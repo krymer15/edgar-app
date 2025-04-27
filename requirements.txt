@@ -1,0 +1,8 @@
+beautifulsoup4
+lxml
+openai
+pandas
+psycopg2-binary
+python-dotenv
+requests
+tqdm

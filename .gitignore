@@ -1,0 +1,19 @@
+# 🔐 Secrets
+.env
+
+# 📓 Jupyter notebook noise
+*.ipynb~
+.ipynb_checkpoints/
+
+# 📂 Folders to ignore
+output/                      # Top-level output (e.g., /output/)
+notebooks/output/           # Nested output inside notebooks/
+data/                       # Local data folder (any purpose)
+
+# 🐍 Python bytecode
+__pycache__/
+*.pyc
+
+# 💻 IDE/editor
+.vscode/
+.DS_Store

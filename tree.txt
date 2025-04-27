@@ -1,0 +1,103 @@
+./
+├── README.md
+├── clear_pycache.bat
+├── market_data.py
+├── notion_writer.py
+├── requirements.txt
+├── run_tests.bat
+└── tree_view.py
+├── config/
+│   └── app_config.yaml
+├── data/
+│   ├── processed/
+│   │   ├── 1835632/
+│   │   │   ├── 2025-03-12_10-K_000183563225000057_blocks.txt
+│   │   │   ├── 2025-03-12_8-K_000119312525053027_blocks.txt
+│   │   │   ├── 2025-03-21_8-K_000183563225000068_blocks.txt
+│   │   │   ├── 2025-04-08_8-K_000119312525074816_blocks.txt
+│   │   │   └── 2025-04-14_8-K_000119312525079772_blocks.txt
+│   ├── raw/
+│   │   ├── 8k_item_codes.txt
+│   │   ├── raw_exhibit.html
+│   │   ├── ticker.txt
+│   │   └── ticker_cik.csv
+│   │   ├── 1835632/
+│   │   │   ├── 2025-03-12_10-K_000183563225000057.html
+│   │   │   ├── 2025-03-12_10-K_000183563225000057_metadata.json
+│   │   │   ├── 2025-03-12_8-K_000119312525053027.html
+│   │   │   ├── 2025-03-12_8-K_000119312525053027_metadata.json
+│   │   │   ├── 2025-03-21_8-K_000183563225000068.html
+│   │   │   ├── 2025-03-21_8-K_000183563225000068_metadata.json
+│   │   │   ├── 2025-04-08_8-K_000119312525074816.html
+│   │   │   ├── 2025-04-08_8-K_000119312525074816_metadata.json
+│   │   │   ├── 2025-04-14_8-K_000119312525079772.html
+│   │   │   └── 2025-04-14_8-K_000119312525079772_metadata.json
+├── downloaders/
+│   ├── draft.py
+│   └── sec_downloader.py
+├── infra/
+│   └── docker-compose.yml
+├── logs/
+├── notebooks/
+│   ├── 1_load_clean_exhibit.ipynb
+│   ├── 2_extract_clean_text.ipynb
+│   ├── __init__.py
+│   ├── agent_controller_test.ipynb
+│   ├── blank.ipynb
+│   ├── check_submission_api_keys.ipynb
+│   ├── cik1835632_submissions.json
+│   ├── db_cleanup.ipynb
+│   ├── db_schema_upgrade.ipynb
+│   ├── exhibit_view.ipynb
+│   ├── notebook.ipynb
+│   ├── notebook_items.ipynb
+│   ├── table_preview.html
+│   ├── test1.ipynb
+│   ├── test_downloader.ipynb
+│   ├── test_exhibit.ipynb
+│   ├── test_postgres.ipynb
+│   ├── test_process_single_filing.ipynb
+│   ├── vector_inspect.ipynb
+│   └── view_filing_text.ipynb
+│   ├── output/
+│   │   ├── 0001835632_metadata.json
+│   │   ├── aso_8k_summary_2025-04-21.md
+│   │   ├── cleaned_exhibit_body.html
+│   │   ├── daily_digest_2025-04-20.md
+│   │   ├── daily_digest_2025-04-21.md
+│   │   ├── elv_8k_summary_2025-04-20.md
+│   │   ├── elv_8k_summary_2025-04-21.md
+│   │   ├── goog_8k_summary_2025-04-21.md
+│   │   ├── gpn_8k_summary_2025-04-20.md
+│   │   ├── gpn_8k_summary_2025-04-21.md
+│   │   ├── mrvl_8-K_2025-03-21_raw.html
+│   │   ├── mrvl_8-K_2025-04-14_blocks.txt
+│   │   ├── mrvl_8-K_2025-04-14_raw.html
+│   │   ├── mrvl_8k_summary_2025-04-21.md
+│   │   └── nvda_8k_summary_2025-04-21.md
+├── output/
+│   ├── 0001835632_metadata.json
+│   ├── mrvl_8-K_2025-04-14_blocks.txt
+│   └── mrvl_8-K_2025-04-14_raw.html
+├── parsers/
+│   ├── __init__.py
+│   └── exhibit_parser.py
+├── scripts/
+│   ├── __init__.py
+│   └── process_company_filings.py
+├── tests/
+│   ├── README.md
+│   ├── test_exhibit_parser.py
+│   ├── test_file_saver.py
+│   ├── test_path_manager.py
+│   ├── test_sec_downloader.py
+│   └── test_ticker_cik_mapper.py
+│   ├── tmp/
+├── utils/
+│   ├── config_loader.py
+│   ├── file_saver.py
+│   ├── get_project_root.py
+│   ├── path_manager.py
+│   └── ticker_cik_mapper.py
+│   ├── db/
+│   │   └── vector_store.py

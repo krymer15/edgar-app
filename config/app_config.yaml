@@ -1,0 +1,50 @@
+# App Environment
+app:
+  name: "Safe Harbor EDGAR AI Platform"
+  environment: "development"  # Options: development, staging, production
+  log_level: "INFO"
+
+# Database Settings
+database:
+  url: ${DATABASE_URL}  # Example: postgres://user:password@localhost:5432/edgar_db
+
+# Vector Store Settings (pgvector)
+vector_store:
+  table_name: "filing_vectors"
+  embedding_dimensions: 1536
+  distance_function: "cosine"
+
+# Storage Paths
+storage:
+  raw_html_path: "data/raw/"
+  processed_text_path: "data/processed/"
+  company_mapping_path: "data/raw/company_tickers.json"
+  exhibits_path: "data/exhibits/"
+  parsed_output_path: "data/parsed/"
+
+# SEC Downloader Settings
+sec_downloader:
+  base_url: "https://www.sec.gov/Archives/"
+  user_agent: "SafeHarborBot/1.0 (kris@safeharborstocks.com)"
+  request_delay_seconds: 0.2
+
+# Ingestion Settings
+ingestion:
+  use_rss_feed: true
+  use_daily_index: true
+  filing_forms_to_track: ["8-K", "10-K", "10-Q", "S-1", "3", "4", "5", "13D", "13G"]
+  chunk_max_tokens: 4000
+  save_cleaned_html: true
+  save_raw_html: false
+
+# Exhibit Parser Settings
+exhibit_parser:
+  remove_tables: true
+  strip_whitespace: true
+  header_labeling: true
+
+# XBRL Ingestion (Future Work)
+xbrl_ingestion:
+  enabled: false
+  base_url: "https://data.sec.gov/api/xbrl/companyfacts"
+  backfill_years: 5

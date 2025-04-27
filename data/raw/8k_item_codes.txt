@@ -1,0 +1,65 @@
+
+8-K Item Code Reference Guide
+
+Item 1.01 – Entry into a Material Agreement
+  → Covers material contracts like loans, leases, M&A deals.
+
+Item 1.02 – Termination of a Material Agreement
+  → Discloses premature termination of key contracts.
+
+Item 1.03 – Bankruptcy or Receivership
+  → Indicates bankruptcy filings and restructuring plans.
+
+Item 2.01 – Acquisition or Disposition of Assets
+  → Major purchases, mergers, or divestitures.
+
+Item 2.02 – Results of Operations and Financial Condition
+  → Earnings results; often includes Exhibit 99.1.
+
+Item 2.03 – Creation of a Direct Financial Obligation
+  → New debt obligations or financial commitments.
+
+Item 2.04 – Triggering Events That Accelerate Financial Obligations
+  → Defaults or events that accelerate repayment terms.
+
+Item 2.05 – Costs Associated with Exit or Disposal Activities
+  → Restructuring charges, layoffs, or closures.
+
+Item 2.06 – Material Impairments
+  → Write-downs of assets or goodwill impairments.
+
+Item 3.01 – Notice of Delisting or Listing Noncompliance
+  → Stock exchange notices and compliance risk.
+
+Item 3.02 – Unregistered Sales of Equity Securities
+  → Private placements or insider equity sales.
+
+Item 3.03 – Material Modification to Rights of Security Holders
+  → Governance or voting rights changes.
+
+Item 4.01 – Changes in Registrant’s Certifying Accountant
+  → Auditor changes; may include red flags.
+
+Item 4.02 – Non-Reliance on Previously Issued Financials
+  → Restatements due to accounting errors.
+
+Item 5.01 – Changes in Control of Registrant
+  → M&A-driven changes in voting control.
+
+Item 5.02 – Director/Officer Departures or Appointments
+  → Exec changes and compensation updates.
+
+Item 5.03 – Amendments to Articles or Bylaws; Fiscal Year Change
+  → Corporate structure updates.
+
+Item 5.07 – Submission of Matters to a Vote of Security Holders
+  → Proxy results and shareholder vote outcomes.
+
+Item 7.01 – Regulation FD Disclosure
+  → Public disclosure of non-material but useful updates (dividends, guidance).
+
+Item 8.01 – Other Events
+  → Anything material not covered by other items.
+
+Item 9.01 – Financial Statements and Exhibits
+  → Includes exhibit attachments like 99.1 (earnings release), 99.2 (deck).
