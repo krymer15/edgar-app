@@ -16,11 +16,21 @@ vector_store:
 
 # Storage Paths
 storage:
-  raw_html_path: "data/raw/"
-  processed_text_path: "data/processed/"
+  base_data_path: "data/"
+  # base_data_path: "/mnt/external_drive/data/" REPLACE LINE ABOVE ONCE /DATA/ MOUNTED TO EXTERNAL SSD
+  raw_html_base_path: "data/raw/"
+  processed_text_base_path: "data/processed/"
+  exhibits_base_path: "data/exhibits/"
+  parsed_output_base_path: "data/parsed/"
+  structured_output_base_path: "data/structured/"  # for future XBRL etc.
+
+  # Dynamic Subfolder Formatting (new)
+  raw_subfolder_template: "{year}/{cik}/{form_type}/{accession_or_subtype}/"
+  processed_subfolder_template: "{year}/{cik}/{form_type}/{accession_or_subtype}/"
+
+  # Company Mapping Files
   company_mapping_path: "data/raw/company_tickers.json"
-  exhibits_path: "data/exhibits/"
-  parsed_output_path: "data/parsed/"
+
 
 # SEC Downloader Settings
 sec_downloader:

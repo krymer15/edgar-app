@@ -1,4 +1,5 @@
 # utils/db/db_connector.py
+# psycopg2 manual connection helper (No ORM or SQL Alchemy)
 
 import os
 import psycopg2

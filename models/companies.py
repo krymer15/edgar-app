@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, ARRAY, JSON, TIMESTAMP
+from sqlalchemy import Column, String, Text, ARRAY, JSON, TIMESTAMP, text
 from models.base import Base
 
 class CompaniesMetadata(Base):
@@ -22,5 +22,6 @@ class CompaniesMetadata(Base):
     mailing_address = Column(JSON)
     business_address = Column(JSON)
     phone = Column(Text)
-    created_at = Column(TIMESTAMP(timezone=True), server_default="CURRENT_TIMESTAMP")
-    updated_at = Column(TIMESTAMP(timezone=True), server_default="CURRENT_TIMESTAMP")
+    created_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"))
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"))
+

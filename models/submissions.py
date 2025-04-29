@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Text, Date, ARRAY, Boolean, TIMESTAMP, ForeignKey
+from sqlalchemy import Column, Text, Date, ARRAY, Boolean, TIMESTAMP, ForeignKey, text
 from models.base import Base
 
 class SubmissionsMetadata(Base):
@@ -15,5 +15,9 @@ class SubmissionsMetadata(Base):
     is_xbrl = Column(Boolean)
     is_inline_xbrl = Column(Boolean)
     acceptance_datetime = Column(TIMESTAMP)
-    created_at = Column(TIMESTAMP(timezone=True), server_default="CURRENT_TIMESTAMP")
-    updated_at = Column(TIMESTAMP(timezone=True), server_default="CURRENT_TIMESTAMP")
+
+    downloaded = Column(Boolean, server_default=text("false"))
+    
+    created_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"))
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"))
+

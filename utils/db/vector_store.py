@@ -1,4 +1,4 @@
-# agent_plugins/vector_store.py
+# Manages filing_summaries table (vector embeddings, unrelated to basic filings ingestion) potentially old/redundant?
 
 import os
 import psycopg2
