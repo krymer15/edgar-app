@@ -1,11 +1,12 @@
 # writers/filing_writer.py
 
 from writers.base_writer import BaseWriter
+from utils.path_manager import build_raw_filepath
 import os
 
 class FilingWriter(BaseWriter):
-    def __init__(self, base_dir: str = "data/raw/"):
-        self.base_dir = base_dir
+    def __init__(self):
+        pass  # No base_dir needed; full filepath is passed in
 
     def write_metadata(self, *args, **kwargs):
         """
@@ -13,36 +14,51 @@ class FilingWriter(BaseWriter):
         """
         raise NotImplementedError("FilingWriter does not handle metadata writing.")
 
-    def write_content(self, parsed_content):
+    def write_content(self, parsed_content, filepath=None):
         """
         Write parsed filing content (e.g., text blocks) to disk.
-        parsed_content is expected to be a dict with { 'filepath': ..., 'content': ... }
+
+        Args:
+            parsed_content (dict): Must contain a 'content' key.
+            filepath (str): Full destination path. Required and overrides parsed_content['filepath'].
         """
-        filepath = parsed_content.get("filepath")
         content = parsed_content.get("content")
+        if content is None or filepath is None:
+            raise ValueError("write_content requires both 'content' and 'filepath' arguments.")
 
-        if not filepath or content is None:
-            raise ValueError("Parsed content must include 'filepath' and 'content'.")
+        # Ensure the parent directory exists
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
-        full_path = os.path.join(self.base_dir, filepath)
-        os.makedirs(os.path.dirname(full_path), exist_ok=True)
-
-        with open(full_path, "w", encoding="utf-8") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             f.write(content)
 
-        print(f"✅ Saved parsed content to {full_path}")
+        print(f"✅ Saved parsed content to {filepath}")
 
-    def write_filing(self, cik: str, accession_number: str, form_type: str, filing_date: str, raw_html: str):
+    # Function below deprecated or used by an unknown orchestrator
+    def write_filing(self, raw_html: str, year: str, cik: str, form_type: str, accession_number: str, filename: str = "primarydoc.html"):
         """
-        Save raw filing HTML to disk organized by CIK and filing date.
+        Writes raw filing HTML to /data/raw/
         """
-        cik_path = os.path.join(self.base_dir, cik)
-        os.makedirs(cik_path, exist_ok=True)
+        filepath = build_raw_filepath(
+            year=year,
+            cik=cik,
+            form_type=form_type,
+            accession_or_subtype=accession_number,
+            filename=filename
+        )
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
-        filename = f"{filing_date}_{form_type}_{accession_number.replace('-', '')}.html"
-        full_path = os.path.join(cik_path, filename)
-
-        with open(full_path, "w", encoding="utf-8") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             f.write(raw_html)
 
-        print(f"✅ Saved raw filing to {full_path}")
+        print(f"✅ Saved raw filing to {filepath}")
+
+    def write_filing_from_filepath(self, raw_html: str, filepath: str):
+        """
+        Writes raw HTML filing to disk using a fully specified filepath.
+        This is used by orchestrators that already resolved the path (e.g., daily index).
+        """
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(raw_html)
+        print(f"✅ Saved raw filing to {filepath}")

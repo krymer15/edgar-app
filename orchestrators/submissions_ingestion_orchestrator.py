@@ -1,6 +1,8 @@
 # orchestrators/submissions_ingestion_orchestrator.py
 
 from orchestrators.base_orchestrator import BaseOrchestrator
+from utils.path_utils import build_path_args
+import utils.path_manager as path_manager
 
 class SubmissionsIngestionOrchestrator(BaseOrchestrator):
     def __init__(self, collector, downloader, writer, forms_filter=None):
@@ -32,16 +34,27 @@ class SubmissionsIngestionOrchestrator(BaseOrchestrator):
             filing_date = filing["filingDate"]
 
             try:
-                # Step 2: Download the raw HTML filing
                 raw_html = self.downloader.download_html(filing_url)
 
-                # Step 3: Write raw HTML filing to storage
+                # NEW: Build filepath
+                path_args = build_path_args({
+                    "filing_date": filing_date,
+                    "cik": cik,
+                    "form_type": form_type,
+                    "accession_number": accession_number,
+                }, filename="primarydoc.html")
+
+                filepath = path_manager.build_raw_filepath(*path_args)
+
+                print(f"🧱 Saving raw submission to: {filepath}")
+
                 self.writer.write_filing(
                     cik=cik,
                     accession_number=accession_number,
                     form_type=form_type,
                     filing_date=filing_date,
-                    raw_html=raw_html
+                    raw_html=raw_html,
+                    filepath=filepath
                 )
 
                 print(f"✅ Successfully processed {accession_number} ({form_type})")

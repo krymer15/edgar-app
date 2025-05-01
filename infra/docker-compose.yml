@@ -11,8 +11,5 @@ services:
       POSTGRES_USER: myuser
       POSTGRES_PASSWORD: mypassword
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - D:/safeharbor-postgres/data:/var/lib/postgresql/data
     restart: unless-stopped
-
-volumes:
-  pg_data:

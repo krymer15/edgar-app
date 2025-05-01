@@ -6,7 +6,7 @@ app:
 
 # Database Settings
 database:
-  url: ${DATABASE_URL}  # Example: postgres://user:password@localhost:5432/edgar_db
+  url: ${DATABASE_URL}  # Example: postgres://user:password@localhost:5432/myagentdb
 
 # Vector Store Settings (pgvector)
 vector_store:
@@ -14,22 +14,22 @@ vector_store:
   embedding_dimensions: 1536
   distance_function: "cosine"
 
-# Storage Paths
+# Storage Paths\
+
 storage:
-  base_data_path: "data/"
-  # base_data_path: "/mnt/external_drive/data/" REPLACE LINE ABOVE ONCE /DATA/ MOUNTED TO EXTERNAL SSD
+  # ⚠️ Set to ./test_data/ to run in TEST mode, otherwise use ./data/
+  # Only change manually during testing — this value is not overridden via CLI
+  base_data_path: "./test_data/"
   raw_html_base_path: "data/raw/"
   processed_text_base_path: "data/processed/"
-  exhibits_base_path: "data/exhibits/"
-  parsed_output_base_path: "data/parsed/"
-  structured_output_base_path: "data/structured/"  # for future XBRL etc.
+  metadata_base_path: "data/metadata/"
 
   # Dynamic Subfolder Formatting (new)
   raw_subfolder_template: "{year}/{cik}/{form_type}/{accession_or_subtype}/"
   processed_subfolder_template: "{year}/{cik}/{form_type}/{accession_or_subtype}/"
 
   # Company Mapping Files
-  company_mapping_path: "data/raw/company_tickers.json"
+  company_mapping_path: "data/metadata/company_tickers.json"
 
 
 # SEC Downloader Settings

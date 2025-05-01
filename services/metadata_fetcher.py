@@ -9,7 +9,7 @@ class MetadataFetcher:
         self.source = source
 
     def get_urls_for_download(self, since_date=None):
-        """Query the database for filing URLs based on conditions."""
+        """Query the database for MAIN filing Detail URLs based on conditions (NOT Company Document URL)."""
 
         if self.source == "submissions":
             query = self.db_session.query(SubmissionsMetadata)
@@ -37,7 +37,7 @@ class MetadataFetcher:
         elif self.source == "daily_index":
             for filing in results:
                 output.append({
-                    "url": filing.filing_url,
+                    "url": filing.filing_url, # SEC Filing Detail URL, not Primary Filing URL
                     "cik": filing.cik,
                     "form_type": filing.form_type,
                     "filing_date": filing.filing_date.isoformat() if filing.filing_date else None,

@@ -1,4 +1,8 @@
 # CLI Testing - Developer Utility Only
+'''
+Runs pipeline (orchestrator) based on either submissions API or daily index crawler.idx
+'''
+
 # scripts/ingest_from_source.py
 
 import argparse
@@ -15,22 +19,18 @@ from collectors.submissions_collector import SubmissionsCollector
 from collectors.daily_index_collector import DailyIndexCollector
 from downloaders.sec_downloader import SECDownloader
 from writers.daily_index_writer import DailyIndexWriter
-from parsers.daily_index_parser import DailyIndexParser
-from parsers.filing_parser import FilingParser
+from parsers.index_page_parser import IndexPageParser
 from writers.filing_writer import FilingWriter 
 from orchestrators.submissions_ingestion_orchestrator import SubmissionsIngestionOrchestrator
 from orchestrators.daily_index_orchestrator import DailyIndexOrchestrator
 from utils.ticker_cik_mapper import TickerCIKMapper
-from dotenv import load_dotenv
+from utils.config_loader import ConfigLoader
 from utils.get_project_root import get_project_root
 from services.metadata_fetcher import MetadataFetcher
 
-# Load environment variables
-dotenv_path = os.path.join(get_project_root(), ".env")
-load_dotenv(dotenv_path)
+config = ConfigLoader.load_config()
+DATABASE_URL = config["database"]["url"]
 
-# Database session setup (needed for Daily Index ingestion)
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://myuser:mypassword@localhost:5432/edgar_app_db")
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 db_session = SessionLocal()
@@ -41,7 +41,7 @@ def main():
     parser.add_argument("--cik", required=False, help="Company CIK (10-digit padded)")
     parser.add_argument("--ticker", required=False, help="Company ticker (will map to CIK)")
     parser.add_argument("--date", required=False, help="Date for daily index ingestion (format: YYYY-MM-DD)")
-
+    parser.add_argument("--limit", type=int, default=5, help="Limit number of filings to process.")
     args = parser.parse_args()
 
     company = os.getenv("EDGAR_COMPANY_NAME", "SafeHarborAI")
@@ -82,19 +82,24 @@ def main():
 
         # Setup components
         collector = DailyIndexCollector(user_agent=user_agent)
-        parser_module = DailyIndexParser()  # Assuming you have it
-        writer = DailyIndexWriter(db_session=db_session)
+        writer = DailyIndexWriter(db_session=db_session) # write metadata
+        parser = IndexPageParser
         fetcher = MetadataFetcher(db_session, source="daily_index")
-        downloader = SECDownloader(user_agent=user_agent)  # fallback to SECDownloader unless you specialize
-        content_parser = FilingParser()  # Assuming you have it
-        content_writer = FilingWriter()  # same as above
+        downloader = SECDownloader(user_agent=user_agent) 
+        content_parser = IndexPageParser() 
+        content_writer = FilingWriter()  
 
         orchestrator = DailyIndexOrchestrator(
-            collector, parser_module, writer,
-            fetcher, downloader, content_parser, content_writer
+            collector=collector,
+            parser=parser,
+            writer=writer,
+            fetcher=fetcher,
+            downloader=downloader,
+            content_parser=content_parser,
+            content_writer=content_writer
         )
-        #orchestrator.orchestrate(date=args.date)
-        orchestrator.orchestrate_metadata_ingestion(date=args.date)
+
+        orchestrator.orchestrate(date=args.date, limit=args.limit)
 
 if __name__ == "__main__":
     main()

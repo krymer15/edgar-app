@@ -1,28 +1,46 @@
-# writers/daily_index_writer.py
+import psycopg2
+import os
+from utils.config_loader import ConfigLoader
+from psycopg2.extras import execute_values
 
-from writers.base_writer import BaseWriter
-from models.daily_index_metadata import DailyIndexMetadata
-from sqlalchemy.dialects.postgresql import insert
+class DailyIndexWriter:
+    def __init__(self):
+        config = ConfigLoader.load_config()
+        self.db_url = config["postgres"]["DATABASE_URL"]  # pulled from app_config.yaml
 
-class DailyIndexWriter(BaseWriter):
-    def write_metadata(self, metadata_list):
-        """Write collected metadata to database with ON CONFLICT DO NOTHING."""
-        for metadata in metadata_list:
-            stmt = insert(DailyIndexMetadata).values(
-                accession_number=metadata["accession_number"],
-                cik=metadata["cik"],
-                form_type=metadata["form_type"],
-                filing_date=metadata["filing_date"],
-                filing_url=metadata["filing_url"]
-            ).on_conflict_do_nothing(
-                index_elements=['accession_number']
+    def write_to_postgres(self, filings: list):
+        if not filings:
+            print("⚠️ No filings to write.")
+            return
+
+        print(f"📥 Inserting {len(filings)} filings into daily_index_metadata...")
+
+        insert_query = """
+        INSERT INTO daily_index_metadata (
+            accession_number, cik, form_type, filing_date, filing_url
+        ) VALUES %s
+        ON CONFLICT (accession_number) DO NOTHING;
+        """
+
+        values = [
+            (
+                f["accession_number"],
+                f["cik"],
+                f.get("form_type"),
+                f.get("filing_date"),
+                f["filing_url"]
             )
-            self.db_session.execute(stmt)
+            for f in filings
+        ]
 
-        self.db_session.commit()
-        print(f"✅ Inserted {len(metadata_list)} filings into daily_index_metadata (skipping duplicates).")
-
-    def write_content(self, parsed_content):
-        """(Placeholder) Write parsed filing content to database or file storage."""
-        # Not implemented yet — will be used for raw filing storage.
-        pass
+        try:
+            conn = psycopg2.connect(self.db_url)
+            with conn:
+                with conn.cursor() as cur:
+                    execute_values(cur, insert_query, values)
+            print(f"✅ Inserted {len(values)} rows into daily_index_metadata")
+        except Exception as e:
+            print(f"[ERROR] Failed DB insert: {e}")
+        finally:
+            if 'conn' in locals():
+                conn.close()

@@ -1,32 +1,27 @@
-# ORM-based table creation ... /scripts/init_db.py
+# scripts/init_db.py
 
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from utils.get_project_root import get_project_root
-from dotenv import load_dotenv
+from utils.config_loader import ConfigLoader
 from sqlalchemy import create_engine
 from models.base import Base
+
+# Explicit model imports to register with Base metadata
 from models.companies import CompaniesMetadata
 from models.submissions import SubmissionsMetadata
-
-# Load .env explicitly using full path
-dotenv_path = os.path.join(get_project_root(), ".env")
-load_dotenv(dotenv_path)
-
-# Database URL from .env
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://myuser:mypassword@localhost:5432/edgar_app_db")
-
-# SQLAlchemy engine
-engine = create_engine(DATABASE_URL)
-print(f"Connecting to database at: {DATABASE_URL}")
-print(f"Resolved dotenv path: {dotenv_path}")
-
+from models.daily_index_metadata import DailyIndexMetadata
 
 def create_tables():
+    config = ConfigLoader.load_config()
+    db_url = config["database"]["url"]
+
+    engine = create_engine(db_url)
+    print(f"🔗 Connecting to database at: {db_url}")
+    
     Base.metadata.create_all(bind=engine)
+    print("✅ Tables created successfully.")
 
 if __name__ == "__main__":
     create_tables()
-    print("✅ Tables created successfully.")

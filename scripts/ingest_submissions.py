@@ -7,7 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import json
 from utils.get_project_root import get_project_root
-from dotenv import load_dotenv
+from utils.config_loader import ConfigLoader
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models.base import Base
@@ -15,12 +15,8 @@ from models.companies import CompaniesMetadata
 from models.submissions import SubmissionsMetadata
 from datetime import datetime
 
-# Load .env explicitly using full path
-dotenv_path = os.path.join(get_project_root(), ".env")
-load_dotenv(dotenv_path)
-
-# Database connection string from your .env
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://myuser:mypassword@localhost:5432/edgar_app_db")
+config = ConfigLoader.load_config()
+DATABASE_URL = config["database"]["url"]
 
 # Set up SQLAlchemy engine and session
 engine = create_engine(DATABASE_URL)

@@ -10,7 +10,7 @@ class DailyIndexCollector(BaseCollector):
     
     def collect(self, date: str):
         """
-        Download and parse the SEC daily index file (crawler.idx) for a given date.
+        Call, download and parse the SEC daily index file (crawler.idx) for a given date.
 
         Args:
             date (str): Filing date in YYYY-MM-DD format
@@ -75,9 +75,11 @@ class DailyIndexCollector(BaseCollector):
                 "cik": cik.strip(),
                 "form_type": form_type.strip(),
                 "filing_date": filing_date.strip(),
-                "filing_url": filing_url.strip(),
+                "filing_url": filing_url.strip(), # Only main filing detail URL, not the primary_document URL
                 "accession_number": accession_number.strip()
             })
 
         print(f"🔎 Debug: {len(parsed)} filings parsed inside DailyIndexCollector")
-        return parsed
+        
+        # Returns parsed dict of lists each containing metadata of each filing from the crawler.{date}.idx
+        return parsed 
