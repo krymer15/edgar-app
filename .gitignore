@@ -17,3 +17,7 @@ __pycache__/
 # 💻 IDE/editor
 .vscode/
 .DS_Store
+
+# Data folders
+data/
+test_data/
