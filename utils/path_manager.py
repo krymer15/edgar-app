@@ -1,5 +1,6 @@
 import os
 from utils.config_loader import ConfigLoader
+from utils.report_logger import log_debug
 
 # Load config once at module import
 CONFIG = ConfigLoader.load_config()
@@ -34,7 +35,7 @@ def build_raw_filepath(
     )
 
     full_path = os.path.join(base_path, subfolder, filename)
-    print(f"📁 [Debug] Saving to: {full_path}")
+    log_debug(f"📁 [Debug] Saving to: {full_path}")
     return full_path
 
 def build_processed_filepath(
@@ -64,6 +65,6 @@ def build_processed_filepath(
     )
 
     full_path = os.path.join(base_path, subfolder, filename)
-    print(f"📁 [Debug] Saving to: {full_path}")
+    log_debug(f"📁 [Debug] Saving to: {full_path}")
     return full_path
 

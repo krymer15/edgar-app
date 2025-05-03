@@ -1,7 +1,10 @@
 # collectors/daily_index_collector.py
 
+from datetime import datetime, date as dt_date
 import requests
 from collectors.base_collector import BaseCollector
+from schemas.index_record_model import IndexRecordModel
+from utils.report_logger import log_warn, log_debug
 
 class DailyIndexCollector(BaseCollector):
     def __init__(self, user_agent: str):
@@ -13,7 +16,7 @@ class DailyIndexCollector(BaseCollector):
         Call, download and parse the SEC daily index file (crawler.idx) for a given date.
 
         Args:
-            date (str): Filing date in YYYY-MM-DD format
+            date (str or datetime.date): Filing date in YYYY-MM-DD format or datetime.date
 
         Returns:
             List[dict]: List of filing metadata dicts with keys:
@@ -23,8 +26,19 @@ class DailyIndexCollector(BaseCollector):
                 - filing_url
                 - accession_number
         """
-        year = date[:4]
-        month = int(date[5:7])
+        
+        # Normalize string to datetime.date
+        if isinstance(date, str):
+            try:
+                date = datetime.strptime(date, "%Y-%m-%d").date()
+            except ValueError:
+                raise ValueError(f"[ERROR] Invalid date string format: '{date}' — expected YYYY-MM-DD")
+
+        elif not isinstance(date, dt_date):
+            raise TypeError(f"[ERROR] 'date' must be a str or datetime.date, got {type(date)}")
+    
+        year = str(date.year)
+        month = date.month
 
         if 1 <= month <= 3:
             quarter = "QTR1"
@@ -35,7 +49,7 @@ class DailyIndexCollector(BaseCollector):
         else:
             quarter = "QTR4"
 
-        date_compact = date.replace("-", "")
+        date_compact = date.strftime("%Y%m%d")
         url = f"https://www.sec.gov/Archives/edgar/daily-index/{year}/{quarter}/crawler.{date_compact}.idx"
 
 
@@ -71,15 +85,20 @@ class DailyIndexCollector(BaseCollector):
 
             accession_number = filing_url.split("/")[-1].replace("-index.htm", "")
 
-            parsed.append({
-                "cik": cik.strip(),
-                "form_type": form_type.strip(),
-                "filing_date": filing_date.strip(),
-                "filing_url": filing_url.strip(), # Only main filing detail URL, not the primary_document URL
-                "accession_number": accession_number.strip()
-            })
+            try:
+                record = IndexRecordModel(
+                    cik=cik.strip(),
+                    form_type=form_type.strip(),
+                    filing_date=filing_date.strip(),
+                    filing_url=filing_url.strip(),
+                    accession_number=accession_number.strip()
+                )
+                parsed.append(record.dict())
+            except Exception as e:
+                log_warn(f"[SKIPPED] Malformed idx entry: {e}")
+                continue
 
-        print(f"🔎 Debug: {len(parsed)} filings parsed inside DailyIndexCollector")
+        log_debug(f"🔎 Parsed {len(parsed)} filings inside DailyIndexCollector")
         
         # Returns parsed dict of lists each containing metadata of each filing from the crawler.{date}.idx
         return parsed 

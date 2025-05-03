@@ -53,3 +53,11 @@ Always run git status before pushing.
 
 ✨ Purpose:
 This document formalizes the active project structure and version control process for the Safe Harbor Edgar AI App ("edgar-app/").
+
+-----
+## ✅ Phase 1 Complete – May, 1 2025
+- Introduced single-filing ingestion from `crawler.idx`
+- Parses raw `.txt` SGML documents
+- Stores to `/data/raw/` and routes via `path_manager.py`
+- Prepares ingestion architecture for Phase 2 (backfill, bulk ingestion, RAG prep)
+-----
