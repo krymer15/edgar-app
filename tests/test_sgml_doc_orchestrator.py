@@ -1,4 +1,9 @@
 # test_sgml_doc_orchestrator.py
+
+# At the top of test_single_sgml_orchestrator.py, test_batch_sgml_ingestion_orchestrator.py, etc.
+from utils.bootstrap import add_project_root_to_sys_path
+add_project_root_to_sys_path()
+
 import unittest
 from parsers.sgml_filing_parser import SgmlFilingParser
 
@@ -28,7 +33,7 @@ class TestSgmlFilingParser(unittest.TestCase):
 <DESCRIPTION>Investor Deck
 <TYPE>EX-99.2
 """
-        self.parser = SgmlFilingParser(cik="1084869", accession="0001437749-25-013070", form_type="8-K")
+        self.parser = SgmlFilingParser(cik="1084869", accession_number="0001437749-25-013070", form_type="8-K")
 
     def test_sgml_exhibit_parsing(self):
         result = self.parser.parse(self.sample_txt)

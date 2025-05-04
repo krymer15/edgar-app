@@ -1,6 +1,7 @@
 from parsers.base_parser import BaseParser
 from lxml import html
 import re
+from utils.report_logger import log_debug, log_warn, log_error
 
 class IndexPageParser(BaseParser):
     def parse(self, raw_html: str, url: str = None, cik: str = None, form_type: str = None, filing_date: str = None) -> dict:
@@ -20,7 +21,7 @@ class IndexPageParser(BaseParser):
             rows = doc.xpath('//table[@summary="Document Format Files"]//tr[position() > 1]')
 
             if rows:
-                print("🔍 Embedded doc table row found.")
+                log_debug("🔍 Embedded doc table row found.")
 
                 # Grab the first row’s document link cell
                 first_doc_cell = rows[0].xpath('./td[3]/a')
@@ -29,7 +30,7 @@ class IndexPageParser(BaseParser):
                     raw_href = raw_element.get("href", "")
 
                     # 🧪 DIAGNOSTIC: Save and print raw href before processing
-                    print(f"🧪 Raw embedded href (as extracted): `{raw_href}`")
+                    log_debug(f"🧪 Raw embedded href (as extracted): `{raw_href}`")
                     with open("diagnostics_last_raw_href.txt", "w", encoding="utf-8") as f:
                         f.write(raw_href)
 
@@ -45,13 +46,13 @@ class IndexPageParser(BaseParser):
                     # Final whitespace cleanup
                     primary_url = re.sub(r"\s+", "", primary_url)
                 else:
-                    print("[WARN] Could not find <a> inside third column of row.")
+                    log_warn("Could not find <a> inside third column of row.")
             else:
-                print("[WARN] No rows found in Document Format Files table.")
+                log_warn("No rows found in Document Format Files table.")
 
 
         except Exception as e:
-            print(f"[ERROR] Failed to parse embedded URL from index.html: {e}")
+            log_error(f"Failed to parse embedded URL from index.html: {e}")
             primary_url = None
 
         return {

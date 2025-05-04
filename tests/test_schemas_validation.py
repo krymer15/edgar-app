@@ -11,7 +11,7 @@ def test_parsed_result_validation():
             "accession_number": "0000921895-25-001190",
             "form_type": "4",
             "filing_date": "2025-04-28",
-            "primary_document_url": "https://www.sec.gov/Archives/..."
+            "primary_doc_url": "https://www.sec.gov/Archives/..."
         },
         "exhibits": [
             {

@@ -93,7 +93,7 @@ class DailyIndexCollector(BaseCollector):
                     filing_url=filing_url.strip(),
                     accession_number=accession_number.strip()
                 )
-                parsed.append(record.dict())
+                parsed.append(record.model_dump())
             except Exception as e:
                 log_warn(f"[SKIPPED] Malformed idx entry: {e}")
                 continue

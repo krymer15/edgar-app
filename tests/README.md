@@ -1,19 +1,19 @@
-# Tests Overview
+# Tests
 
-This folder contains unit tests for the `edgar-app` project.
+Unit tests for all major modules.
 
-## Test Conventions
+## Coverage
 
-- **Framework**: Python `unittest`
-- **Network Calls**: All external HTTP requests are mocked using `unittest.mock`
-- **Disk IO**: No disk writes are performed in tests
-- **Environment**: Tests expect a `.env` file for loading EDGAR credentials (if necessary)
-- **Speed**: All tests are designed to run quickly (<1 second per test)
-- **Structure**: Each core module has a corresponding `test_*.py` file
+- `test_parsed_sgml_writer.py`: Verifies DB writes and exhibit filtering
+- `test_report_logger.py`: Validates CSV file creation and structure
+- `test_path_manager.py`: Tests correct path building logic
 
-## Running Tests
+## To Add (Suggestions)
 
-You can run all tests by:
+- `test_sgml_filing_parser.py`: Exhibit tagging logic, primary doc inference
+- `test_orchestrator.py`: Batch loop error handling, skipped filings
+- `test_exhibit_summary_writer.py`: (Future GPT layer)
 
+Run via:
 ```bash
-python -m unittest discover -s tests -p "test_*.py" -v
+pytest tests/

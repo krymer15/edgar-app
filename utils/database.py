@@ -24,3 +24,7 @@ print(f"🔌 Loaded DATABASE_URL: {DATABASE_URL}")
 # SQLAlchemy setup
 engine = create_engine(DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Helper function for consistent session access
+def get_db_session():
+    return SessionLocal()

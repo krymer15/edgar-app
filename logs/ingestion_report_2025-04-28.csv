@@ -1,0 +1,7 @@
+timestamp,record_type,accession_number,cik,form_type,filing_date,exhibits_written,exhibits_skipped,primary_doc_url
+2025-05-04T04:28:23.141804+00:00,parsed,0000921895-25-001190,1084869,4,20250428,0,0,https://www.sec.gov/Archives/edgar/data/0001084869/000092189525001190/form413866005_04282025.xml
+2025-05-04T04:28:23.301477+00:00,parsed,0002065713-25-000001,2065713,D,20250428,0,0,https://www.sec.gov/Archives/edgar/data/0002065713/000206571325000001/primary_doc.xml
+2025-05-04T04:28:24.986100+00:00,parsed,0001670254-25-000460,2023635,C-AR,20250428,0,0,https://www.sec.gov/Archives/edgar/data/0002023635/000167025425000460/documents_list.htm
+2025-05-04T04:28:25.142396+00:00,parsed,0001670254-25-000459,2023635,C-U,20250428,0,0,https://www.sec.gov/Archives/edgar/data/0002023635/000167025425000459/primary_doc.xml
+2025-05-04T04:28:25.442139+00:00,parsed,0002063604-25-000005,1615727,C-AR,20250428,0,0,https://www.sec.gov/Archives/edgar/data/0001615727/000206360425000005/primary_doc.xml
+2025-05-04T04:28:25.450129+00:00,summary,BATCH_SUMMARY,,,,5,0,"attempted=5, failed=0"

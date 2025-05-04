@@ -4,6 +4,7 @@ import re
 from typing import List, Optional
 from utils.url_builder import construct_primary_document_url
 from parsers.base_parser import BaseParser
+from utils.report_logger import log_debug
 
 IGNORE_EXTENSIONS = (
     ".js", ".css", ".xlsx", ".zip", ".json",
@@ -35,7 +36,7 @@ class SgmlFilingParser(BaseParser):
             )
 
             if not accessible:
-                print(f"[SKIPPED] Binary or noise exhibit: {filename}")
+                log_debug(f"[SKIPPED] Binary or noise exhibit: {filename}")
 
             exhibits.append({
                 "filename": filename,

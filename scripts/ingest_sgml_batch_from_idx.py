@@ -25,7 +25,7 @@ parser.add_argument("--accession", help="Accession number of the filing")
 parser.add_argument("--form_type", help="Form type (e.g., 8-K, 10-K)")
 parser.add_argument("--filing_date", help="Filing date in YYYY-MM-DD format")
 parser.add_argument("--save_raw", action="store_true", help="Save raw .txt to disk")
-parser.add_argument("--date", help="Date to process crawler.idx (YYYY-MM-DD)")
+parser.add_argument("--date", help="Date to process crawler.idx (YYYY-MM-DD)", required=True)
 parser.add_argument("--limit", type=int, help="Optional: limit number of filings")
 parser.add_argument("--debug", action="store_true", help="Enable DEBUG logging level")
 args = parser.parse_args()
@@ -36,5 +36,8 @@ if args.debug:
     config["app"]["log_level"] = "DEBUG"
 
 if __name__ == "__main__":
-    orchestrator = BatchSgmlIngestionOrchestrator(date_str="2025-04-28", limit=5)
+    if not args.date:
+        raise ValueError("⚠️ Please provide --date YYYY-MM-DD to run the batch ingestion.")
+    
+    orchestrator = BatchSgmlIngestionOrchestrator(date_str=args.date, limit=args.limit)
     orchestrator.orchestrate()

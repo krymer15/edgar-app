@@ -6,6 +6,7 @@ from models.parsed_sgml_metadata import ParsedSgmlMetadata
 from models.exhibit_metadata import ExhibitMetadata
 from utils.report_logger import log_info, log_warn, log_error, append_ingestion_report
 from uuid import uuid4
+from datetime import datetime
 
 class ParsedSgmlWriter:
     def __init__(self):
@@ -28,6 +29,23 @@ class ParsedSgmlWriter:
             self.session.commit()
             log_info("Parsed SGML metadata written to Postgres.")
 
+            raw_date = str(metadata_dict.get("filing_date") or "")
+            try:
+                parsed_log_date = datetime.strptime(raw_date, "%Y%m%d").strftime("%Y-%m-%d") if len(raw_date) == 8 else raw_date
+            except Exception:
+                parsed_log_date = raw_date  # fallback
+
+            append_ingestion_report({
+                "record_type": "parsed",
+                "accession_number": metadata_dict.get("accession_number"),
+                "cik": metadata_dict.get("cik"),
+                "form_type": metadata_dict.get("form_type"),
+                "filing_date": raw_date,
+                "exhibits_written": 0,
+                "exhibits_skipped": 0,
+                "primary_doc_url": metadata_dict.get("primary_doc_url", "")
+            }, log_date=parsed_log_date)
+
         except IntegrityError:
             self.session.rollback()
             log_warn(f"Parsed metadata already exists for: {metadata_dict.get('accession_number')}")
@@ -36,6 +54,8 @@ class ParsedSgmlWriter:
             self.session.rollback()
             log_error(f"Failed to write parsed metadata: {e}")
 
+    # Note: write_exhibits() does not log exhibit rows to ingestion_report.csv.
+    # If needed later, logging can be added using record_type='exhibit' and log_date=filing_date.
     def write_exhibits(
         self,
         exhibits: list,
@@ -43,8 +63,7 @@ class ParsedSgmlWriter:
         cik: str = "",
         form_type: str = "",
         filing_date=None,
-        primary_doc_url: str = "",
-        run_id: str = ""
+        primary_doc_url: str = ""
     ):
         try:
             filtered = [ex for ex in exhibits if ex.get("accessible", True) is True]
@@ -79,18 +98,6 @@ class ParsedSgmlWriter:
                 self.session.commit()
 
             skipped_count += len(exhibits) - len(filtered)
-
-            if written_count > 0 or skipped_count > 0:
-                append_ingestion_report({
-                    "record_type": "exhibit",
-                    "accession_number": accession_number,
-                    "cik": cik,
-                    "form_type": form_type,
-                    "filing_date": str(filing_date) if filing_date else "",
-                    "exhibits_written": written_count,
-                    "exhibits_skipped": skipped_count,
-                    "primary_doc_url": primary_doc_url
-                }, run_id=run_id)
 
             log_info(f"Exhibits written: {written_count}, skipped: {skipped_count}")
 

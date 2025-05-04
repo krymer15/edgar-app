@@ -3,8 +3,7 @@ edgar-app/
 ├── __init__,py
 ├── backup_postgres.bat
 ├── clear_pycache.bat
-├── companies_metadata.sql
-├── filings_metadata.sql
+├── diagnostics_last_raw_href.txt
 ├── json_zip.py
 ├── manual_table_creation.py
 ├── market_data.py
@@ -13,46 +12,43 @@ edgar-app/
 ├── run_tests.bat
 ├── start_postgres.bat
 ├── stop_postgres.bat
-├── submissions_metadata.sql
 ├── test_submissions.zip
 ├── tree.txt
 └── tree_view.py
+├── archive/
+│   ├── parsers/
+│   │   └── daily_index_parser.py
 ├── collectors/
 │   ├── base_collector.py
 │   ├── daily_index_collector.py
 │   └── submissions_collector.py
-│   ├── __pycache__/
-│   │   ├── base_collector.cpython-310.pyc
-│   │   ├── daily_index_collector.cpython-310.pyc
-│   │   └── submissions_collector.cpython-310.pyc
 ├── config/
 │   └── app_config.yaml
 ├── docs/
 │   ├── 8k_item_codes.txt
+│   ├── data_symlink_handling.md
 │   ├── path_generation_standards.md
-│   └── project_naming_and_git_update.md
+│   ├── project_naming_and_git_update.md
+│   └── universal_script_header.md
 ├── downloaders/
 │   ├── base_downloader.py
 │   ├── daily_index_downloader.py
 │   ├── draft.py
 │   └── sec_downloader.py
-│   ├── __pycache__/
-│   │   ├── base_downloader.cpython-310.pyc
-│   │   └── sec_downloader.cpython-310.pyc
 ├── infra/
 │   └── docker-compose.yml
 ├── logs/
+│   └── ingestion_report_2025-05-03.csv
 ├── migrations/
 │   └── add_downloaded_flag_to_submissions.sql
 ├── models/
+│   ├── __init__.py
 │   ├── base.py
 │   ├── companies.py
 │   ├── daily_index_metadata.py
+│   ├── exhibit_metadata.py
+│   ├── parsed_sgml_metadata.py
 │   └── submissions.py
-│   ├── __pycache__/
-│   │   ├── base.cpython-310.pyc
-│   │   ├── daily_index_metadata.cpython-310.pyc
-│   │   └── submissions.cpython-310.pyc
 ├── notebooks/
 │   ├── 1_load_clean_exhibit.ipynb
 │   ├── 2_extract_clean_text.ipynb
@@ -90,13 +86,13 @@ edgar-app/
 │   │   ├── mrvl_8k_summary_2025-04-21.md
 │   │   └── nvda_8k_summary_2025-04-21.md
 ├── orchestrators/
+│   ├── __init__.py
 │   ├── base_orchestrator.py
+│   ├── batch_sgml_ingestion_orchestrator.py
 │   ├── daily_index_orchestrator.py
+│   ├── embedded_doc_orchestrator.py
+│   ├── sgml_doc_orchestrator.py
 │   └── submissions_ingestion_orchestrator.py
-│   ├── __pycache__/
-│   │   ├── base_orchestrator.cpython-310.pyc
-│   │   ├── daily_index_orchestrator.cpython-310.pyc
-│   │   └── submissions_ingestion_orchestrator.cpython-310.pyc
 ├── output/
 │   ├── 0001835632_metadata.json
 │   ├── mrvl_8-K_2025-04-14_blocks.txt
@@ -104,34 +100,70 @@ edgar-app/
 ├── parsers/
 │   ├── __init__.py
 │   ├── base_parser.py
-│   ├── daily_index_parser.py
+│   ├── embedded_doc_parser.py
 │   ├── exhibit_parser.py
-│   └── filing_parser.py
-│   ├── __pycache__/
-│   │   ├── __init__.cpython-310.pyc
-│   │   ├── base_parser.cpython-310.pyc
-│   │   ├── daily_index_parser.cpython-310.pyc
-│   │   └── filing_parser.cpython-310.pyc
+│   ├── index_page_parser.py
+│   └── sgml_filing_parser.py
+├── schemas/
+│   ├── __init__.py
+│   ├── index_record_model.py
+│   └── parsed_result_model.py
 ├── scripts/
 │   ├── __init__.py
+│   ├── cleanup_test_data.py
 │   ├── ingest_daily_index.py
 │   ├── ingest_from_source.py
+│   ├── ingest_sgml_batch_from_idx.py
+│   ├── ingest_sgml_from_cli.py
 │   ├── ingest_submissions.py
 │   ├── init_db.py
 │   ├── process_company_filings.py
+│   ├── test_postgres_connection.py
 │   └── test_query.py
 ├── services/
 │   └── metadata_fetcher.py
-│   ├── __pycache__/
-│   │   └── metadata_fetcher.cpython-310.pyc
+├── sql/
+│   ├── companies_metadata.sql
+│   ├── daily_index_metadata.sql
+│   ├── exhibit_metadata.sql
+│   ├── parsed_sgml_metadata.sql
+│   └── submissions_metadata.sql
+├── test_data/
+│   ├── 2025/
+│   │   ├── 1084869/
+│   │   │   ├── 4/
+│   │   │   │   ├── 000092189525001190/
+│   │   │   │   │   └── 0000921895-25-001190.txt
+│   │   ├── 1615727/
+│   │   │   ├── C-AR/
+│   │   │   │   ├── 000206360425000005/
+│   │   │   │   │   └── 0002063604-25-000005.txt
+│   │   ├── 2023635/
+│   │   │   ├── C-AR/
+│   │   │   │   ├── 000167025425000460/
+│   │   │   │   │   └── 0001670254-25-000460.txt
+│   │   │   ├── C-U/
+│   │   │   │   ├── 000167025425000459/
+│   │   │   │   │   └── 0001670254-25-000459.txt
+│   │   ├── 2065713/
+│   │   │   ├── D/
+│   │   │   │   ├── 000206571325000001/
+│   │   │   │   │   └── 0002065713-25-000001.txt
 ├── tests/
 │   ├── README.md
 │   ├── __init__.py
+│   ├── test_batch_sgml_ingestion_orchestrator.py
+│   ├── test_config_loader.py
 │   ├── test_exhibit_parser.py
 │   ├── test_file_saver.py
 │   ├── test_filing_writer.py
 │   ├── test_path_manager.py
+│   ├── test_report_logger.py
+│   ├── test_schemas_validation.py
 │   ├── test_sec_downloader.py
+│   ├── test_sgml_doc_orchestrator.py
+│   ├── test_sgml_doc_writer.py
+│   ├── test_sgml_parser_integration.py
 │   ├── test_submissions_collector.py
 │   ├── test_submissions_ingestion_orchestrator.py
 │   └── test_ticker_cik_mapper.py
@@ -140,20 +172,19 @@ edgar-app/
 │   │   └── test_filing_raw.html
 │   ├── tmp/
 ├── utils/
+│   ├── __init__.py
 │   ├── config_loader.py
+│   ├── database.py
+│   ├── field_mapper.py
 │   ├── file_saver.py
 │   ├── get_project_root.py
+│   ├── html_extractors.py
 │   ├── path_manager.py
 │   ├── path_utils.py
+│   ├── report_logger.py
+│   ├── sgml_utils.py
 │   ├── ticker_cik_mapper.py
 │   └── url_builder.py
-│   ├── __pycache__/
-│   │   ├── config_loader.cpython-310.pyc
-│   │   ├── get_project_root.cpython-310.pyc
-│   │   ├── path_manager.cpython-310.pyc
-│   │   ├── path_utils.cpython-310.pyc
-│   │   ├── ticker_cik_mapper.cpython-310.pyc
-│   │   └── url_builder.cpython-310.pyc
 │   ├── db/
 │   │   ├── __init__.py
 │   │   ├── db_connector.py
@@ -161,8 +192,6 @@ edgar-app/
 ├── writers/
 │   ├── base_writer.py
 │   ├── daily_index_writer.py
-│   └── filing_writer.py
-│   ├── __pycache__/
-│   │   ├── base_writer.cpython-310.pyc
-│   │   ├── daily_index_writer.cpython-310.pyc
-│   │   └── filing_writer.cpython-310.pyc
+│   ├── filing_writer.py
+│   ├── parsed_sgml_writer.py
+│   └── sgml_doc_writer.py

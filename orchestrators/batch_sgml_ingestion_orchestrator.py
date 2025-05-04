@@ -4,7 +4,7 @@ from orchestrators.sgml_doc_orchestrator import SgmlDocOrchestrator
 from writers.parsed_sgml_writer import ParsedSgmlWriter
 from utils.config_loader import ConfigLoader
 from utils.report_logger import append_ingestion_report, log_info, log_warn, log_error, append_batch_summary
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from utils.field_mapper import (
     get_accession_full, get_cik, get_form_type, get_filing_date
 )
@@ -30,7 +30,7 @@ class BatchSgmlIngestionOrchestrator(BaseOrchestrator):
 
         self.collector = DailyIndexCollector(user_agent=user_agent)
         self.parsed_writer = ParsedSgmlWriter()
-        self.single_orchestrator = SgmlDocOrchestrator(save_raw=True)
+        self.single_orchestrator = SgmlDocOrchestrator(save_raw=True, write_to_db=False)
 
     def orchestrate(self):
         """Top-level entry point required by BaseOrchestrator."""
@@ -38,7 +38,6 @@ class BatchSgmlIngestionOrchestrator(BaseOrchestrator):
     
     def run(self, date_str: str, limit: int = None):
         """Ingest all SGML filings for a given date from SEC's crawler.idx."""
-        run_id = str(uuid.uuid4())
 
         try:
             target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
@@ -53,6 +52,12 @@ class BatchSgmlIngestionOrchestrator(BaseOrchestrator):
             log_info(f"Limiting to first {limit} filings for testing.")
 
         log_info(f"Processing {len(filings_metadata)} filings from {target_date}...")
+
+        # ⏳ Track counters
+        attempted = len(filings_metadata)
+        skipped = 0
+        failed = 0
+        succeeded = 0
 
         for meta in filings_metadata:
             accession_full = get_accession_full(meta)
@@ -69,8 +74,7 @@ class BatchSgmlIngestionOrchestrator(BaseOrchestrator):
                 cik=cik,
                 accession_full=accession_full,
                 form_type=form_type,
-                filing_date=filing_date,
-                run_id=run_id
+                filing_date=filing_date
             )
 
             if not result:
@@ -90,46 +94,29 @@ class BatchSgmlIngestionOrchestrator(BaseOrchestrator):
 
             # 🔐 Validate before DB write
             try:
-                _ = ParsedResultModel(**parsed_result)
+                validated = ParsedResultModel(**parsed_result)
+
+                # Flatten metadata for writing
+                # Pydantic v2: use model_dump() instead of deprecated .dict()
+                metadata_flat = validated.metadata.model_dump()
+
+                # Write to DB
+                self.parsed_writer.write_metadata(metadata_flat)
+                self.parsed_writer.write_exhibits(
+                    exhibits=[ex.model_dump() for ex in validated.exhibits],
+                    accession_number=metadata_flat.get("accession_number", ""),
+                    cik=metadata_flat.get("cik", ""),
+                    form_type=metadata_flat.get("form_type", ""),
+                    filing_date=metadata_flat.get("filing_date", ""),
+                    primary_doc_url=metadata_flat.get("primary_document_url", "")
+                )
+
+                succeeded += 1
+
             except Exception as e:
-                log_error(f"[ERROR] Invalid parsed_result schema: {e}")
-                continue  # Skip or raise depending on strictness
-
-        # ⏳ Track counters
-        attempted = len(filings_metadata)
-        skipped = 0
-        failed = 0
-        succeeded = 0
-
-        for meta in filings_metadata:
-            # existing code...
-
-            if not (accession_full and cik and form_type):
-                log_warn(f"[SKIPPED] Incomplete metadata: {meta}")
-                skipped += 1
-                continue
-
-            result = self.single_orchestrator.run(
-                cik=cik,
-                accession_full=accession_full,
-                form_type=form_type,
-                filing_date=filing_date,
-                run_id=run_id
-            )
-            
-            if not result:
-                log_warn(f"[SKIPPED] No result returned for: {accession_full}")
+                log_error(f"[ERROR] Failed to validate or write parsed result: {e}")
                 failed += 1
                 continue
-
-            try:
-                _ = ParsedResultModel(**parsed_result)
-            except Exception as e:
-                log_error(f"[ERROR] Invalid parsed_result schema: {e}")
-                failed += 1
-                continue
-
-            succeeded += 1
 
         # ✅ After loop ends
         append_batch_summary(
@@ -137,7 +124,23 @@ class BatchSgmlIngestionOrchestrator(BaseOrchestrator):
             skipped=skipped,
             failed=failed,
             succeeded=succeeded,
-            run_id=run_id
+            log_date=date_str
         )            
+
+    def run_backfill(self, start_date: str, end_date: str):
+        """Run ingestion for a date range."""
+        try:
+            start = datetime.strptime(start_date, "%Y-%m-%d").date()
+            end = datetime.strptime(end_date, "%Y-%m-%d").date()
+        except ValueError:
+            raise ValueError("Invalid date format — use YYYY-MM-DD")
+
+        if start > end:
+            raise ValueError("Start date must be before or equal to end date")
+
+        current = start
+        while current <= end:
+            self.run(date_str=current.isoformat(), limit=self.limit)
+            current += timedelta(days=1)
 
 

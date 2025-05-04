@@ -10,15 +10,16 @@ from utils.path_manager import build_raw_filepath
 from utils.report_logger import log_info, log_debug, log_error, log_warn
 
 class SgmlDocOrchestrator:
-    def __init__(self, save_raw: bool = True, run_id: str = ""):
+    # write_to_db = true if running this orch isolated (outside the batch orch). Otherwise BatchSgmlIngestionOrchestrator tries to write 2x to `parsed_sgml_metadata`
+    def __init__(self, save_raw: bool = True, write_to_db: bool = False):
         self.config = ConfigLoader.load_config()
         self.base_data_path = self.config.get("storage", {}).get("base_data_path", "./data/")
-        print(f"[DEBUG] base_data_path resolved to: {self.base_data_path}")
+        log_debug(f"base_data_path resolved to: {self.base_data_path}")
         self.user_agent = self.config.get("sec_downloader", {}).get("user_agent")
         self.save_raw = save_raw
-        self.run_id = run_id
+        self.write_to_db = write_to_db
 
-    def run(self, cik: str, accession_full: str, form_type: str, filing_date: str, run_id: str = ""):
+    def run(self, cik: str, accession_full: str, form_type: str, filing_date: str):
         year = filing_date[:4]
 
         # ⚠️ accession_clean is for local use only — do not persist or pass downstream.
@@ -70,26 +71,27 @@ class SgmlDocOrchestrator:
         log_info(f"🔗 Likely Primary Document URL:\n{result['primary_document_url']}")
         
         # Write to database; We use accession_full (with dashes) to match the DB key field and avoid conflicts with the accession_clean rule.
-        writer = ParsedSgmlWriter()
-        try:
-            writer.write_metadata({
-                "accession_number": accession_full,
-                "cik": cik,
-                "form_type": form_type,
-                "filing_date": filing_date,
-                "primary_document_url": result["primary_document_url"]
-            })
-            writer.write_exhibits(
-                result["exhibits"],
-                accession_number=accession_full,
-                cik=cik,
-                form_type=form_type,
-                filing_date=filing_date,
-                primary_doc_url=result.get("primary_document_url", ""),
-                run_id=run_id
-            )
+        # Metadata and exhibits will be written by batch orchestrator after validation. Below code can be activated with a bool switch for isolated (outside batch orch) runs like this:
+        if self.write_to_db:
+            writer = ParsedSgmlWriter()
+            try:
+                writer.write_metadata({
+                    "accession_number": accession_full,
+                    "cik": cik,
+                    "form_type": form_type,
+                    "filing_date": filing_date,
+                    "primary_doc_url": result["primary_document_url"]
+                })
+                writer.write_exhibits(
+                    result["exhibits"],
+                    accession_number=accession_full,
+                    cik=cik,
+                    form_type=form_type,
+                    filing_date=filing_date,
+                    primary_doc_url=result.get("primary_document_url", "")
+                )
 
-        finally:
-            writer.close()
+            finally:
+                writer.close()
 
         return result
