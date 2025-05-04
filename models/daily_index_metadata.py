@@ -1,6 +1,7 @@
 # models/daily_index_metadata.py
 
 from sqlalchemy import Column, Text, Date, TIMESTAMP, text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from models.base import Base
 
 class DailyIndexMetadata(Base):
@@ -16,3 +17,4 @@ class DailyIndexMetadata(Base):
 
     created_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"))
     updated_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"))
+    sgml_meta = relationship("ParsedSgmlMetadata", uselist=False, back_populates="parent_index")

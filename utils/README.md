@@ -13,6 +13,7 @@ Helper modules to support path generation, logging, config loading, and field st
   - `filing_date`
 - `config_loader.py`: Loads `app_config.yaml`
 - `url_builder.py`: Constructs SEC URLs from CIK and accession.
+- `xml_backfill_utils.py`: Utility to populate xml_metadata from parsed_sgml_metadata
 
 ## Notes
 - Do not log `accession_clean` to DB or logs — filenames only.

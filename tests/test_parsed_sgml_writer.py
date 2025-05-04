@@ -1,51 +1,65 @@
-# tests/test_parsed_sgml_writer.py
+@echo off
+REM ===============================================
+REM Safe Harbor EDGAR AI Platform – Test Runner
+REM Project Root: edgar-app/
+REM ===============================================
+REM Features:
+REM - Recursively runs all test_*.py scripts under /tests/
+REM - Skips individual test scripts listed in SKIP_LIST (no .py extension)
+REM - Skips folders listed in SKIP_FOLDERS (e.g., tests\archived)
+REM - Uses `python -m` to maintain correct relative import paths
+REM ===============================================
 
-import unittest
-from unittest.mock import patch, MagicMock
-from writers.parsed_sgml_writer import ParsedSgmlWriter
+setlocal EnableDelayedExpansion
 
+REM Navigate to the root of edgar-app/ (this .bat file must live there)
+cd /d %~dp0
 
-class TestParsedSgmlWriter(unittest.TestCase):
-    def setUp(self):
-        self.writer = ParsedSgmlWriter()
+REM Optional: activate virtual environment (edit this if your venv folder differs)
+REM call edgar-env\Scripts\activate.bat
 
-    @patch("writers.parsed_sgml_writer.SessionLocal")
-    def test_write_metadata_success(self, mock_session_cls):
-        mock_session = MagicMock()
-        mock_session_cls.return_value = mock_session
-        self.writer.session = mock_session
+echo.
+echo === 🚀 Running Tests in edgar-app/tests ===
+echo.
 
-        metadata = {
-            "accession_number": "000001",
-            "cik": "1234567",
-            "form_type": "8-K",
-            "filing_date": "2025-01-01",
-            "primary_document_url": "https://sec.gov/test"
-        }
+REM List test files (by filename without extension) to skip
+set SKIP_LIST=test_deprecated test_old_collector
 
-        self.writer.write_metadata(metadata)
-        self.assertTrue(mock_session.add.called)
-        self.assertTrue(mock_session.commit.called)
+REM List folders to skip (relative to /tests/)
+set SKIP_FOLDERS=tests\archived
 
-    @patch("writers.parsed_sgml_writer.SessionLocal")
-    def test_write_exhibits_filters_and_commits(self, mock_session_cls):
-        mock_session = MagicMock()
-        mock_session.query.return_value.filter_by.return_value.first.return_value = None
-        mock_session_cls.return_value = mock_session
-        self.writer.session = mock_session
+REM Recursively run tests matching test_*.py
+for /R %%F in (tests\test_*.py) do (
+    set "SKIP=0"
 
-        exhibits = [
-            {"filename": "ex1.htm", "description": "D1", "type": "EX-99.1", "accessible": True},
-            {"filename": "ex2.htm", "description": "D2", "type": "EX-99.2", "accessible": False}
-        ]
-
-        self.writer.write_exhibits(
-            exhibits=exhibits,
-            accession_number="000001",
-            cik="1234567",
-            form_type="8-K",
-            filing_date="2025-01-01",
-            primary_doc_url="https://sec.gov/test"
+    REM Skip folders in SKIP_FOLDERS
+    for %%D in (%SKIP_FOLDERS%) do (
+        echo %%~fF | findstr /I /C:"%%~fD" >nul
+        if not errorlevel 1 (
+            set "SKIP=1"
         )
-        self.assertTrue(mock_session.commit.called)
+    )
 
+    REM Skip specific files in SKIP_LIST
+    for %%S in (%SKIP_LIST%) do (
+        echo %%~nF | findstr /I /C:"%%S" >nul
+        if not errorlevel 1 (
+            set "SKIP=1"
+        )
+    )
+
+    if "!SKIP!"=="0" (
+        REM Convert file path to Python module path (slashes → dots)
+        set "MODULE=%%~pnF"
+        set "MODULE=!MODULE:\=.!."
+        echo Running: python -m !MODULE!
+        python -m !MODULE!
+    ) else (
+        echo Skipping: %%F
+    )
+)
+
+echo.
+echo === ✅ Test run complete ===
+pause
+endlocal

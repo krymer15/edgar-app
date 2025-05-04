@@ -1,0 +1,260 @@
+<ownershipDocument>
+<schemaVersion>X0508</schemaVersion>
+<documentType>4</documentType>
+<periodOfReport>2025-04-24</periodOfReport>
+<notSubjectToSection16>0</notSubjectToSection16>
+<issuer>
+<issuerCik>0001084869</issuerCik>
+<issuerName>1 800 FLOWERS COM INC</issuerName>
+<issuerTradingSymbol>FLWS</issuerTradingSymbol>
+</issuer>
+<reportingOwner>
+<reportingOwnerId>
+<rptOwnerCik>0001959730</rptOwnerCik>
+<rptOwnerName>Fund 1 Investments, LLC</rptOwnerName>
+</reportingOwnerId>
+<reportingOwnerAddress>
+<rptOwnerStreet1>100 CARR 115</rptOwnerStreet1>
+<rptOwnerStreet2>UNIT 1900</rptOwnerStreet2>
+<rptOwnerCity>RINCON</rptOwnerCity>
+<rptOwnerState>PR</rptOwnerState>
+<rptOwnerZipCode>00677</rptOwnerZipCode>
+<rptOwnerStateDescription>PUERTO RICO</rptOwnerStateDescription>
+</reportingOwnerAddress>
+<reportingOwnerRelationship>
+<isDirector>0</isDirector>
+<isOfficer>0</isOfficer>
+<isTenPercentOwner>1</isTenPercentOwner>
+<isOther>0</isOther>
+<officerTitle/>
+<otherText/>
+</reportingOwnerRelationship>
+</reportingOwner>
+<reportingOwner>
+<reportingOwnerId>
+<rptOwnerCik>0002052009</rptOwnerCik>
+<rptOwnerName>PLP Funds Master Fund LP</rptOwnerName>
+</reportingOwnerId>
+<reportingOwnerAddress>
+<rptOwnerStreet1>100 CARR 115 UNIT 1900</rptOwnerStreet1>
+<rptOwnerStreet2/>
+<rptOwnerCity>RINCON</rptOwnerCity>
+<rptOwnerState>PR</rptOwnerState>
+<rptOwnerZipCode>00677</rptOwnerZipCode>
+<rptOwnerStateDescription>PUERTO RICO</rptOwnerStateDescription>
+</reportingOwnerAddress>
+<reportingOwnerRelationship>
+<isDirector>0</isDirector>
+<isOfficer>0</isOfficer>
+<isTenPercentOwner>1</isTenPercentOwner>
+<isOther>0</isOther>
+<officerTitle/>
+<otherText/>
+</reportingOwnerRelationship>
+</reportingOwner>
+<reportingOwner>
+<reportingOwnerId>
+<rptOwnerCik>0001580144</rptOwnerCik>
+<rptOwnerName>Pleasant Lake Partners LLC</rptOwnerName>
+</reportingOwnerId>
+<reportingOwnerAddress>
+<rptOwnerStreet1>100 CARR 115 UNIT 1900</rptOwnerStreet1>
+<rptOwnerStreet2/>
+<rptOwnerCity>RINCON</rptOwnerCity>
+<rptOwnerState>PR</rptOwnerState>
+<rptOwnerZipCode>00677</rptOwnerZipCode>
+<rptOwnerStateDescription>PUERTO RICO</rptOwnerStateDescription>
+</reportingOwnerAddress>
+<reportingOwnerRelationship>
+<isDirector>0</isDirector>
+<isOfficer>0</isOfficer>
+<isTenPercentOwner>1</isTenPercentOwner>
+<isOther>0</isOther>
+<officerTitle/>
+<otherText/>
+</reportingOwnerRelationship>
+</reportingOwner>
+<aff10b5One>0</aff10b5One>
+<nonDerivativeTable>
+<nonDerivativeTransaction>
+<securityTitle>
+<value>Class A Common Stock, $0.01 par value</value>
+</securityTitle>
+<transactionDate>
+<value>2025-04-24</value>
+</transactionDate>
+<deemedExecutionDate/>
+<transactionCoding>
+<transactionFormType>4</transactionFormType>
+<transactionCode>P</transactionCode>
+<equitySwapInvolved>0</equitySwapInvolved>
+</transactionCoding>
+<transactionTimeliness/>
+<transactionAmounts>
+<transactionShares>
+<value>16000</value>
+</transactionShares>
+<transactionPricePerShare>
+<value>5.3569</value>
+</transactionPricePerShare>
+<transactionAcquiredDisposedCode>
+<value>A</value>
+</transactionAcquiredDisposedCode>
+</transactionAmounts>
+<postTransactionAmounts>
+<sharesOwnedFollowingTransaction>
+<value>8536067</value>
+</sharesOwnedFollowingTransaction>
+</postTransactionAmounts>
+<ownershipNature>
+<directOrIndirectOwnership>
+<value>I</value>
+</directOrIndirectOwnership>
+<natureOfOwnership>
+<value>See Footnotes</value>
+<footnoteId id="F1"/>
+<footnoteId id="F2"/>
+</natureOfOwnership>
+</ownershipNature>
+</nonDerivativeTransaction>
+<nonDerivativeTransaction>
+<securityTitle>
+<value>Class A Common Stock, $0.01 par value</value>
+</securityTitle>
+<transactionDate>
+<value>2025-04-24</value>
+</transactionDate>
+<deemedExecutionDate/>
+<transactionCoding>
+<transactionFormType>4</transactionFormType>
+<transactionCode>P</transactionCode>
+<equitySwapInvolved>0</equitySwapInvolved>
+</transactionCoding>
+<transactionTimeliness/>
+<transactionAmounts>
+<transactionShares>
+<value>16847</value>
+</transactionShares>
+<transactionPricePerShare>
+<value>5.4231</value>
+</transactionPricePerShare>
+<transactionAcquiredDisposedCode>
+<value>A</value>
+</transactionAcquiredDisposedCode>
+</transactionAmounts>
+<postTransactionAmounts>
+<sharesOwnedFollowingTransaction>
+<value>8552914</value>
+</sharesOwnedFollowingTransaction>
+</postTransactionAmounts>
+<ownershipNature>
+<directOrIndirectOwnership>
+<value>I</value>
+</directOrIndirectOwnership>
+<natureOfOwnership>
+<value>See Footnotes</value>
+<footnoteId id="F1"/>
+<footnoteId id="F2"/>
+</natureOfOwnership>
+</ownershipNature>
+</nonDerivativeTransaction>
+<nonDerivativeTransaction>
+<securityTitle>
+<value>Class A Common Stock, $0.01 par value</value>
+</securityTitle>
+<transactionDate>
+<value>2025-04-25</value>
+</transactionDate>
+<deemedExecutionDate/>
+<transactionCoding>
+<transactionFormType>4</transactionFormType>
+<transactionCode>P</transactionCode>
+<equitySwapInvolved>0</equitySwapInvolved>
+</transactionCoding>
+<transactionTimeliness/>
+<transactionAmounts>
+<transactionShares>
+<value>100000</value>
+</transactionShares>
+<transactionPricePerShare>
+<value>5.4598</value>
+</transactionPricePerShare>
+<transactionAcquiredDisposedCode>
+<value>A</value>
+</transactionAcquiredDisposedCode>
+</transactionAmounts>
+<postTransactionAmounts>
+<sharesOwnedFollowingTransaction>
+<value>8652914</value>
+</sharesOwnedFollowingTransaction>
+</postTransactionAmounts>
+<ownershipNature>
+<directOrIndirectOwnership>
+<value>I</value>
+</directOrIndirectOwnership>
+<natureOfOwnership>
+<value>See Footnotes</value>
+<footnoteId id="F1"/>
+<footnoteId id="F2"/>
+</natureOfOwnership>
+</ownershipNature>
+</nonDerivativeTransaction>
+<nonDerivativeTransaction>
+<securityTitle>
+<value>Class A Common Stock, $0.01 par value</value>
+</securityTitle>
+<transactionDate>
+<value>2025-04-28</value>
+</transactionDate>
+<deemedExecutionDate/>
+<transactionCoding>
+<transactionFormType>4</transactionFormType>
+<transactionCode>P</transactionCode>
+<equitySwapInvolved>0</equitySwapInvolved>
+</transactionCoding>
+<transactionTimeliness/>
+<transactionAmounts>
+<transactionShares>
+<value>35000</value>
+</transactionShares>
+<transactionPricePerShare>
+<value>5.4173</value>
+</transactionPricePerShare>
+<transactionAcquiredDisposedCode>
+<value>A</value>
+</transactionAcquiredDisposedCode>
+</transactionAmounts>
+<postTransactionAmounts>
+<sharesOwnedFollowingTransaction>
+<value>8687914</value>
+</sharesOwnedFollowingTransaction>
+</postTransactionAmounts>
+<ownershipNature>
+<directOrIndirectOwnership>
+<value>I</value>
+</directOrIndirectOwnership>
+<natureOfOwnership>
+<value>See Footnotes</value>
+<footnoteId id="F1"/>
+<footnoteId id="F2"/>
+</natureOfOwnership>
+</ownershipNature>
+</nonDerivativeTransaction>
+</nonDerivativeTable>
+<footnotes>
+<footnote id="F1">Securities reported herein are held for the benefit of PLP Funds Master Fund LP (the "Master Fund") for which Pleasant Lake Partners LLC ("PLP") serves as investment adviser. Fund 1 Investments, LLC ("Fund 1") serves as managing member of PLP. Jonathan Lennon (together with Fund 1, PLP and Master Fund, the "Reporting Persons") serves as managing member of Fund 1. Each of the Reporting Persons disclaims beneficial ownership of the shares reported herein except to the extent of its or his pecuniary interest therein.</footnote>
+<footnote id="F2">Securities held for the account of Master Fund.</footnote>
+</footnotes>
+<ownerSignature>
+<signatureName>/s/ Fund 1 Investments, LLC By: Benjamin C. Cable, Chief Operating Officer</signatureName>
+<signatureDate>2025-04-28</signatureDate>
+</ownerSignature>
+<ownerSignature>
+<signatureName>/s/ PLP Funds Master Fund LP, by Pleasant Lake Partners LLC, its Investment Adviser, by Fund 1 Investments, LLC, its Managing Member By: Benjamin C. Cable, Chief Operating Officer</signatureName>
+<signatureDate>2025-04-28</signatureDate>
+</ownerSignature>
+<ownerSignature>
+<signatureName>/s/ Pleasant Lake Partners LLC, by Fund 1 Investments, LLC, its Managing Member By: Benjamin C. Cable, Chief Operating Officer</signatureName>
+<signatureDate>2025-04-28</signatureDate>
+</ownerSignature>
+</ownershipDocument>

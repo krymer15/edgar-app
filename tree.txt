@@ -1,4 +1,4 @@
-edgar-app/
+./
 ├── README.md
 ├── __init__,py
 ├── backup_postgres.bat
@@ -26,6 +26,7 @@ edgar-app/
 │   └── app_config.yaml
 ├── docs/
 │   ├── 8k_item_codes.txt
+│   ├── README.md
 │   ├── data_symlink_handling.md
 │   ├── path_generation_standards.md
 │   ├── project_naming_and_git_update.md
@@ -38,7 +39,7 @@ edgar-app/
 ├── infra/
 │   └── docker-compose.yml
 ├── logs/
-│   └── ingestion_report_2025-05-03.csv
+│   └── ingestion_report_2025-04-28.csv
 ├── migrations/
 │   └── add_downloaded_flag_to_submissions.sql
 ├── models/
@@ -47,6 +48,7 @@ edgar-app/
 │   ├── companies.py
 │   ├── daily_index_metadata.py
 │   ├── exhibit_metadata.py
+│   ├── form4_filing.py
 │   ├── parsed_sgml_metadata.py
 │   └── submissions.py
 ├── notebooks/
@@ -86,11 +88,13 @@ edgar-app/
 │   │   ├── mrvl_8k_summary_2025-04-21.md
 │   │   └── nvda_8k_summary_2025-04-21.md
 ├── orchestrators/
+│   ├── README.md
 │   ├── __init__.py
 │   ├── base_orchestrator.py
 │   ├── batch_sgml_ingestion_orchestrator.py
 │   ├── daily_index_orchestrator.py
 │   ├── embedded_doc_orchestrator.py
+│   ├── form4_xml_orchestrator.py
 │   ├── sgml_doc_orchestrator.py
 │   └── submissions_ingestion_orchestrator.py
 ├── output/
@@ -98,19 +102,32 @@ edgar-app/
 │   ├── mrvl_8-K_2025-04-14_blocks.txt
 │   └── mrvl_8-K_2025-04-14_raw.html
 ├── parsers/
+│   ├── README.md
 │   ├── __init__.py
 │   ├── base_parser.py
 │   ├── embedded_doc_parser.py
 │   ├── exhibit_parser.py
 │   ├── index_page_parser.py
 │   └── sgml_filing_parser.py
+│   ├── forms/
+│   │   ├── form10k_parser.py
+│   │   ├── form3_parser.py
+│   │   ├── form4_parser.py
+│   │   ├── form8k_parser.py
+│   │   └── forms1_parser.py
+│   ├── managers/
+│   │   └── filing_parser_manager.py
+│   ├── utils/
+│   │   └── parser_utils.py
 ├── schemas/
+│   ├── README.md
 │   ├── __init__.py
 │   ├── index_record_model.py
 │   └── parsed_result_model.py
 ├── scripts/
 │   ├── __init__.py
 │   ├── cleanup_test_data.py
+│   ├── clear_test_records.py
 │   ├── ingest_daily_index.py
 │   ├── ingest_from_source.py
 │   ├── ingest_sgml_batch_from_idx.py
@@ -123,9 +140,12 @@ edgar-app/
 ├── services/
 │   └── metadata_fetcher.py
 ├── sql/
+│   ├── clear_test_records.sql
 │   ├── companies_metadata.sql
 │   ├── daily_index_metadata.sql
 │   ├── exhibit_metadata.sql
+│   ├── form4_filings.sql
+│   ├── form4_transactions.sql
 │   ├── parsed_sgml_metadata.sql
 │   └── submissions_metadata.sql
 ├── test_data/
@@ -154,9 +174,12 @@ edgar-app/
 │   ├── __init__.py
 │   ├── test_batch_sgml_ingestion_orchestrator.py
 │   ├── test_config_loader.py
+│   ├── test_daily_index_collector.py
+│   ├── test_daily_index_writer.py
 │   ├── test_exhibit_parser.py
 │   ├── test_file_saver.py
 │   ├── test_filing_writer.py
+│   ├── test_parsed_sgml_writer.py
 │   ├── test_path_manager.py
 │   ├── test_report_logger.py
 │   ├── test_schemas_validation.py
@@ -170,9 +193,16 @@ edgar-app/
 │   ├── output/
 │   │   ├── test_filing_blocks.txt
 │   │   └── test_filing_raw.html
+│   ├── parsers/
+│   │   ├── __init__.py
+│   │   └── test_form4_parser.py
+│   │   ├── fixtures/
+│   │   │   └── form4_sample.xml
 │   ├── tmp/
 ├── utils/
+│   ├── README.md
 │   ├── __init__.py
+│   ├── bootstrap.py
 │   ├── config_loader.py
 │   ├── database.py
 │   ├── field_mapper.py
@@ -190,8 +220,10 @@ edgar-app/
 │   │   ├── db_connector.py
 │   │   └── vector_store.py
 ├── writers/
+│   ├── README.md
 │   ├── base_writer.py
 │   ├── daily_index_writer.py
 │   ├── filing_writer.py
+│   ├── form4_writer.py
 │   ├── parsed_sgml_writer.py
 │   └── sgml_doc_writer.py
