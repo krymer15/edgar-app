@@ -126,3 +126,25 @@ L4 – Filing Router + Orchestrator
 | 4.1   | `FilingParserManager`  | Routes content to correct parser (`Form4Parser`) based on form type |
 | 4.2   | `Form4XmlOrchestrator` | Coordinates: ingest XML → route → write → log                       |
 
+### Thoughts on two-layer Parser interface:
+
+```python
+class FilingParser:
+    def parse(self, filing_text: str) -> ParsedFiling:
+        pass
+
+class HTMLFilingParser(FilingParser):
+    def parse(self, filing_text: str) -> ParsedFiling:
+        # HTML parsing logic
+        pass
+
+class SGMLFilingParser(FilingParser):
+    def parse(self, filing_text: str) -> ParsedFiling:
+        # SGML parsing logic (later or stub for now)
+        pass
+```
+
+#### pipeline integration
+```rust
+Raw Filing -> ParserSelector (HTML or SGML) -> FilingParser -> ParsedFiling (text blocks, exhibits, metadata) -> Storage
+```

@@ -77,9 +77,7 @@ class SgmlDocOrchestrator:
             try:
                 writer.write_metadata({
                     "accession_number": accession_full,
-                    "cik": cik,
                     "form_type": form_type,
-                    "filing_date": filing_date,
                     "primary_doc_url": result["primary_document_url"]
                 })
                 writer.write_exhibits(

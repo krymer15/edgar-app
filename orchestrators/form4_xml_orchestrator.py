@@ -86,20 +86,14 @@ class Form4XmlOrchestrator(XmlOrchestratorBase):
             "filing_date": filing_date,
             "cik": cik,
             "form_type": form_type,
-            "source": "embedded",
         })
         self.writer.write_content(parsed)
 
         # ✅ Update XML metadata to mark parsed_successfully = True
         log_xml_metadata({
             "accession_number": accession_number,
-            "cik": cik,
-            "form_type": form_type,
             "filename": filename,
-            "url": url,
             "downloaded": True,  # assumed if we parsed it
-            "parsed_successfully": True,
-            "source": "embedded",
-            "content_type": "xml"
+            "parsed_successfully": True
         })
         self.logger(f"[INFO] Parsed + saved Form 4: {accession_number}")

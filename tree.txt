@@ -4,6 +4,7 @@
 ├── backup_postgres.bat
 ├── clear_pycache.bat
 ├── diagnostics_last_raw_href.txt
+├── form4_xml_metadata_starter_prompt.md
 ├── json_zip.py
 ├── manual_table_creation.py
 ├── market_data.py
@@ -12,6 +13,7 @@
 ├── run_tests.bat
 ├── start_postgres.bat
 ├── stop_postgres.bat
+├── test_debug.py
 ├── test_submissions.zip
 ├── tree.txt
 └── tree_view.py
@@ -22,6 +24,9 @@
 │   ├── base_collector.py
 │   ├── daily_index_collector.py
 │   └── submissions_collector.py
+│   ├── __pycache__/
+│   │   ├── base_collector.cpython-312.pyc
+│   │   └── daily_index_collector.cpython-312.pyc
 ├── config/
 │   └── app_config.yaml
 ├── docs/
@@ -35,11 +40,12 @@
 │   ├── base_downloader.py
 │   ├── daily_index_downloader.py
 │   ├── draft.py
+│   ├── form4_xml_downloader.py
 │   └── sec_downloader.py
 ├── infra/
 │   └── docker-compose.yml
 ├── logs/
-│   └── ingestion_report_2025-04-28.csv
+│   └── ingestion_report_2025-04-25.csv
 ├── migrations/
 │   └── add_downloaded_flag_to_submissions.sql
 ├── models/
@@ -50,7 +56,15 @@
 │   ├── exhibit_metadata.py
 │   ├── form4_filing.py
 │   ├── parsed_sgml_metadata.py
-│   └── submissions.py
+│   ├── submissions.py
+│   └── xml_metadata.py
+│   ├── __pycache__/
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── base.cpython-312.pyc
+│   │   ├── daily_index_metadata.cpython-312.pyc
+│   │   ├── exhibit_metadata.cpython-312.pyc
+│   │   ├── parsed_sgml_metadata.cpython-312.pyc
+│   │   └── xml_metadata.cpython-312.pyc
 ├── notebooks/
 │   ├── 1_load_clean_exhibit.ipynb
 │   ├── 2_extract_clean_text.ipynb
@@ -97,6 +111,13 @@
 │   ├── form4_xml_orchestrator.py
 │   ├── sgml_doc_orchestrator.py
 │   └── submissions_ingestion_orchestrator.py
+│   ├── __pycache__/
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── base_orchestrator.cpython-312.pyc
+│   │   ├── batch_sgml_ingestion_orchestrator.cpython-312.pyc
+│   │   └── sgml_doc_orchestrator.cpython-312.pyc
+│   ├── base/
+│   │   └── xml_orchestrator_base.py
 ├── output/
 │   ├── 0001835632_metadata.json
 │   ├── mrvl_8-K_2025-04-14_blocks.txt
@@ -109,6 +130,10 @@
 │   ├── exhibit_parser.py
 │   ├── index_page_parser.py
 │   └── sgml_filing_parser.py
+│   ├── __pycache__/
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── base_parser.cpython-312.pyc
+│   │   └── sgml_filing_parser.cpython-312.pyc
 │   ├── forms/
 │   │   ├── form10k_parser.py
 │   │   ├── form3_parser.py
@@ -124,10 +149,17 @@
 │   ├── __init__.py
 │   ├── index_record_model.py
 │   └── parsed_result_model.py
+│   ├── __pycache__/
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── index_record_model.cpython-312.pyc
+│   │   └── parsed_result_model.cpython-312.pyc
 ├── scripts/
+│   ├── README.md
 │   ├── __init__.py
+│   ├── backfill_xml_primary.py
 │   ├── cleanup_test_data.py
 │   ├── clear_test_records.py
+│   ├── debug_inspect_joined_sgml.py
 │   ├── ingest_daily_index.py
 │   ├── ingest_from_source.py
 │   ├── ingest_sgml_batch_from_idx.py
@@ -135,6 +167,7 @@
 │   ├── ingest_submissions.py
 │   ├── init_db.py
 │   ├── process_company_filings.py
+│   ├── run_form4_xml_ingest.py
 │   ├── test_postgres_connection.py
 │   └── test_query.py
 ├── services/
@@ -151,24 +184,61 @@
 ├── test_data/
 │   ├── 2025/
 │   │   ├── 1084869/
-│   │   │   ├── 4/
-│   │   │   │   ├── 000092189525001190/
-│   │   │   │   │   └── 0000921895-25-001190.txt
-│   │   ├── 1615727/
-│   │   │   ├── C-AR/
-│   │   │   │   ├── 000206360425000005/
-│   │   │   │   │   └── 0002063604-25-000005.txt
-│   │   ├── 2023635/
-│   │   │   ├── C-AR/
-│   │   │   │   ├── 000167025425000460/
-│   │   │   │   │   └── 0001670254-25-000460.txt
-│   │   │   ├── C-U/
-│   │   │   │   ├── 000167025425000459/
-│   │   │   │   │   └── 0001670254-25-000459.txt
-│   │   ├── 2065713/
+│   │   │   ├── 3/
+│   │   │   │   ├── 000143774925013050/
+│   │   │   │   │   └── 0001437749-25-013050.txt
+│   │   │   │   ├── 000143774925013089/
+│   │   │   │   │   └── 0001437749-25-013089.txt
+│   │   │   ├── 8-K/
+│   │   │   │   ├── 000143774925013070/
+│   │   │   │   │   └── 0001437749-25-013070.txt
+│   │   ├── 1319067/
+│   │   │   ├── NPORT-P/
+│   │   │   │   ├── 000200032425001468/
+│   │   │   │   │   └── 0002000324-25-001468.txt
+│   │   │   │   ├── 000200032425001474/
+│   │   │   │   │   └── 0002000324-25-001474.txt
+│   │   │   │   ├── 000200032425001480/
+│   │   │   │   │   └── 0002000324-25-001480.txt
+│   │   ├── 1690080/
+│   │   │   ├── 10-K/
+│   │   │   │   ├── A/
+│   │   │   │   │   ├── 000121390025035578/
+│   │   │   │   │   │   └── 0001213900-25-035578.txt
+│   │   ├── 1770787/
+│   │   │   ├── 13G/
+│   │   │   │   ├── A/
+│   │   │   │   │   ├── 000121465925006369/
+│   │   │   │   │   │   └── 0001214659-25-006369.txt
+│   │   ├── 1821468/
+│   │   │   ├── 20-F/
+│   │   │   │   ├── 000095017025058824/
+│   │   │   │   │   └── 0000950170-25-058824.txt
+│   │   │   ├── 6-K/
+│   │   │   │   ├── 000095017025058793/
+│   │   │   │   │   └── 0000950170-25-058793.txt
+│   │   ├── 1875534/
+│   │   │   ├── C/
+│   │   │   │   ├── A/
+│   │   │   │   │   ├── 000106299325007964/
+│   │   │   │   │   │   └── 0001062993-25-007964.txt
+│   │   ├── 2011834/
+│   │   │   ├── X-17A-5/
+│   │   │   │   ├── 000201183425000003/
+│   │   │   │   │   └── 0002011834-25-000003.txt
+│   │   ├── 2051992/
 │   │   │   ├── D/
-│   │   │   │   ├── 000206571325000001/
-│   │   │   │   │   └── 0002065713-25-000001.txt
+│   │   │   │   ├── A/
+│   │   │   │   │   ├── 000205199225000002/
+│   │   │   │   │   │   └── 0002051992-25-000002.txt
+│   │   ├── 2065590/
+│   │   │   ├── D/
+│   │   │   │   ├── 000206559025000002/
+│   │   │   │   │   └── 0002065590-25-000002.txt
+│   │   ├── 34782/
+│   │   │   ├── 8-K/
+│   │   │   │   ├── 000003478225000047/
+│   │   │   │   │   └── 0000034782-25-000047.txt
 ├── tests/
 │   ├── README.md
 │   ├── __init__.py
@@ -190,6 +260,7 @@
 │   ├── test_submissions_collector.py
 │   ├── test_submissions_ingestion_orchestrator.py
 │   └── test_ticker_cik_mapper.py
+│   ├── archived/
 │   ├── output/
 │   │   ├── test_filing_blocks.txt
 │   │   └── test_filing_raw.html
@@ -214,11 +285,25 @@
 │   ├── report_logger.py
 │   ├── sgml_utils.py
 │   ├── ticker_cik_mapper.py
-│   └── url_builder.py
+│   ├── url_builder.py
+│   └── xml_backfill_utils.py
+│   ├── __pycache__/
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── config_loader.cpython-312.pyc
+│   │   ├── database.cpython-312.pyc
+│   │   ├── field_mapper.cpython-312.pyc
+│   │   ├── get_project_root.cpython-312.pyc
+│   │   ├── path_manager.cpython-312.pyc
+│   │   ├── path_utils.cpython-312.pyc
+│   │   ├── report_logger.cpython-312.pyc
+│   │   ├── url_builder.cpython-312.pyc
+│   │   └── xml_backfill_utils.cpython-312.pyc
 │   ├── db/
 │   │   ├── __init__.py
 │   │   ├── db_connector.py
 │   │   └── vector_store.py
+│   ├── devtools/
+│   │   └── fixture_loader.py
 ├── writers/
 │   ├── README.md
 │   ├── base_writer.py
@@ -226,4 +311,9 @@
 │   ├── filing_writer.py
 │   ├── form4_writer.py
 │   ├── parsed_sgml_writer.py
-│   └── sgml_doc_writer.py
+│   ├── sgml_doc_writer.py
+│   └── xml_metadata_writer.py
+│   ├── __pycache__/
+│   │   ├── parsed_sgml_writer.cpython-312.pyc
+│   │   ├── sgml_doc_writer.cpython-312.pyc
+│   │   └── xml_metadata_writer.cpython-312.pyc

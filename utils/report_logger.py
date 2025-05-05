@@ -79,8 +79,11 @@ def append_batch_summary(total, skipped, failed, succeeded, output_path: str = N
 # === Logging functions ===
 
 def log_debug(message: str):
-    if _log_level == "DEBUG":
+    runtime_config = ConfigLoader.load_config()
+    level = runtime_config.get("app", {}).get("log_level", "INFO").upper()
+    if level == "DEBUG":
         print(f"🐛 {message}", file=sys.stdout)
+
 
 def log_info(message: str):
     if _log_level in ("DEBUG", "INFO"):

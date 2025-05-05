@@ -3,8 +3,11 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from models.parsed_sgml_metadata import ParsedSgmlMetadata
+from models.exhibit_metadata import ExhibitMetadata
+from models.daily_index_metadata import DailyIndexMetadata
 from models.xml_metadata import XmlMetadata
 from writers.xml_metadata_writer import log_xml_metadata
+from utils.url_builder import construct_primary_document_url
 
 TARGET_FORMS = {"3", "4", "5", "10-K", "10-Q", "8-K"}
 SEC_BASE = "https://www.sec.gov/"
@@ -12,22 +15,28 @@ SEC_BASE = "https://www.sec.gov/"
 def normalize_url(url: str) -> str:
     return url.strip().replace(SEC_BASE, "")
 
-def backfill_xml_from_primary_doc(session: Session, logger=print):
-    """Scan parsed_sgml_metadata for XML primary docs and log to xml_metadata."""
-    logger("🔍 Scanning primary_doc_url for XML-based filings...")
+def backfill_xml_from_exhibits(session: Session, logger=print):
+    """Scan exhibit_metadata for XML-based documents and log to xml_metadata."""
+    logger("📎 Scanning exhibit_metadata for XML-based exhibits...")
 
-    stmt = select(ParsedSgmlMetadata).where(
-        ParsedSgmlMetadata.primary_doc_url.ilike('%.xml'),
-        ParsedSgmlMetadata.form_type.in_(TARGET_FORMS)
+    stmt = (
+        select(ExhibitMetadata)
+        .join(ParsedSgmlMetadata, ExhibitMetadata.accession_number == ParsedSgmlMetadata.accession_number)
+        .join(DailyIndexMetadata, ParsedSgmlMetadata.accession_number == DailyIndexMetadata.accession_number)
+        .where(ExhibitMetadata.filename.ilike('%.xml'))
+        .where(DailyIndexMetadata.form_type.in_(TARGET_FORMS))
     )
 
     results = session.execute(stmt).scalars().all()
-    logger(f"Found {len(results)} XML primary docs to consider...")
+    logger(f"Found {len(results)} XML exhibits to consider...")
 
     count_inserted = 0
     for row in results:
-        filename = normalize_url(row.primary_doc_url)
-        url = row.primary_doc_url.strip()
+        filename = normalize_url(row.filename)
+
+        # Retrieve reliable CIK + form_type
+        parsed_sgml = session.get(ParsedSgmlMetadata, row.accession_number)
+        cik = parsed_sgml.parent_index.cik
 
         existing = session.execute(
             select(XmlMetadata).where(
@@ -41,16 +50,11 @@ def backfill_xml_from_primary_doc(session: Session, logger=print):
 
         log_xml_metadata({
             "accession_number": row.accession_number,
-            "cik": row.cik,
-            "form_type": row.form_type,
             "filename": filename,
-            "url": url,
             "downloaded": False,
             "parsed_successfully": False,
-            "source": "primary_doc",
-            "content_type": "xml"
         })
 
         count_inserted += 1
 
-    logger(f"✅ Backfill complete. {count_inserted} new XML records inserted.")
+    logger(f"✅ Backfill complete. {count_inserted} new XML exhibit records inserted.")

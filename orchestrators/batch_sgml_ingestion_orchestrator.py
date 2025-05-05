@@ -3,7 +3,7 @@ from collectors.daily_index_collector import DailyIndexCollector
 from orchestrators.sgml_doc_orchestrator import SgmlDocOrchestrator
 from writers.parsed_sgml_writer import ParsedSgmlWriter
 from utils.config_loader import ConfigLoader
-from utils.report_logger import append_ingestion_report, log_info, log_warn, log_error, append_batch_summary
+from utils.report_logger import append_ingestion_report, log_info, log_warn, log_error, append_batch_summary, log_debug
 from datetime import datetime, timezone, timedelta
 from utils.field_mapper import (
     get_accession_full, get_cik, get_form_type, get_filing_date
@@ -92,26 +92,34 @@ class BatchSgmlIngestionOrchestrator(BaseOrchestrator):
                 "exhibits": result.get("exhibits", []),
             }
 
+            log_debug(f"[DEBUG] Parsed metadata for {accession_number}:")
+            log_debug(f"  cik: {cik}")
+            log_debug(f"  form_type: {form_type}")
+            log_debug(f"  filing_date: {filing_date}")
+            log_debug(f"  primary_doc_url: {result.get('primary_document_url')}")
+
             # 🔐 Validate before DB write
             try:
                 validated = ParsedResultModel(**parsed_result)
 
                 # Flatten metadata for writing
-                # Pydantic v2: use model_dump() instead of deprecated .dict()
                 metadata_flat = validated.metadata.model_dump()
 
                 # Write to DB
-                self.parsed_writer.write_metadata(metadata_flat)
-                self.parsed_writer.write_exhibits(
-                    exhibits=[ex.model_dump() for ex in validated.exhibits],
-                    accession_number=metadata_flat.get("accession_number", ""),
-                    cik=metadata_flat.get("cik", ""),
-                    form_type=metadata_flat.get("form_type", ""),
-                    filing_date=metadata_flat.get("filing_date", ""),
-                    primary_doc_url=metadata_flat.get("primary_document_url", "")
-                )
-
-                succeeded += 1
+                write_success = self.parsed_writer.write_metadata(metadata_flat)
+                if write_success:
+                    self.parsed_writer.write_exhibits(
+                        exhibits=[ex.model_dump() for ex in validated.exhibits],
+                        accession_number=metadata_flat.get("accession_number", ""),
+                        cik=metadata_flat.get("cik", ""),
+                        form_type=metadata_flat.get("form_type", ""),
+                        filing_date=metadata_flat.get("filing_date", ""),
+                        primary_doc_url=metadata_flat.get("primary_document_url", "")
+                    )
+                    succeeded += 1
+                else:
+                    log_warn(f"⚠️ Skipping exhibit write — no parsed_sgml_metadata row found for: {accession_number}")
+                    failed += 1
 
             except Exception as e:
                 log_error(f"[ERROR] Failed to validate or write parsed result: {e}")
@@ -124,7 +132,7 @@ class BatchSgmlIngestionOrchestrator(BaseOrchestrator):
             skipped=skipped,
             failed=failed,
             succeeded=succeeded,
-            log_date=date_str
+            log_date=target_date
         )            
 
     def run_backfill(self, start_date: str, end_date: str):

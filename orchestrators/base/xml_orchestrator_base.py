@@ -44,7 +44,7 @@ class XmlOrchestratorBase(ABC):
             downloader.downloader.download_to_file(url, xml_path)
         except Exception as e:
             self.logger(f"[ERROR] Download failed: {e}")
-            self.log_xml_meta(meta, filename, url, downloaded=False, parsed=False)
+            self.log_xml_meta(meta, filename, downloaded=False, parsed=False)
             return
 
         try:
@@ -52,28 +52,23 @@ class XmlOrchestratorBase(ABC):
                 xml_content = f.read()
         except Exception as e:
             self.logger(f"[ERROR] Read failed: {e}")
-            self.log_xml_meta(meta, filename, url, downloaded=True, parsed=False)
+            self.log_xml_meta(meta, filename, downloaded=True, parsed=False)
             return
 
         parsed = self.parse_content(xml_content, meta)
         if "error" in parsed:
             self.logger(f"[ERROR] Parse error: {parsed['error']}")
-            self.log_xml_meta(meta, filename, url, downloaded=True, parsed=False)
+            self.log_xml_meta(meta, filename, downloaded=True, parsed=False)
             return
 
         self.write_to_db(parsed)
-        self.log_xml_meta(meta, filename, url, downloaded=True, parsed=True)
+        self.log_xml_meta(meta, filename, downloaded=True, parsed=True)
         self.logger(f"[INFO] Parsed + saved {form_type}: {accession_number}")
 
-    def log_xml_meta(self, meta: dict, filename: str, url: str, downloaded: bool, parsed: bool):
+    def log_xml_meta(self, meta: dict, filename: str, downloaded: bool, parsed: bool):
         log_xml_metadata({
             "accession_number": meta["accession_number"],
-            "cik": meta["cik"],
-            "form_type": meta["form_type"],
             "filename": filename,
-            "url": url,
             "downloaded": downloaded,
-            "parsed_successfully": parsed,
-            "source": "embedded",
-            "content_type": "xml"
+            "parsed_successfully": parsed
         })

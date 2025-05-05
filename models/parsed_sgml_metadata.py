@@ -12,9 +12,10 @@ class ParsedSgmlMetadata(Base):
     accession_number = mapped_column(
         Text, ForeignKey("daily_index_metadata.accession_number"), primary_key=True
     )
-    parent_index = relationship("DailyIndexMetadata", backref="sgml_filing")
+    parent_index = relationship("DailyIndexMetadata", back_populates="sgml_meta")
 
     primary_doc_url: Mapped[Optional[str]] = mapped_column(nullable=True)
+    form_type: Mapped[str] = mapped_column(Text, nullable=False)
 
     created_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"))
     updated_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"))

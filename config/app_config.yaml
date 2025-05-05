@@ -2,7 +2,7 @@
 app:
   name: "Safe Harbor EDGAR AI Platform"
   environment: "development"  # Options: development, staging, production
-  log_level: "INFO"
+  log_level: "DEBUG"
 
 # Database Settings
 database:

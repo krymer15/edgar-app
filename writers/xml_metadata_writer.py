@@ -26,14 +26,15 @@ def log_xml_metadata(entry: dict):
             # Update fields if already exists
             existing.downloaded = entry.get("downloaded", existing.downloaded)
             existing.parsed_successfully = entry.get("parsed_successfully", existing.parsed_successfully)
-            existing.url = entry.get("url", existing.url)
-            existing.source = entry.get("source", existing.source)
-            existing.content_type = entry.get("content_type", existing.content_type)
             session.commit()
             log_info(f"Updated XML metadata: {entry['accession_number']} - {entry['filename']}")
         else:
-            # Insert new
-            record = XmlMetadata(**entry)
+            # Remove redundant fields before model instantiation
+            filtered = {
+                k: v for k, v in entry.items()
+                if k in {"accession_number", "filename", "downloaded", "parsed_successfully"}
+            }
+            record = XmlMetadata(**filtered)
             session.add(record)
             session.commit()
             log_info(f"Inserted XML metadata: {entry['accession_number']} - {entry['filename']}")

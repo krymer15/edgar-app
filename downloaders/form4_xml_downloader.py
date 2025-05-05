@@ -1,7 +1,6 @@
 # downloaders/form4_xml_downloader.py
 
 import os
-from urllib.parse import urljoin
 
 from downloaders.sec_downloader import SecDownloader
 from utils.path_manager import build_raw_filepath
@@ -31,7 +30,7 @@ class Form4XmlDownloader:
         saved_files = []
 
         for filename in file_list:
-            url = self.build_sec_url(filename)
+            url = construct_primary_document_url(cik=self.cik, accession_number=self.accession, filename=filename)
             raw_path = build_raw_filepath(
                 year=self.year,
                 cik=self.cik,
@@ -52,19 +51,9 @@ class Form4XmlDownloader:
             # ✅ Log XML metadata (regardless of success)
             log_xml_metadata({
                 "accession_number": self.accession,
-                "cik": self.cik,
-                "form_type": self.form_type,
                 "filename": filename,
-                "url": url,
                 "downloaded": downloaded,
-                "parsed_successfully": False,  # will be updated later
-                "source": "embedded",
-                "content_type": "xml"
+                "parsed_successfully": False
             })
 
         return saved_files
-
-    def build_sec_url(self, filename: str) -> str:
-        # Assumes SEC XML is served under base path
-        base_url = f"https://www.sec.gov/Archives/edgar/data/{self.cik}/{self.accession.replace('-', '')}/"
-        return urljoin(base_url, filename)
