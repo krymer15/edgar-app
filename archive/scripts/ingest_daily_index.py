@@ -1,4 +1,6 @@
 # scripts/ingest_daily_index.py
+# DEPRECATED: Replaced by `ingest_sgml_batch_from_idx.py`
+
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))

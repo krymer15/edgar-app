@@ -26,26 +26,29 @@ python scripts/run_form4_xml_ingest.py \
 
 ### 🔧 How It Works
 - Loads project settings via .env and app_config.yaml
-
 - Inserts project root dynamically for safe imports
-
 - Uses SQLAlchemy session from utils/database.py
-
 - Uses Form4XmlOrchestrator to coordinate download → parse → write
 
 ### Notes
 Notes
-- All downloaded XML files are saved under /data/raw/{year}/{cik}/{form_type}/{accession}/filename.xml
-
+- Scripts are modular and orchestrator-driven.
+- Global CIK/form_type filtering is supported via `FilteredCikManager`.
+- Use `--skip_filter` in `ingest_sgml_batch_from_idx.py` to ingest all filings without filtering.
+- To avoid duplication, all writers use `merge()` for safe upserts in Postgres.
+- All downloaded XML files are saved under `/data/raw/{year}/{cik}/{form_type}/{accession}/filename.xml`
 - Only the file named via --filename is downloaded (not all XMLs under the accession)
-
 - Output is written to the form4_filings table in Postgres
-
 - This script is useful for spot-checking filings or prototyping parser changes
 
 ### Folder Summary
 
-| Script Name                     | Purpose                                     |
-| ------------------------------- | ------------------------------------------- |
-| `run_form4_xml_ingest.py`       | Ingest a specific Form 4 XML file           |
-| `ingest_sgml_batch_from_idx.py` | Batch ingest of all SGML filings for a date |
+| Script                               | Purpose                                                                 | Orchestrator(s) Used                                               | Populates `daily_index_metadata`? | Parses SGML?       |
+|--------------------------------------|-------------------------------------------------------------------------|--------------------------------------------------------------------|-----------------------------------|--------------------|
+| `ingest_daily_index.py`              | **Metadata-only ingestion** from `crawler.idx`                          | ✅ `DailyIndexOrchestrator`                                        | ✅ Yes                             | ❌ No               |
+| `ingest_from_source.py`              | Unified CLI for `daily_index` or `submissions_api` sources              | ✅ `DailyIndexOrchestrator` or `SubmissionsIngestionOrchestrator` | ✅ Yes (for daily\_index)          | ❌ No               |
+| `ingest_sgml_batch_from_idx.py`      | **Filtered SGML ingestion + optional metadata write**                   | ✅ `BatchSgmlIngestionOrchestrator`                                | ✅ If filtering is enabled         | ✅ Yes              |
+| `run_form4_xml_ingest.py`           | Ingest and parse a **single Form 4 XML** from SEC                       | ✅ `Form4XmlOrchestrator`                                          | ❌                                 | ✅ Yes (XML only)   |
+
+- UPDATE needed for above table. `ingest_daily_index.py` has been deprecated and replaced by `ingest_sgml_batch_from_idx.py`, which is the single source for filtered SGML parsing and `daily_index_metadata`.
+- `ingest_from_source.py` should only be used for the Submissions API pipeline.

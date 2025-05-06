@@ -1,3 +1,15 @@
+'''
+This CLI runner will:
+
+✅ Download and parse the crawler.idx file
+
+✅ Filter filings (unless --skip_filter is passed)
+
+✅ Write to daily_index_metadata
+
+✅ Parse SGML and write to parsed_sgml_metadata
+'''
+
 import sys
 import os
 
@@ -11,6 +23,7 @@ except ImportError:
 import argparse
 from utils.config_loader import ConfigLoader
 from orchestrators.batch_sgml_ingestion_orchestrator import BatchSgmlIngestionOrchestrator
+from utils.report_logger import log_info
 
 # ✅ Ensure project root is in sys.path — supports running from /scripts or /tests
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -28,7 +41,10 @@ parser.add_argument("--save_raw", action="store_true", help="Save raw .txt to di
 parser.add_argument("--date", help="Date to process crawler.idx (YYYY-MM-DD)", required=True)
 parser.add_argument("--limit", type=int, help="Optional: limit number of filings")
 parser.add_argument("--debug", action="store_true", help="Enable DEBUG logging level")
+parser.add_argument("--skip_filter", action="store_true", help="Skip global CIK/form_type filtering")
 args = parser.parse_args()
+
+log_info("📌 Note: This script also writes filtered filings to daily_index_metadata")
 
 # ✅ Override config log level at runtime
 if args.debug:
@@ -39,5 +55,10 @@ if __name__ == "__main__":
     if not args.date:
         raise ValueError("⚠️ Please provide --date YYYY-MM-DD to run the batch ingestion.")
     
-    orchestrator = BatchSgmlIngestionOrchestrator(date_str=args.date, limit=args.limit)
+    orchestrator = BatchSgmlIngestionOrchestrator(
+        date_str=args.date,
+        limit=args.limit,
+        override_filter=not args.skip_filter  # False if --skip_filter is set
+    )
+
     orchestrator.orchestrate()

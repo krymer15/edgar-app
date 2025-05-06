@@ -1,0 +1,105 @@
+- Form: 10-K
+  Category: Core Financial
+  Data_Format: XBRL, HTML
+  Priority: High
+  Key_Use: Annual financials, risk factors
+- Form: 10-Q
+  Category: Core Financial
+  Data_Format: XBRL, HTML
+  Priority: High
+  Key_Use: Quarterly updates
+- Form: 8-K
+  Category: Core Financial
+  Data_Format: HTML, SGML
+  Priority: High
+  Key_Use: Material events
+- Form: 20-F
+  Category: Core Financial
+  Data_Format: HTML, XBRL
+  Priority: Medium
+  Key_Use: Annual report for foreign issuers
+- Form: 6-K
+  Category: Core Financial
+  Data_Format: HTML
+  Priority: Medium
+  Key_Use: Interim foreign issuer reports
+- Form: Form 4
+  Category: Insider Activity
+  Data_Format: XML
+  Priority: High
+  Key_Use: Insider trades
+- Form: Form 3
+  Category: Insider Activity
+  Data_Format: XML
+  Priority: Medium
+  Key_Use: Initial insider holdings
+- Form: Form 5
+  Category: Insider Activity
+  Data_Format: XML
+  Priority: Medium
+  Key_Use: Annual insider updates
+- Form: 13D
+  Category: Institutional Ownership
+  Data_Format: HTML, SGML
+  Priority: High
+  Key_Use: Activist disclosures
+- Form: 13G
+  Category: Institutional Ownership
+  Data_Format: HTML, SGML
+  Priority: High
+  Key_Use: Passive institutional ownership
+- Form: 13F-HR
+  Category: Institutional Ownership
+  Data_Format: Text/XML
+  Priority: Medium
+  Key_Use: Quarterly fund holdings
+- Form: S-1
+  Category: Capital Markets
+  Data_Format: HTML
+  Priority: High
+  Key_Use: IPO filing
+- Form: F-1
+  Category: Capital Markets
+  Data_Format: HTML
+  Priority: High
+  Key_Use: Foreign IPO filing
+- Form: S-3
+  Category: Capital Markets
+  Data_Format: HTML
+  Priority: Medium
+  Key_Use: Follow-on registration
+- Form: 424B
+  Category: Capital Markets
+  Data_Format: HTML
+  Priority: Medium
+  Key_Use: IPO final terms
+- Form: S-4
+  Category: Capital Markets
+  Data_Format: HTML
+  Priority: Medium
+  Key_Use: M&A registration
+- Form: DEF 14A
+  Category: Governance
+  Data_Format: HTML
+  Priority: High
+  Key_Use: Executive comp and governance
+- Form: SC TO-I
+  Category: Governance
+  Data_Format: HTML
+  Priority: Medium
+  Key_Use: Tender offers
+- Form: SD
+  Category: Governance
+  Data_Format: HTML
+  Priority: Low
+  Key_Use: Conflict minerals (ESG)
+- Form: 10-D
+  Category: Structured Finance
+  Data_Format: HTML
+  Priority: Low
+  Key_Use: ABS distributions
+- Form: ABS-EE
+  Category: Structured Finance
+  Data_Format: XML
+  Priority: Low
+  Key_Use: Structured asset data

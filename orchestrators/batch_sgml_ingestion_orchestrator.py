@@ -2,6 +2,7 @@ from orchestrators.base_orchestrator import BaseOrchestrator
 from collectors.daily_index_collector import DailyIndexCollector
 from orchestrators.sgml_doc_orchestrator import SgmlDocOrchestrator
 from writers.parsed_sgml_writer import ParsedSgmlWriter
+from writers.daily_index_writer import DailyIndexWriter
 from utils.config_loader import ConfigLoader
 from utils.report_logger import append_ingestion_report, log_info, log_warn, log_error, append_batch_summary, log_debug
 from datetime import datetime, timezone, timedelta
@@ -10,6 +11,8 @@ from utils.field_mapper import (
 )
 from schemas.parsed_result_model import ParsedResultModel
 import uuid
+from utils.filtered_cik_manager import FilteredCikManager
+
 
 '''
 # ⚠️ ACCESSION_ USAGE POLICY
@@ -20,10 +23,11 @@ import uuid
 '''
 
 class BatchSgmlIngestionOrchestrator(BaseOrchestrator):
-    def __init__(self, date_str: str, limit: int = None):
+    def __init__(self, date_str: str, limit: int = None, override_filter: bool = None):
         super().__init__()
         self.date_str = date_str
         self.limit = limit
+        self.override_filter = override_filter
 
         config = ConfigLoader.load_config() 
         user_agent = config.get("sec_downloader", {}).get("user_agent", "SafeHarborBot/1.0")
@@ -44,32 +48,64 @@ class BatchSgmlIngestionOrchestrator(BaseOrchestrator):
         except ValueError:
             raise ValueError(f"Invalid date format: '{date_str}' — use YYYY-MM-DD")
 
+        # Pull and parse crawler.idx for target_date.
         log_info(f"Launching Batch SGML Ingestion for {target_date}")
-        filings_metadata = self.collector.collect(date=target_date)
+        full_filing_metadata = self.collector.collect(date=target_date)
 
+        index_writer = DailyIndexWriter()
+
+        config = ConfigLoader.load_config()
+        form_types_to_track = config.get("ingestion", {}).get("filing_forms_to_track", [])
+        cik_allowlist_path = config.get("storage", {}).get("company_mapping_path", "data/raw/company_tickers.json")
+
+        apply_filter = config.get("ingestion", {}).get("apply_global_filter", True)
+        if self.override_filter is not None:
+            apply_filter = self.override_filter
+
+        if apply_filter:
+            filter_mgr = FilteredCikManager(
+                cik_allowlist_path=cik_allowlist_path,
+                allowed_form_types=form_types_to_track
+            )
+            filtered_metadata = filter_mgr.filter(full_filing_metadata)
+            log_info(f"🔍 Filtered {len(full_filing_metadata)} → {len(filtered_metadata)} filings based on CIK + form_type")
+            index_writer.write(filtered_metadata) # Write only filtered
+        else:
+            log_info("⚠️ Skipping global filter...")
+            filtered_metadata = FilteredCikManager(
+                cik_allowlist_path=cik_allowlist_path,
+                allowed_form_types=form_types_to_track
+            ).filter(full_filing_metadata)  # ✅ still filter for parsing
+            index_writer.write(full_filing_metadata) # Write all to `daily_index_metadata`
+
+        # Dev Testing Only; defaults to None
         if limit:
-            filings_metadata = filings_metadata[:limit]
+            full_filing_metadata = full_filing_metadata[:limit]
             log_info(f"Limiting to first {limit} filings for testing.")
 
-        log_info(f"Processing {len(filings_metadata)} filings from {target_date}...")
+        log_info(f"Processing {len(full_filing_metadata)} filings from {target_date}...")
 
         # ⏳ Track counters
-        attempted = len(filings_metadata)
+        attempted = len(filtered_metadata)
         skipped = 0
         failed = 0
         succeeded = 0
 
-        for meta in filings_metadata:
+        # Main Parsing Loop
+        for meta in filtered_metadata:
+            # Extract key fields from metadata dict.
             accession_full = get_accession_full(meta)
             accession_number = accession_full  # ✅ Needed for writer compatibility
             cik = get_cik(meta)
             form_type = get_form_type(meta)
             filing_date = get_filing_date(meta)
 
+            # Skip entries with missing fields.
             if not (accession_full and cik and form_type):
                 log_warn(f"[SKIPPED] Incomplete metadata: {meta}")
                 continue
 
+            # Run SgmlDocOrchestrator: download SGML, parse it using SgmlFilingParser and return result dict with `primary_doc_url` and `exhibits`.
             result = self.single_orchestrator.run(
                 cik=cik,
                 accession_full=accession_full,
@@ -81,6 +117,8 @@ class BatchSgmlIngestionOrchestrator(BaseOrchestrator):
                 log_warn(f"[SKIPPED] No result returned for: {accession_full}")
                 continue
 
+            ## Post-parse validation and DB Write
+            # Wraps into a Pydantic model for validation.
             parsed_result = {
                 "metadata": {
                     "cik": cik,
@@ -105,8 +143,10 @@ class BatchSgmlIngestionOrchestrator(BaseOrchestrator):
                 # Flatten metadata for writing
                 metadata_flat = validated.metadata.model_dump()
 
-                # Write to DB
+                # Write to `parsed_sgml_metadata` table.
                 write_success = self.parsed_writer.write_metadata(metadata_flat)
+                
+                # Write exhibits to `exhibit_metadata` ONLY IF metadata write above succeeded.
                 if write_success:
                     self.parsed_writer.write_exhibits(
                         exhibits=[ex.model_dump() for ex in validated.exhibits],
@@ -126,7 +166,7 @@ class BatchSgmlIngestionOrchestrator(BaseOrchestrator):
                 failed += 1
                 continue
 
-        # ✅ After loop ends
+        # Batch Summary Logging after Parsing Loop ends. Appends totals to the daily log CSV report.
         append_batch_summary(
             total=attempted,
             skipped=skipped,
@@ -136,7 +176,7 @@ class BatchSgmlIngestionOrchestrator(BaseOrchestrator):
         )            
 
     def run_backfill(self, start_date: str, end_date: str):
-        """Run ingestion for a date range."""
+        # Run ingestion for a date range. Repeatedly calls `run()` over a date range using `timedelta(days-1)`
         try:
             start = datetime.strptime(start_date, "%Y-%m-%d").date()
             end = datetime.strptime(end_date, "%Y-%m-%d").date()

@@ -1,0 +1,21 @@
+# Auto-normalize all text files
+* text=auto
+
+# Use LF for cross-platform critical files
+*.sh text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.csv text eol=lf
+*.json text eol=lf
+
+# Leave binary files alone
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.exe binary
+*.zip binary
+*.tar binary
