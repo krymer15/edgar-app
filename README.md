@@ -2,6 +2,8 @@
 
 A modular, scalable platform for SEC EDGAR filings ingestion, AI-driven parsing, and future vector search integration.
 
+Resource links: https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data
+
 ---
 ## SEC Forms to include for analysis
 Core Financial Reporting:

@@ -1,0 +1,80 @@
+# Form Type Rules – Safe Harbor EDGAR AI Platform
+# Last updated: 2025-05-07
+# -----------------------------------------------
+# Used to filter SEC filings by material value.
+# Developers: Each section below defines groups of form types by investment relevance.
+# You can read this config directly from orchestration and parsing logic.
+# 
+# NOTE:
+# - Only canonical SEC `form_type` values are listed.
+# - Use `include_amendments: true` to automatically match '*/A' variations (e.g., '13D' + '13D/A').
+
+include_amendments: true
+
+form_type_rules:
+
+  core:
+    registration: # IPOs, follow-ons, shelf registrations
+      - '8A-12B'
+      - '10-12B'   # Spin-off registrations
+      - '144'
+      - '424B1'    # Prospectus
+      - '424B3'    # Prospectus
+      - '424B4'    # Prospectus
+      - '424B5'    # Prospectus
+      - '425'      # Prospectuses and communications – Written disclosures and communications in connection with a business combination where securities are part of the consideration.
+      - 'F-1'      # Short-Form Registration Statement (Foreign)
+      - 'F-3'      # Short-Form Registration Statement (Foreign)
+      - 'F-4'
+      - 'S-1'      # Registration Statement (Foreign)
+      - 'S-3'      # Registration Statement 
+      - 'S-4'      # Registration statement – Filed when the company is registering securities to be used as consideration in the merger or acquisition.
+      - 'S-8'      # Employee Benefit Plans
+
+    ownership: # Insider and 5% owner disclosures
+      insider:
+        - '3'
+        - '4'
+        - '5'
+      beneficial:
+        - '13D'        # >5% active stake
+        - '13G'        # >5% passive stake
+        - '13F-HR'     # Institutional investment managers
+
+    governance: # Proxy materials (DEF 14A family)
+      proxy:
+        - 'DEF 14A'
+        - 'DEF 14C'
+        - 'DEFA14A'
+        - 'DEFA14C'
+        - 'DEFR14A'
+        - 'PRE 14A'
+
+    merger_tender_offers: # Tender offers, going private, M&A
+      - '13E-1'
+      - '13E-3'
+      - '14D9'      # Solicitation/recommendation
+      - '14F1'
+      - '425'
+      - 'DEFM14A'   # Definitive proxy for M&A
+      - 'PREM14A'   # Preliminary proxy for M&A
+      - 'S-4'
+      - 'TO-C'
+      - 'TO-I'
+      - 'TO-T'
+
+    terminations: # High-Signal, low frequency
+      - '15-12B'   # Termination under Exchange Act
+      - '15-12G'   # Deregistration (smaller companies)
+      - '15-15D'   # Deregistration from reporting
+      - '25'       # Exchange delisting notification
+      - '25-NSE'   # Non-systematic delisting
+
+    Reporting:
+      - '10-K'
+      - '10-Q'
+      - '20-F'     # Foreign Annual report
+      - '40-F'     # Canadian companies dual-listed - annual report
+      - '6-K'      # Foreign Report
+      - '8-K'
+      - 'ARS'      # Access to Company's PDF Report

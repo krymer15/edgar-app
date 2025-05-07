@@ -58,7 +58,7 @@ if __name__ == "__main__":
     orchestrator = BatchSgmlIngestionOrchestrator(
         date_str=args.date,
         limit=args.limit,
-        override_filter=not args.skip_filter  # False if --skip_filter is set
+        override_filter=False if args.skip_filter else None
     )
 
     orchestrator.orchestrate()

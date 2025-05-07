@@ -64,9 +64,9 @@ class SgmlDocOrchestrator:
         parser = SgmlFilingParser(cik=cik, accession_number=accession_clean, form_type=form_type)
         result = parser.parse(sgml_contents)
 
-        for ex in result["exhibits"]:
-            tag = "✅" if ex.get("accessible", True) else "❌"
-            log_info(f"{tag} {ex['filename']} | {ex['description']} | {ex['type']}")
+        # for ex in result["exhibits"]:
+        #     tag = "✅" if ex.get("accessible", True) else "❌"
+        #     log_info(f"{tag} {ex['filename']} | {ex['description']} | {ex['type']}")
 
         log_info(f"🔗 Likely Primary Document URL:\n{result['primary_document_url']}")
         

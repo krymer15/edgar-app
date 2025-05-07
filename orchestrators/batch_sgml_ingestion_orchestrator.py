@@ -69,14 +69,14 @@ class BatchSgmlIngestionOrchestrator(BaseOrchestrator):
             )
             filtered_metadata = filter_mgr.filter(full_filing_metadata)
             log_info(f"🔍 Filtered {len(full_filing_metadata)} → {len(filtered_metadata)} filings based on CIK + form_type")
-            index_writer.write(filtered_metadata) # Write only filtered
+            index_writer.write(filtered_metadata) # Write only filtered to `daily_index_metadata`
         else:
             log_info("⚠️ Skipping global filter...")
+            index_writer.write(full_filing_metadata) # Write all to `daily_index_metadata` before filtering
             filtered_metadata = FilteredCikManager(
                 cik_allowlist_path=cik_allowlist_path,
                 allowed_form_types=form_types_to_track
             ).filter(full_filing_metadata)  # ✅ still filter for parsing
-            index_writer.write(full_filing_metadata) # Write all to `daily_index_metadata`
 
         # Dev Testing Only; defaults to None
         if limit:

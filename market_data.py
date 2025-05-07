@@ -1,5 +1,6 @@
 # edgar-app/market_data.py
 
+import json
 import yfinance as yf
 from datetime import datetime
 
@@ -27,4 +28,18 @@ def get_stock_price_change_yf(symbol: str) -> str:
 
     except Exception as e:
         return f"Real-time price lookup failed: {e}"
+
+def get_market_cap(ticker: str) -> float:
+    """
+    Return the market cap of the given ticker using yfinance.
+    
+    Returns:
+        float: Market capitalization in dollars, or None if not found.
+    """
+    try:
+        yf_data = yf.Ticker(ticker)
+        return yf_data.info.get("marketCap")
+    except Exception as e:
+        print(f"❌ Error getting market cap for {ticker}: {e}")
+        return None
 
