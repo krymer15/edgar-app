@@ -35,7 +35,7 @@ def test_cli_runs_with_date(monkeypatch, mock_orchestrator_run):
     monkeypatch.setattr(sys, "argv", test_args)
     run_daily_metadata_ingest.main()
 
-    mock_orchestrator_run.assert_called_once_with(date_str="2024-12-20", limit=10)
+    mock_orchestrator_run.assert_called_once_with(date_str="2024-12-20", limit=10, include_forms=None)
 
 
 def test_cli_runs_with_backfill(monkeypatch, mock_orchestrator_run):
@@ -72,3 +72,17 @@ def test_cli_fails_with_invalid_date_format(monkeypatch):
         run_daily_metadata_ingest.main()
     # argparse exits with code 2 on argument parse error
     assert exc_info.value.code == 2
+
+def test_cli_runs_with_include_forms(monkeypatch, mock_orchestrator_run):
+    test_args = [
+        "run_daily_metadata_ingest.py",
+        "--date",
+        "2024-12-20",
+        "--include_forms",
+        "10-K",
+        "8-K",
+    ]
+    monkeypatch.setattr(sys, "argv", test_args)
+    run_daily_metadata_ingest.main()
+
+    mock_orchestrator_run.assert_called_once_with(date_str="2024-12-20", limit=None, include_forms=["10-K", "8-K"])

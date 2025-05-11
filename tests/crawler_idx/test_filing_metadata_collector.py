@@ -41,3 +41,8 @@ def test_collect_returns_filing_metadata_list():
     assert isinstance(results, list)
     assert all(isinstance(r, FilingMetadata) for r in results)
     assert len(results) > 0
+
+def test_collect_filters_by_include_forms():
+    collector = FilingMetadataCollector(user_agent="test-agent")
+    results = collector.collect(SAMPLE_DATE, include_forms=["10-K"])
+    assert all(r.form_type == "10-K" for r in results)

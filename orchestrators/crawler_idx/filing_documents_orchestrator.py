@@ -2,53 +2,33 @@
 
 # Parses SGML .txt to populate filing_documents
 
-from models.parsed_document import ParsedDocument
-from models.filing_metadata import FilingMetadata
+from orchestrators.base_orchestrator import BaseOrchestrator
+from collectors.crawler_idx.filing_documents_collector import FilingDocumentsCollector
 from writers.crawler_idx.filing_documents_writer import FilingDocumentsWriter
-from parsers.sgml_document_processor import SgmlDocumentProcessor
-from utils.path_utils import build_path_args
-from models.database import SessionLocal
+from models.database import get_db_session
 from config.config_loader import ConfigLoader
-from utils.report_logger import log_info, log_error, log_warn
-from utils.url_builder import construct_sgml_txt_url
+from utils.report_logger import log_info, log_warn
 
-class FilingDocumentsOrchestrator:
-    def __init__(self, limit: int = 100):
-        self.session = SessionLocal()
-        self.writer = FilingDocumentsWriter()
-        self.limit = limit
+class FilingDocumentsOrchestrator(BaseOrchestrator):
+    def __init__(self):
         config = ConfigLoader.load_config()
-        self.processor = SgmlDocumentProcessor(
-            user_agent=config.get("sec_downloader", {}).get("user_agent", "SafeHarborBot/1.0")
-        )
+        self.user_agent = config.get("sec_downloader", {}).get("user_agent", "SafeHarborBot/1.0")
+        self.db_session = get_db_session()
+        self.collector = FilingDocumentsCollector(db_session=self.db_session, user_agent=self.user_agent)
+        self.writer = FilingDocumentsWriter(db_session=self.db_session)
 
-    def orchestrate(self, limit: int):
-        filings = self.session.query(FilingMetadata).limit(limit).all()
-        for record in filings:
-            try:
-                self.process_record(record)
-            except Exception as e:
-                log_error(f"Failed to process {record.accession_number}: {e}")
-        self.session.close()
+    def orchestrate(self, target_date: str, limit: int = None):
+        try:
+            documents = self.collector.collect(target_date)
+            if limit:
+                documents = documents[:limit]
+            log_info(f"[DOCS] Collected {len(documents)} filing documents for {target_date}")
+            self.writer.write_documents(documents)
+        except Exception as e:
+            log_warn(f"[DOCS] Error during orchestrate(): {e}")
+            raise
 
-    def process_record(self, record: FilingMetadata):
-        log_info(f"🔍 Processing {record.accession_number}")
-
-        sgml_url = construct_sgml_txt_url(record.cik, record.accession_number) # Construct SGML .txt. URL
-
-        parsed_documents = self.processor.process(
-            cik=record.cik,
-            accession_number=record.accession_number,
-            form_type=record.form_type,
-            sgml_url=sgml_url
-        )
-
-        log_info(f"📄 Parsed {len(parsed_documents)} documents for {record.accession_number}")
-        if not parsed_documents:
-            log_warn(f"No documents parsed from {record.accession_number}")
-        self.writer.write_documents(parsed_documents)
-
-    def run(self, date_str: str, limit: int):
-        print(f"Running FilingDocumentsOrchestrator for {date_str}")  # 👈 for CLI test capture
-        log_info(f"Running FilingDocumentsOrchestrator for {date_str}")
-        self.orchestrate(limit=limit)
+    def run(self, target_date: str, limit: int = None):
+        log_info(f"[DOCS] Starting document ingestion for {target_date}")
+        self.orchestrate(target_date, limit)
+        log_info(f"[DOCS] Completed document ingestion for {target_date}")

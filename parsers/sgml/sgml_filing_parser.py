@@ -9,7 +9,7 @@ import re
 from typing import List, Optional
 from utils.url_builder import construct_primary_document_url, normalize_cik
 from parsers.base_parser import BaseParser
-from models.parsed_document import ParsedDocument
+from models.dataclasses.parsed_document import ParsedDocument
 from utils.report_logger import log_debug
 
 IGNORE_EXTENSIONS = (

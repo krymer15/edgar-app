@@ -1,17 +1,22 @@
 CREATE TABLE filing_documents (
-  id UUID PRIMARY KEY,
-  cik TEXT NOT NULL,
-  accession_number TEXT NOT NULL,
-  form_type TEXT NOT NULL,
-  filing_date DATE,
-  document_type TEXT,             -- e.g., 'EX-99.1'
-  filename TEXT,
-  description TEXT,
-  source_url TEXT,
-  is_primary BOOLEAN DEFAULT FALSE,
-  is_exhibit BOOLEAN DEFAULT FALSE,
-  is_data_support BOOLEAN DEFAULT FALSE,
-  source_type TEXT,                -- 'sgml', 'index_html', 'inferred'
-  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+	id uuid DEFAULT gen_random_uuid() NOT NULL,
+	accession_number text NOT NULL,
+	cik text NOT NULL,
+	document_type text NULL,
+	filename text NULL,
+	description text NULL,
+	source_url text NULL,
+	source_type text NULL,
+	is_primary bool DEFAULT false NULL,
+	is_exhibit bool DEFAULT false NULL,
+	is_data_support bool DEFAULT false NULL,
+	accessible bool DEFAULT true NULL,
+	created_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT filing_documents_pkey PRIMARY KEY (id)
 );
+
+
+-- filing_documents foreign keys
+
+ALTER TABLE filing_documents ADD CONSTRAINT filing_documents_accession_number_fkey FOREIGN KEY (accession_number) REFERENCES filing_metadata(accession_number);

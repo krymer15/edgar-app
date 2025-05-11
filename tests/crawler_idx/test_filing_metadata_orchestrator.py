@@ -44,7 +44,7 @@ def test_orchestrator_calls_collector_and_writer(mock_writer_cls, mock_collector
     orchestrator.run("2024-12-31")
 
     # Assertions
-    mock_collector.collect.assert_called_once_with("2024-12-31")
+    mock_collector.collect.assert_called_once_with("2024-12-31", include_forms=None)
     mock_writer.upsert_many.assert_called_once_with(mock_metadata)
 
 def test_orchestrator_respects_limit(mock_metadata):
@@ -62,7 +62,7 @@ def test_orchestrator_respects_limit(mock_metadata):
         orchestrator = FilingMetadataOrchestrator()
         orchestrator.run("2024-12-31", limit=2)
 
-        mock_collector.collect.assert_called_once_with("2024-12-31")
+        mock_collector.collect.assert_called_once_with("2024-12-31", include_forms=None)
 
         # Ensure only 2 records were passed to writer
         args, _ = mock_writer.upsert_many.call_args

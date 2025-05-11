@@ -16,9 +16,9 @@ class FilingMetadataOrchestrator(BaseOrchestrator):
         self.collector = FilingMetadataCollector(user_agent=user_agent)
         self.writer = FilingMetadataWriter()
 
-    def orchestrate(self, date_str: str, limit: int = None):
+    def orchestrate(self, date_str: str, limit: int = None, include_forms: list[str] = None):
         try:
-            parsed_records: list[FilingMetadata] = self.collector.collect(date_str)
+            parsed_records: list[FilingMetadata] = self.collector.collect(date_str, include_forms=include_forms)
             if limit:
                 parsed_records = parsed_records[:limit]
             log_info(f"[META] Collected {len(parsed_records)} filing metadata records for {date_str}")
@@ -27,7 +27,7 @@ class FilingMetadataOrchestrator(BaseOrchestrator):
             log_warn(f"[META] Error during orchestrate(): {e}")
             raise
 
-    def run(self, date_str: str, limit: int = None):
+    def run(self, date_str: str, limit: int = None, include_forms: list[str] = None):
         log_info(f"[META] Starting metadata ingestion for {date_str}")
         self.orchestrate(date_str, limit)
         log_info(f"[META] Completed metadata ingestion for {date_str}")

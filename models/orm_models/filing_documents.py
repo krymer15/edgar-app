@@ -1,8 +1,10 @@
 # models/orm_models/filing_document.py
+
 from sqlalchemy import Column, Text, Boolean, TIMESTAMP, ForeignKey, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from models.base import Base
+from uuid import uuid4 # for SQLite testing compatibility
 
 class FilingDocument(Base):
     __tablename__ = "filing_documents"
@@ -10,7 +12,8 @@ class FilingDocument(Base):
     id                = Column(
                           UUID(as_uuid=True),
                           primary_key=True,
-                          server_default=text("gen_random_uuid()"),
+                          default=uuid4, # used only by SQLAlchemy in tests (e.g., SQLite)
+                          server_default=text("gen_random_uuid()"), # used by Postgres in production
                           nullable=False
                         )
     accession_number  = Column(

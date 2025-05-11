@@ -1,3 +1,31 @@
+# CLI Scripts
+
+These scripts are entry points for running individual pipeline modules, typically invoked by a daily scheduler or meta-orchestrator.
+
+## Filing Metadata Ingestion
+- `scripts/crawler_idx/run_daily_metadata_ingest.py`
+- Supports `--date`, `--backfill`, `--limit`
+
+## Filing Documents Ingestion
+- `scripts/crawler_idx/run_daily_documents_ingest.py`
+- Supports `--date`, `--limit`
+- `--skip_forms` is planned but not yet implemented. This will allow form-type level exclusion (e.g. `424B2`, `8-K`) at the document ingestion layer.
+
+## Filtering by Form Type: `--include_forms`
+
+The metadata ingestion CLI (`run_daily_metadata_ingest.py`) now supports form type filtering via:
+`python scripts/crawler_idx/run_daily_metadata_ingest.py --date 2025-05-10 --include_forms 10-K 8-K S-1`
+
+If not provided, it defaults to the form types defined under `crawler_idx.include_forms_default` in `app_config.yaml`.
+
+This allows modular form-type-level ingestion and will support specialized pipelines (e.g., IPOs, Form 4, 10-K focus).
+
+
+## All scripts support:
+- Config-based logging via `utils/report_logger.py`
+- Clean exit codes and stdout/stderr integration for use in Airflow or cron
+
+
 # Conceptual pipelines
 
 Skeleton Specialized Pipeline

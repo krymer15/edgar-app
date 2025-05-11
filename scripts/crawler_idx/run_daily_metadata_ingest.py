@@ -36,6 +36,7 @@ def main():
     parser.add_argument("--date", type=validate_date, help="Target date to ingest (YYYY-MM-DD)")
     parser.add_argument("--backfill", type=int, help="Ingest N days backwards from today (e.g., 7)")
     parser.add_argument("--limit", type=int, help="Limit number of records per day (for testing)")
+    parser.add_argument("--include_forms", nargs="+", help="Only include specific form types (e.g. 10-K 8-K)")
 
     args = parser.parse_args()
     orchestrator = FilingMetadataOrchestrator()
@@ -46,9 +47,9 @@ def main():
             for i in range(args.backfill):
                 target_date = (today - timedelta(days=i)).strftime("%Y-%m-%d")
                 log_info(f"[CLI] Backfill day {i + 1} of {args.backfill}: {target_date}")
-                orchestrator.run(date_str=target_date, limit=args.limit)
+                orchestrator.run(date_str=target_date, limit=args.limit, include_forms=args.include_forms)
         elif args.date:
-            orchestrator.run(date_str=args.date, limit=args.limit)
+            orchestrator.run(date_str=args.date, limit=args.limit, include_forms=args.include_forms)
         else:
             log_error("Must specify either --date or --backfill.")
             sys.exit(1)

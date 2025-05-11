@@ -78,20 +78,27 @@ def append_batch_summary(total, skipped, failed, succeeded, output_path: str = N
 
 # === Logging functions ===
 
+def safe_print(message: str, stream=sys.stdout):
+    try:
+        print(message, file=stream)
+    except UnicodeEncodeError:
+        ascii_fallback = message.encode("ascii", errors="ignore").decode()
+        print(ascii_fallback, file=stream)
+
 def log_debug(message: str):
     runtime_config = ConfigLoader.load_config()
     level = runtime_config.get("app", {}).get("log_level", "INFO").upper()
     if level == "DEBUG":
-        print(f"🐛 {message}", file=sys.stdout)
+        safe_print(f"[DEBUG] {message}", stream=sys.stdout)
 
 
 def log_info(message: str):
     if _log_level in ("DEBUG", "INFO"):
-        print(f"ℹ️  {message}", file=sys.stdout)
+        safe_print(f"[INFO] {message}", stream=sys.stdout)
 
 def log_warn(message: str):
     if _log_level in ("DEBUG", "INFO", "WARNING"):
-        print(f"⚠️  {message}", file=sys.stderr)
+        safe_print(f"[WARN] {message}", stream=sys.stderr)
 
 def log_error(message: str):
-    print(f"❌ {message}", file=sys.stderr)
+    safe_print(f"[ERROR] {message}", stream=sys.stderr)

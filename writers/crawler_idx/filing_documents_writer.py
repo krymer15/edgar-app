@@ -1,58 +1,64 @@
 # writers/filing_documents_writer.py
 
 from sqlalchemy.exc import SQLAlchemyError
-from models.database import SessionLocal
-from models.filing_documents import FilingDocument
+from writers.base_writer import BaseWriter
+from models.adapters.dataclass_to_orm import convert_filing_doc_to_orm
+from models.dataclasses.filing_document import FilingDocument as FilingDocDC
+from models.orm_models.filing_documents import FilingDocument as FilingDocORM
 from utils.report_logger import log_info, log_warn, log_error
 
-class FilingDocumentsWriter:
-    def __init__(self):
-        self.session = SessionLocal()
+class FilingDocumentsWriter(BaseWriter):
+    def write_metadata(self, *args, **kwargs):
+        # Not used for this writer
+        pass
 
-    def write_documents(self, documents: list):
+    def write_content(self, *args, **kwargs):
+        # Placeholder for future RawDocument content writing
+        pass
+
+    def write_documents(self, documents: list[FilingDocDC]):
         written = 0
+        updated = 0
         skipped = 0
 
-        for doc in documents:
+        for dc in documents:
             try:
-                # Check for existing entry to avoid duplicates
-                existing = self.session.query(FilingDocument).filter_by(
-                    accession_number=doc.accession_number,
-                    filename=doc.filename
+                # Deduplication check by accession_number + document_type + source_url
+                existing = self.db_session.query(FilingDocORM).filter_by(
+                    accession_number=dc.accession_number,
+                    document_type=dc.document_type,
+                    source_url=dc.source_url
                 ).first()
 
                 if existing:
-                    skipped += 1
+                    # Update only if something changed (minimal update for now)
+                    updated_fields = False
+                    if existing.description != dc.description:
+                        existing.description = dc.description
+                        updated_fields = True
+                    if existing.accessible != dc.accessible:
+                        existing.accessible = dc.accessible
+                        updated_fields = True
+
+                    if updated_fields:
+                        updated += 1
+                    else:
+                        skipped += 1
                     continue
 
-                new_doc = FilingDocument(
-                    accession_number=doc.accession_number,
-                    cik=doc.cik,
-                    document_type=doc.type,
-                    filename=doc.filename,
-                    description=doc.description,
-                    source_url=doc.source_url,
-                    source_type=doc.source_type,
-                    is_primary=doc.is_primary,
-                    is_exhibit=doc.is_exhibit,
-                    is_data_support=doc.is_data_support,
-                    accessible=doc.accessible
-                )
-
-                self.session.add(new_doc)
+                new_doc = convert_filing_doc_to_orm(dc)
+                self.db_session.add(new_doc)
                 written += 1
 
             except SQLAlchemyError as e:
-                self.session.rollback()
-                log_error(f"❌ DB error writing {doc.filename}: {e}")
+                self.db_session.rollback()
+                log_error(f"❌ DB error processing document {dc.filename or dc.source_url}: {e}")
                 continue
 
         try:
-            self.session.commit()
+            self.db_session.commit()
         except SQLAlchemyError as e:
-            self.session.rollback()
+            self.db_session.rollback()
             log_error(f"❌ Final commit failed: {e}")
-        finally:
-            self.session.close()
 
-        log_info(f"📝 Filing documents written: {written}, skipped: {skipped}")
+        log_info(f"📝 Filing documents — Written: {written}, Updated: {updated}, Skipped: {skipped}")

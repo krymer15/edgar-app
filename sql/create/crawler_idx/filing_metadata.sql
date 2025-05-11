@@ -1,10 +1,10 @@
 CREATE TABLE filing_metadata (
-  accession_number TEXT PRIMARY KEY,
-  cik TEXT NOT NULL,
-  form_type TEXT NOT NULL,
-  filing_date DATE,
-  filing_url TEXT, 
-
-  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+	accession_number text NOT NULL,
+	cik text NOT NULL,
+	form_type text NOT NULL,
+	filing_date date NOT NULL,
+	filing_url text NULL,
+	created_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT filing_metadata_pkey PRIMARY KEY (accession_number)
 );

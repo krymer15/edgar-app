@@ -1,3 +1,7 @@
+# ARCHIVED MODULE – Replaced by SgmlDownloader + FilingDocumentsCollector
+# Do not use in new pipelines.
+
+
 # parsers/sgml_document_processor.py
 
 ''' 
