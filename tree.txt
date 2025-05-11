@@ -50,14 +50,9 @@
 ├── collectors/
 │   ├── README.md
 │   └── base_collector.py
-│   ├── __pycache__/
-│   │   └── base_collector.cpython-310.pyc
 │   ├── crawler_idx/
 │   │   ├── filing_documents_collector.py
 │   │   └── filing_metadata_collector.py
-│   │   ├── __pycache__/
-│   │   │   ├── filing_documents_collector.cpython-310.pyc
-│   │   │   └── filing_metadata_collector.cpython-310.pyc
 │   ├── submissions_api/
 │   │   └── submissions_collector.py
 ├── config/
@@ -66,8 +61,6 @@
 │   ├── config_loader.py
 │   ├── form_type_rules.yaml
 │   └── form_type_rules_README.md
-│   ├── __pycache__/
-│   │   └── config_loader.cpython-310.pyc
 ├── dev_tools/
 │   ├── backup_postgres.bat
 │   ├── bootstrap.py
@@ -97,10 +90,6 @@
 │   ├── form4_xml_downloader.py
 │   ├── sec_downloader.py
 │   └── sgml_downloader.py
-│   ├── __pycache__/
-│   │   ├── base_downloader.cpython-310.pyc
-│   │   ├── sec_downloader.cpython-310.pyc
-│   │   └── sgml_downloader.cpython-310.pyc
 ├── external_data/
 │   └── market_data.py
 ├── extractors/
@@ -117,15 +106,9 @@
 │   ├── database.py
 │   ├── form4_filing.py
 │   └── submissions.py
-│   ├── __pycache__/
-│   │   ├── __init__.cpython-310.pyc
-│   │   ├── base.cpython-310.pyc
-│   │   └── database.cpython-310.pyc
 │   ├── adapters/
 │   │   ├── README.md
 │   │   └── dataclass_to_orm.py
-│   │   ├── __pycache__/
-│   │   │   └── dataclass_to_orm.cpython-310.pyc
 │   ├── dataclasses/
 │   │   ├── README.md
 │   │   ├── __init__.py
@@ -133,20 +116,11 @@
 │   │   ├── filing_metadata.py
 │   │   ├── parsed_document.py
 │   │   └── raw_document.py
-│   │   ├── __pycache__/
-│   │   │   ├── __init__.cpython-310.pyc
-│   │   │   ├── filing_document.cpython-310.pyc
-│   │   │   ├── filing_metadata.cpython-310.pyc
-│   │   │   └── parsed_document.cpython-310.pyc
 │   ├── orm_models/
 │   │   ├── README.md
 │   │   ├── __init__.py
 │   │   ├── filing_documents.py
 │   │   └── filing_metadata.py
-│   │   ├── __pycache__/
-│   │   │   ├── __init__.cpython-310.pyc
-│   │   │   ├── filing_documents.cpython-310.pyc
-│   │   │   └── filing_metadata.cpython-310.pyc
 │   ├── schemas/
 │   │   └── index_record_model.py
 ├── monitors/
@@ -170,16 +144,10 @@
 │   ├── README.md
 │   ├── __init__.py
 │   └── base_orchestrator.py
-│   ├── __pycache__/
-│   │   ├── __init__.cpython-310.pyc
-│   │   └── base_orchestrator.cpython-310.pyc
 │   ├── crawler_idx/
 │   │   ├── daily_ingestion_orchestrator.py
 │   │   ├── filing_documents_orchestrator.py
 │   │   └── filing_metadata_orchestrator.py
-│   │   ├── __pycache__/
-│   │   │   ├── filing_documents_orchestrator.cpython-310.pyc
-│   │   │   └── filing_metadata_orchestrator.cpython-310.pyc
 │   ├── forms/
 │   │   └── form4_xml_orchestrator.py
 │   ├── legacy/
@@ -201,9 +169,6 @@
 │   ├── exhibit_parser.py
 │   ├── filing_parser_manager.py
 │   └── index_page_parser.py
-│   ├── __pycache__/
-│   │   ├── __init__.cpython-310.pyc
-│   │   └── base_parser.cpython-310.pyc
 │   ├── forms/
 │   │   ├── form10k_parser.py
 │   │   ├── form3_parser.py
@@ -213,12 +178,8 @@
 │   ├── html/
 │   ├── idx/
 │   │   └── idx_parser.py
-│   │   ├── __pycache__/
-│   │   │   └── idx_parser.cpython-310.pyc
 │   ├── sgml/
 │   │   └── sgml_filing_parser.py
-│   │   ├── __pycache__/
-│   │   │   └── sgml_filing_parser.cpython-310.pyc
 │   ├── utils/
 │   │   └── parser_utils.py
 │   ├── xbrl/
@@ -226,13 +187,9 @@
 │   ├── README.md
 │   ├── __init__.py
 │   └── run_daily_ingestion.py
-│   ├── __pycache__/
-│   │   └── __init__.cpython-310.pyc
 │   ├── crawler_idx/
 │   │   ├── run_daily_documents_ingest.py
 │   │   └── run_daily_metadata_ingest.py
-│   │   ├── __pycache__/
-│   │   │   └── run_daily_metadata_ingest.cpython-310.pyc
 │   ├── devtools/
 │   │   ├── cleanup_test_data.py
 │   │   ├── clear_test_records.py
@@ -263,8 +220,6 @@
 ├── tests/
 │   ├── README.md
 │   └── __init__.py
-│   ├── __pycache__/
-│   │   └── __init__.cpython-310.pyc
 │   ├── archived/
 │   │   ├── test_batch_sgml_ingestion_orchestrator.py
 │   │   ├── test_file_saver.py
@@ -283,18 +238,7 @@
 │   │   ├── test_idx_parser.py
 │   │   ├── test_raw_document.py
 │   │   ├── test_run_daily_documents_ingest.py
-│   │   ├── test_run_daily_metadata_ingest.py
-│   │   ├── test_sgml_parser.py
-│   │   └── test_sgml_processor.py
-│   │   ├── __pycache__/
-│   │   │   ├── test_filing_documents_collector.cpython-310-pytest-8.3.5.pyc
-│   │   │   ├── test_filing_documents_model.cpython-310-pytest-8.3.5.pyc
-│   │   │   ├── test_filing_documents_orchestrator.cpython-310-pytest-8.3.5.pyc
-│   │   │   ├── test_filing_documents_writer.cpython-310-pytest-8.3.5.pyc
-│   │   │   ├── test_filing_metadata_collector.cpython-310-pytest-8.3.5.pyc
-│   │   │   ├── test_filing_metadata_orchestrator.cpython-310-pytest-8.3.5.pyc
-│   │   │   ├── test_run_daily_documents_ingest.cpython-310-pytest-8.3.5.pyc
-│   │   │   └── test_run_daily_metadata_ingest.cpython-310-pytest-8.3.5.pyc
+│   │   └── test_run_daily_metadata_ingest.py
 │   ├── fixtures/
 │   │   ├── 0000921895-25-001190.txt
 │   │   ├── app_config_test.yaml
@@ -312,6 +256,8 @@
 │   │   ├── test_path_manager.py
 │   │   ├── test_report_logger.py
 │   │   ├── test_sec_downloader.py
+│   │   ├── test_sgml_downloader.py
+│   │   ├── test_sgml_parser.py
 │   │   └── test_ticker_cik_mapper.py
 │   ├── submissions_api/
 │   │   ├── test_submissions_collector.py
@@ -324,22 +270,12 @@
 │   ├── report_logger.py
 │   ├── ticker_cik_mapper.py
 │   └── url_builder.py
-│   ├── __pycache__/
-│   │   ├── __init__.cpython-310.pyc
-│   │   ├── get_project_root.cpython-310.pyc
-│   │   ├── report_logger.cpython-310.pyc
-│   │   └── url_builder.cpython-310.pyc
 ├── writers/
 │   ├── README.md
 │   └── base_writer.py
-│   ├── __pycache__/
-│   │   └── base_writer.cpython-310.pyc
 │   ├── crawler_idx/
 │   │   ├── filing_documents_writer.py
 │   │   └── filing_metadata_writer.py
-│   │   ├── __pycache__/
-│   │   │   ├── filing_documents_writer.cpython-310.pyc
-│   │   │   └── filing_metadata_writer.cpython-310.pyc
 │   ├── forms/
 │   │   ├── form4_writer.py
 │   │   └── xml_metadata_writer.py

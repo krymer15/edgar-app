@@ -10,11 +10,15 @@ from config.config_loader import ConfigLoader
 from utils.report_logger import log_info, log_warn
 
 class FilingDocumentsOrchestrator(BaseOrchestrator):
-    def __init__(self):
+    def __init__(self, use_cache: bool = True):
         config = ConfigLoader.load_config()
         self.user_agent = config.get("sec_downloader", {}).get("user_agent", "SafeHarborBot/1.0")
         self.db_session = get_db_session()
-        self.collector = FilingDocumentsCollector(db_session=self.db_session, user_agent=self.user_agent)
+        self.collector = FilingDocumentsCollector(
+            db_session=self.db_session, 
+            user_agent=self.user_agent,
+            use_cache=use_cache
+            )
         self.writer = FilingDocumentsWriter(db_session=self.db_session)
 
     def orchestrate(self, target_date: str, limit: int = None):

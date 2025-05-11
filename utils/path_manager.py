@@ -83,3 +83,14 @@ def build_processed_filepath(
     log_debug(f"📁 [Debug] Saving to: {full_path}")
     return full_path
 
+def build_cache_path(cik: str, accession: str) -> str:
+    """
+    Returns full path to cached SGML .txt file for a given CIK and accession.
+    E.g. /data/cache_sgml/YYYY/CIK/accession.txt
+    """
+    year = accession[:4]  # Assumes accession starts with YYYY
+    base_path = STORAGE_CONFIG.get("base_data_path", "data/")
+    cache_dir = os.path.join(base_path, "cache_sgml", year, cik)
+    filename = f"{accession}.txt"
+    return os.path.join(cache_dir, filename)
+

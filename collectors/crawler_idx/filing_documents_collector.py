@@ -14,9 +14,9 @@ from downloaders.sgml_downloader import SgmlDownloader
 from utils.report_logger import log_info, log_error
 
 class FilingDocumentsCollector:
-    def __init__(self, db_session: Session, user_agent: str):
+    def __init__(self, db_session: Session, user_agent: str, use_cache: bool = True):
         self.db_session = db_session
-        self.downloader = SgmlDownloader(user_agent=user_agent)
+        self.downloader = SgmlDownloader(user_agent=user_agent, use_cache=use_cache)
 
     def collect(self, target_date: str) -> List[FilingDocument]:
         records = (
