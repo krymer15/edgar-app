@@ -1,6 +1,45 @@
 # models/
 
-This folder defines all SQLAlchemy ORM models for Postgres tables used in the EDGAR AI Platform.
+Contains all data definitions for the EDGAR pipeline.
+
+- **dataclasses/**  
+  Pure `@dataclass` objects used internally by downloaders, parsers, and extractors.
+- **orm_models/**  
+  SQLAlchemy ORM models mapping to your Postgres schema.
+- **adapters/**  
+  Conversion utilities between dataclasses and ORM models (both directions).
+
+## Reverse Mapping: `orm_to_dataclass()`
+Your orchestrators shouldn’t import SQLAlchemy models directly. Instead, provide adapter functions:
+
+```python
+# models/adapters/orm_to_dataclass.py
+
+def metadata_to_header(meta: FilingMetadata) -> FilingHeader:
+    return FilingHeader(
+        accession_number=meta.accession_number,
+        form_type=meta.form_type,
+        filing_date=meta.filing_date,
+        report_date getattr(meta, "report_date", None),
+    )
+
+def document_model_to_raw(doc_model: FilingDocument) -> RawDocument:
+    return RawDocument(
+        accession_number=doc_model.accession_number,
+        cik=doc_model.cik,
+        form_type=doc_model.filing.form_type,
+        filename=doc_model.filename,
+        source_url=doc_model.source_url,
+        doc_type=doc_model.source_type,
+        source_type=doc_model.source_type,
+        is_primary=doc_model.is_primary,
+        is_exhibit=doc_model.is_exhibit,
+        accessible=doc_model.accessible,
+    )
+```
+
+- Use these in your downloaders or parsers when bootstrapping from existing DB rows.
+- Keeps SQLAlchemy out of your business logic.
 
 ## Philosophy
 

@@ -2,7 +2,7 @@
 app:
   name: "Safe Harbor EDGAR AI Platform"
   environment: "development"  # Options: development, staging, production
-  log_level: "NONE"
+  log_level: "DEBUG"
 
 # Database Settings
 database:
@@ -19,16 +19,19 @@ storage:
   # ⚠️ Set to ./test_data/ to run in TEST mode, otherwise use ./data/
   # Only change manually during testing — this value is not overridden via CLI
   base_data_path: "./test_data/"
+
+  # Subfolder routing for raw + cleaned + parsed
   raw_html_base_path: "data/raw/"
-  processed_text_base_path: "data/processed/"
-  metadata_base_path: "data/metadata/"
+  cleaned_base_path: "data/cleaned/"
+  parsed_base_path: "data/parsed/"
 
-  # Dynamic Subfolder Formatting (new)
+  # Subfolder formatting templates
   raw_subfolder_template: "{year}/{cik}/{form_type}/{accession_or_subtype}/"
-  processed_subfolder_template: "{year}/{cik}/{form_type}/{accession_or_subtype}/"
+  cleaned_subfolder_template: "{year}/{cik}/{form_type}/{accession_or_subtype}/"
+  parsed_subfolder_template: "{year}/{cik}/{form_type}/{accession_or_subtype}/"
 
-  # Company Mapping Files
-  company_mapping_path: "data/raw/company_tickers.json"
+  # Reference data
+  company_mapping_path: "data/reference/company_tickers.json"
 
 # SEC Downloader Settings
 sec_downloader:
@@ -40,7 +43,7 @@ sec_downloader:
 ingestion:
   use_rss_feed: true
   use_daily_index: true
-  use_form_type_rules: true  # ✅ NEW: dynamically apply from form_type_rules.yaml
+  use_form_type_rules: false  # ✅ NEW: dynamically apply from form_type_rules.yaml
   include_optional_forms: false  # ✅ NEW: toggle to include optional.form_types
   # Use form_type 424B1 for IPO monitoring pipeline.
   filing_forms_to_track: [

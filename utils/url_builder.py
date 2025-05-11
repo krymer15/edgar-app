@@ -39,3 +39,7 @@ def construct_sgml_txt_url(cik: str, accession_number: str) -> str:
     accession_clean = accession_number.replace("-", "")
     accession_dashed = f"{accession_clean[:10]}-{accession_clean[10:12]}-{accession_clean[12:]}"
     return f"https://www.sec.gov/Archives/edgar/data/{normalized_cik}/{accession_clean}/{accession_dashed}.txt"
+
+def clean_accession_number(accession_number: str) -> str:
+    # Returns the accession number with dashes removed, suitable for SEC URLs or filenames.    
+    return accession_number.strip().replace("-", "")

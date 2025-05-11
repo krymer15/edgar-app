@@ -1,0 +1,24 @@
+app:
+  environment: "test"
+  log_level: "DEBUG"
+
+storage:
+  base_data_path: "tests/tmp/data/"
+  raw_html_base_path: "tests/tmp/raw/"
+  processed_text_base_path: "tests/tmp/processed/"
+  metadata_base_path: "tests/tmp/metadata/"
+  raw_subfolder_template: "{year}/{cik}/{form_type}/{accession_or_subtype}/"
+  processed_subfolder_template: "{year}/{cik}/{form_type}/{accession_or_subtype}/"
+  company_mapping_path: "tests/samples/company_tickers.json"
+
+sec_downloader:
+  user_agent: "TestBot/0.1"
+
+ingestion:
+  use_rss_feed: false
+  use_daily_index: true
+  use_form_type_rules: false
+  apply_global_filter: false
+  chunk_max_tokens: 3000
+  save_cleaned_html: true
+  save_raw_html: true

@@ -8,7 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from models.base import Base
-from utils.config_loader import ConfigLoader
+from config.config_loader import ConfigLoader
 from utils.get_project_root import get_project_root
 
 # Import your modules

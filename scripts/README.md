@@ -1,54 +1,78 @@
-# 🛠️ Developer CLI Runners
+# Conceptual pipelines
 
-This folder contains standalone developer tools for testing, backfilling, or manually triggering ingestion pipelines within the Safe Harbor EDGAR AI Platform.
+Skeleton Specialized Pipeline
+Below is a conceptual “run_*” pipeline illustrating the flow for Form 4, 8-K and 10-K. You’d wire these up in your orchestrators or CLI scripts.
 
-These scripts are **not used in production** — they are intended for internal development, debugging, and custom backfills.
+## Form 4 Pipeline
 
----
+```python
+# scripts/run_form4_pipeline.py
 
-## 📄 `run_form4_xml_ingest.py`
+from collectors.filing_metadata_collector import FilingMetadataCollector
+from downloaders.xml_downloader import XMLDownloader
+from cleaners.form4.form4_cleaner import Form4Cleaner
+from parsers.form4.form4_parser import Form4Parser
+from writers.form4.form4_writer import Form4Writer
 
-Run a full ingestion cycle for a single Form 4 XML file. This includes:
-
-- Downloading the specified `.xml` file from the SEC
-- Parsing the XML using `Form4Parser`
-- Writing parsed data to Postgres using `Form4Writer`
-
-### ✅ Example
-
-```bash
-python scripts/run_form4_xml_ingest.py \
-  --cik 921895 \
-  --accession 0000921895-25-001190 \
-  --filename xslF345X05_primary.xml \
-  --date 2025-04-28
+def run_form4_pipeline(date_str: str):
+    # 1. Phase 1: fetch metadata
+    metas = FilingMetadataCollector(form_type="4").collect(date_str)
+    
+    # 2. Phase 2: download raw XML
+    raw_docs = [ XMLDownloader().download(m) for m in metas ]
+    
+    # 3. Phase 3: clean XML
+    cleaned = [ Form4Cleaner().clean(doc) for doc in raw_docs ]
+    
+    # 4. Phase 4: parse into dataclass
+    parsed = [ Form4Parser().parse(doc) for doc in cleaned ]
+    
+    # 5. Phase 5: write to DB
+    Form4Writer().write_all(parsed)
 ```
 
-### 🔧 How It Works
-- Loads project settings via .env and app_config.yaml
-- Inserts project root dynamically for safe imports
-- Uses SQLAlchemy session from utils/database.py
-- Uses Form4XmlOrchestrator to coordinate download → parse → write
+## Form 8-K Pipeline
 
-### Notes
-Notes
-- Scripts are modular and orchestrator-driven.
-- Global CIK/form_type filtering is supported via `FilteredCikManager`.
-- Use `--skip_filter` in `ingest_sgml_batch_from_idx.py` to ingest all filings without filtering.
-- To avoid duplication, all writers use `merge()` for safe upserts in Postgres.
-- All downloaded XML files are saved under `/data/raw/{year}/{cik}/{form_type}/{accession}/filename.xml`
-- Only the file named via --filename is downloaded (not all XMLs under the accession)
-- Output is written to the form4_filings table in Postgres
-- This script is useful for spot-checking filings or prototyping parser changes
+```python
+# scripts/run_eightk_pipeline.py
 
-### Folder Summary
+from collectors.filing_metadata_collector import FilingMetadataCollector
+from downloaders.sgml_downloader import SGMLDownloader
+from cleaners.sgml.sgml_cleaner import SGMLCleaner
+from parsers.eightk.eightk_parser import EightKParser
+from writers.eightk.eightk_writer import EightKWriter
 
-| Script                               | Purpose                                                                 | Orchestrator(s) Used                                               | Populates `daily_index_metadata`? | Parses SGML?       |
-|--------------------------------------|-------------------------------------------------------------------------|--------------------------------------------------------------------|-----------------------------------|--------------------|
-| `ingest_daily_index.py`              | **Metadata-only ingestion** from `crawler.idx`                          | ✅ `DailyIndexOrchestrator`                                        | ✅ Yes                             | ❌ No               |
-| `ingest_from_source.py`              | Unified CLI for `daily_index` or `submissions_api` sources              | ✅ `DailyIndexOrchestrator` or `SubmissionsIngestionOrchestrator` | ✅ Yes (for daily\_index)          | ❌ No               |
-| `ingest_sgml_batch_from_idx.py`      | **Filtered SGML ingestion + optional metadata write**                   | ✅ `BatchSgmlIngestionOrchestrator`                                | ✅ If filtering is enabled         | ✅ Yes              |
-| `run_form4_xml_ingest.py`           | Ingest and parse a **single Form 4 XML** from SEC                       | ✅ `Form4XmlOrchestrator`                                          | ❌                                 | ✅ Yes (XML only)   |
+def run_eightk_pipeline(date_str: str):
+    metas = FilingMetadataCollector(form_type="8-K").collect(date_str)
+    raw    = [ SGMLDownloader().download(m) for m in metas ]
+    clean  = [ SGMLCleaner().clean(d)     for d in raw ]
+    parsed = [ EightKParser().parse(d)    for d in clean ]
+    EightKWriter().write_all(parsed)
+```
 
-- UPDATE needed for above table. `ingest_daily_index.py` has been deprecated and replaced by `ingest_sgml_batch_from_idx.py`, which is the single source for filtered SGML parsing and `daily_index_metadata`.
-- `ingest_from_source.py` should only be used for the Submissions API pipeline.
+## Form 10-K Pipeline
+
+```python
+# scripts/run_tenk_pipeline.py
+
+from collectors.filing_metadata_collector import FilingMetadataCollector
+from downloaders.xbrl_downloader import XBRLDownloader
+from cleaners.xbrl.xbrl_cleaner import XBRLCleaner
+from parsers.tenk.tenk_parser import TenKParser
+from writers.tenk.tenk_writer import TenKWriter
+
+def run_tenk_pipeline(date_str: str):
+    metas  = FilingMetadataCollector(form_type="10-K").collect(date_str)
+    raw    = [ XBRLDownloader().download(m) for m in metas ]
+    clean  = [ XBRLCleaner().clean(d)       for d in raw ]
+    parsed = [ TenKParser().parse(d)       for d in clean ]
+    TenKWriter().write_all(parsed)
+```
+
+## 🔑 Key Takeaways
+- Shared base classes live at the root of each module (`base_parser.py`, `base_cleaner.py`, `base_writer.py`).
+- Form-specific logic is tucked into its own subfolder when parsing/cleaning/writing diverges.
+- Router (`parsers/router.py`) can dispatch form types to one of these specialized pipelines.
+- “Raw → Clean → Parse → Write” is the consistent flow for every form.
+
+This layout keeps your code highly modular, easy to navigate, and ready to scale as you add more form types or specialized logic.

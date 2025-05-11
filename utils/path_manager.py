@@ -1,5 +1,5 @@
 import os
-from utils.config_loader import ConfigLoader
+from config.config_loader import ConfigLoader
 from utils.report_logger import log_debug
 
 # Load config once at module import
@@ -7,6 +7,21 @@ CONFIG = ConfigLoader.load_config()
 STORAGE_CONFIG = CONFIG.get("storage", {})
 
 # Paths are resolved using base_data_path from app_config.yaml
+
+def build_path_args(metadata: dict, filename: str) -> tuple:
+    """
+    Returns a tuple used to build storage paths:
+    (year, cik, form_type, accession_or_subtype, filename)
+
+    Handles variation in 'accession_number' key casing across Submissions and DailyIndex.
+    """
+    return (
+        metadata["filing_date"][:4],
+        metadata["cik"],
+        metadata["form_type"],
+        metadata.get("accession_number") or metadata.get("accessionNumber"),
+        filename
+    )
 
 def build_raw_filepath(
     year: str,

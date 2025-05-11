@@ -1,76 +1,82 @@
-# Parsers
+# parsers
 
-✅ Parsing Architecture Goals
-Separation of Concerns: Each parser focuses on a specific type of document or transformation.
+Parsers transform raw or cleaned text into structured objects:
 
-Pluggability: New parsers can be registered or invoked dynamically.
+## Organizational Principle
+Parsers are grouped into subfolders by document type, such as:
 
-Maintainability: Each parser is testable and loosely coupled.
+- IDX
+- SGML
+- HTML
+- XML (XBRL, Form 4, etc.)
 
-Compatibility: Works well with both raw SGML and post-processed HTML/XML.
+This reflects how documents are actually processed in the ingestion flow.
+
+Why?
+- Reusable format-specific logic across pipelines
+- Avoids duplication of SGML, HTML, or XML logic
+- Matches the behavior of FilingParserManager.route() and orchestrators
+
+### Parser Usage Convention
+- Parsers do not know about pipelines (e.g., crawler_idx, forms)
+- They operate on input from orchestrators and return structured dataclass outputs such as ParsedDocument and ParsedChunk.
+
+🚫 Do Not
+- Do not add pipeline-specific folders here (crawler_idx/, forms/)
+- Do not couple parsing logic to Postgres writers or orchestrators
+
+## Modules
+
+- **base_parser.py**  
+  Abstract parser interface (`parse()` method).
+
+- **sgml_parser.py**  
+    - Extracts headers, company info, and initial chunks from `.txt`.
+    - `SGMLParser` → produces `ParsedDocument` + `ParsedChunk` list
+
+- **html_parser.py**  
+    - Splits HTML pages into meaningful sections.
+    - `HTMLParser` → splits into chunks by <SECTION>
+
+- **xbrl_parser.py**  
+    - Pulls financial statement line items from XBRL tags.
+    - `XBRLParser` → structured financials via tag names
+
+- **form4_parser.py**  
+    - Specialized parser for Form 4 XML filings.
+    - form-specific (e.g. `Form4Parser`)
+
+All inherit `BaseParser`:
+
+```python
+class BaseParser:
+    def parse(self, raw: DownloadedDocument) -> Union[ParsedDocument, List[ParsedChunk]]:
+        raise NotImplementedError
+```
+
+## Parsing Architecture Goals
+- Separation of Concerns: Each parser focuses on a specific type of document or transformation.
+- Pluggability: New parsers can be registered or invoked dynamically.
+- Maintainability: Each parser is testable and loosely coupled.
+- Compatibility: Works well with both raw SGML and post-processed HTML/XML.
 
 This folder contains logic for parsing SGML and HTML content from EDGAR filings.
-
-# 🧾 SEC Filing Parsers (Safe Harbor EDGAR AI)
-
-This module processes raw SEC EDGAR filings (SGML, HTML, XML) into structured outputs for indexing and analysis.
 
 ---
 
 ## 🔧 Fixture Loading for Parser Development
 
-To support testing and development with real sample XML or HTML inputs, fixture files are stored outside the repo under:
-
-`/data/raw/fixtures/`
-
+To support testing and development with real sample XML or HTML inputs, fixture files are stored outside the repo under: `/data/raw/fixtures/` (may have changed)
 This folder may be symlinked to an external SSD and is ignored by Git.
 
 Use this utility to load fixtures:
-
 ```python
 from utils.devtools.fixture_loader import load_fixture
 xml_text = load_fixture("form4_sample.xml")
 ```
 
-### 📌 Summary
+### OLD INFO BELOW TO INTEGRATE! ###
 
-| Feature                        | Status   |
-|-------------------------------|----------|
-| Reads from `data/raw/fixtures/` | ✅ Yes |
-| Symlink-compatible             | ✅ Yes |
-| Lightweight + self-contained   | ✅ Yes |
-| Git-friendly                   | ✅ Yes (.gitignore applies) |
-
-## 📦 Modules
-
-### `base_parser.py`
-Abstract base class that defines the `parse()` method signature for all specialized parsers.
-
-### `sgml_filing_parser.py`
-Parses `.txt` SGML filings to extract:
-- Exhibit filenames, types, and descriptions
-- Primary document heuristics
-
-### `index_page_parser.py`
-Extracts the primary embedded document URL from the `index.html` page (Document Format Files).
-
-### `exhibit_parser.py`
-Cleans HTML exhibit files, strips tables, and adds `[HEADER]` tags for NLP preprocessing.
-
----
-
-## 🧩 Specialized Form Parsers (`parsers/forms/`)
-
-- `form4_parser.py`: Parses XML Form 4 insider transaction filings into structured data.
-- Extendable: Add Form 10-K, S-1, 13F, etc.
-
----
-
-## 🚦 Filing Router (`parsers/router/`)
-
-Routes each filing to the appropriate parser based on form type and document format.
-
----
 
 ## 🛠️ Usage
 
@@ -79,9 +85,7 @@ from parsers.router.filing_router import FilingRouter
 
 router = FilingRouter()
 parsed = router.route("4", xml_content)
-
-
----
+```
 
 ### 💡 About Parser Registry
 The registry is just a dictionary behind the scenes. The optional `@register_parser` decorator approach is more dynamic and avoids hardcoding, but for now, **your current router pattern is fine** and avoids bloat.

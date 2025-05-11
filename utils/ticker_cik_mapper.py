@@ -14,13 +14,13 @@ class TickerCIKMapper:
     def __init__(self, mapping_file: Optional[str] = None):
         """
         Initialize the mapper by loading the ticker to CIK mapping.
-        Defaults to 'data/raw/company_tickers.json' relative to project root.
+        Defaults to 'data/reference/company_tickers.json' relative to project root.
         
         Args:
             mapping_file (str): Optional path to a custom mapping JSON file.
         """
         if mapping_file is None:
-            mapping_file = os.path.join(get_project_root(), "data/raw/company_tickers.json")
+            mapping_file = os.path.join(get_project_root(), "data", "reference", "company_tickers.json")
 
         self.ticker_to_cik = self._load_mapping(mapping_file)
 

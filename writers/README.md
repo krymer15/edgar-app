@@ -1,23 +1,41 @@
-# Writers
+# writers
 
-This folder contains modules that write parsed results into Postgres.
+Persistence layer for writing pipeline outputs to the database:
 
+## Modules
+
+- **base_writer.py**  
+  - Defines the `write()` interface.
+
+- **metadata_writer.py**  
+  - Persists `FilingMetadata` records.
+  - `MetadataWriter` → writes `FilingMetadata`
+
+- **document_writer.py**  
+  - Persists `FilingDocument` entries.
+  - `DocumentWriter` → writes `FilingDocument`
+
+- **parsed_writer.py**  
+  - Persists `ParsedChunkModel` rows.
+  - `ParsedWriter` → writes `ParsedChunkModel`
+
+- **vector_writer.py**  
+  - Persists `FilingVector` embeddings.
+  - `VectorWriter` → writes `FilingVector`
 ## Key Classes
 
-### `ParsedSgmlWriter`
-- Writes:
-  - Parsed filing metadata (`parsed_sgml_metadata`)
-  - Exhibit rows (`exhibit_metadata`)
-- Performs deduplication to avoid repeated inserts.
+Abstract `BaseWriter`:
 
-### `SgmlDocWriter`
-- (Deprecated in favor of ParsedSgmlWriter)
-- Wrote raw documents in earlier pipeline versions.
+```python
+Copy
+Edit
+class BaseWriter:
+    def write(self, obj) -> None:
+        raise NotImplementedError
+```
 
-### `DailyIndexWriter`
-- Stores crawler.idx metadata (optional archival use)
 
-## Notes
+### Notes
 - All writers use SQLAlchemy ORM.
 - Canonical field for primary doc URL is `primary_doc_url`.
-- `run_id` is recorded for traceability in logs and DB.
+

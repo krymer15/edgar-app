@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from datetime import datetime, timezone
 from utils.get_project_root import get_project_root
-from utils.config_loader import ConfigLoader
+from config.config_loader import ConfigLoader
 
 # Load config
 _config = ConfigLoader.load_config()

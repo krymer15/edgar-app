@@ -4,7 +4,7 @@ import os
 
 from downloaders.sec_downloader import SecDownloader
 from utils.path_manager import build_raw_filepath
-from writers.xml_metadata_writer import log_xml_metadata
+from writers.forms.xml_metadata_writer import log_xml_metadata
 from utils.url_builder import construct_primary_document_url
 from datetime import datetime
 
