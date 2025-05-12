@@ -7,6 +7,21 @@ Usage:
     python scripts/crawler_idx/run_daily_documents_ingest.py --date 2024-12-20 --limit 50
 """
 
+# 
+# Pipeline 2: Filing Document Indexing (SGML)
+#
+# This CLI runner drives the second stage of the daily ingestion workflow.
+# It performs the following:
+# 1. Queries `filing_metadata` records from the database for a given date
+# 2. Downloads the corresponding SGML `.txt` submissions (cached by default)
+# 3. Uses `SgmlDocumentIndexer` to extract structured metadata for each internal document
+# 4. Converts `FilingDocumentMetadata` → `FilingDocumentRecord`
+# 5. Writes records to the `filing_documents` Postgres table
+#
+# Input: FilingMetadata records (from Pipeline 1)
+# Output: FilingDocumentRecord rows (for downstream SGML and exhibit handling in Pipeline 3)
+
+
 import os, sys
 import argparse
 from datetime import datetime

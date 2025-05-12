@@ -1,4 +1,4 @@
-# sgml_filing_parser.py
+# parsers/sgml/indexers/sgml_document_indexer.py
 
 '''  
 Pure logic for parsing SGML content already in memory. (Utility class) 
@@ -9,7 +9,7 @@ import re
 from typing import List, Optional
 from utils.url_builder import construct_primary_document_url, normalize_cik
 from parsers.base_parser import BaseParser
-from models.dataclasses.parsed_document import ParsedDocument
+from models.dataclasses.filing_document_metadata import FilingDocumentMetadata
 from utils.report_logger import log_debug
 
 IGNORE_EXTENSIONS = (
@@ -20,7 +20,10 @@ IGNORE_EXTENSIONS = (
 KNOWN_NOISE = ("SIGNATURE", "SIGNATURES", "EX-24", "IDEA: XBRL DOCUMENT")
 
 
-class SgmlFilingParser(BaseParser):
+class SgmlDocumentIndexer(BaseParser):
+    '''
+    Indexes SGML .txt content to extract document metadata pointers (FilingDocumentMetadata) for each declared exhibit or primary document.
+    '''
     def __init__(self, cik: str, accession_number: str, form_type: str):
         self.cik = cik
         self.accession_number = accession_number
@@ -55,7 +58,7 @@ class SgmlFilingParser(BaseParser):
                 "accessible": accessible
             })
 
-        # ✅ Improved primary_doc logic
+        # Improved primary_doc logic
         primary_doc = None
         html_like = [
             ex for ex in exhibits
@@ -85,8 +88,12 @@ class SgmlFilingParser(BaseParser):
         match = re.search(rf"<{tag}>(.*?)\n", block)
         return match.group(1).strip() if match else ""
 
-    def parse_to_documents(self, txt_contents: str) -> List[ParsedDocument]:
-        result = self.parse(txt_contents)
+    def index_documents(self, txt_contents: str) -> list[FilingDocumentMetadata]:
+        """
+        Parses the SGML `.txt` content and returns a list of FilingDocumentMetadata pointers.
+        Each represents an embedded document (exhibit, primary, or supporting file).
+        """
+        result: dict = self.parse(txt_contents)
         primary_doc_url = result.get("primary_document_url")
         exhibits = result.get("exhibits", [])
 
@@ -95,7 +102,7 @@ class SgmlFilingParser(BaseParser):
             filename = ex.get("filename", "").strip()
             source_url = f"https://www.sec.gov/Archives/edgar/data/{normalize_cik(self.cik)}/{self.accession_number.replace('-', '')}/{filename}"
 
-            documents.append(ParsedDocument(
+            documents.append(FilingDocumentMetadata(
                 cik=self.cik,
                 accession_number=self.accession_number,
                 form_type=self.form_type,

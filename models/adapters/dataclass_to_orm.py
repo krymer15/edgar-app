@@ -7,10 +7,10 @@ Role:
 from models.dataclasses.filing_metadata import FilingMetadata as FilingMetadataDC
 from models.orm_models.filing_metadata import FilingMetadata as FilingMetadataORM
 
-from models.dataclasses.filing_document import FilingDocument as FilingDocDC
+from models.dataclasses.filing_document_record import FilingDocumentRecord as FilingDocDC
 from models.orm_models.filing_documents import FilingDocument as FilingDocORM
 
-from models.dataclasses.parsed_document import ParsedDocument
+from models.dataclasses.filing_document_metadata import FilingDocumentMetadata
 
 def convert_to_orm(dataclass_obj: FilingMetadataDC) -> FilingMetadataORM:
     return FilingMetadataORM(
@@ -36,7 +36,7 @@ def convert_filing_doc_to_orm(dc: FilingDocDC) -> FilingDocORM:
         accessible=dc.accessible,
     )
 
-def convert_parsed_doc_to_filing_doc(parsed: ParsedDocument) -> FilingDocDC:
+def convert_parsed_doc_to_filing_doc(parsed: FilingDocumentMetadata) -> FilingDocDC:
     return FilingDocDC(
         accession_number=parsed.accession_number,
         cik=parsed.cik,

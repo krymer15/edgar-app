@@ -11,6 +11,7 @@ sys.path.insert(
 
 import pytest
 from downloaders.sgml_downloader import SgmlDownloader
+from models.dataclasses.sgml_text_document import SgmlTextDocument
 from utils.path_manager import build_cache_path
 
 def test_cache_read_write(tmp_path, monkeypatch):
@@ -36,7 +37,11 @@ def test_cache_read_write(tmp_path, monkeypatch):
 def test_download_sgml_uses_cache(monkeypatch):
     # Setup mock downloader
     cik, accession = "0000000000", "20250101000001"
-    expected_text = "From cache"
+    expected_doc = SgmlTextDocument(
+        cik=cik,
+        accession_number=accession,
+        content="From cache"
+    )
 
     class MockDownloader(SgmlDownloader):
         def __init__(self):
@@ -45,9 +50,13 @@ def test_download_sgml_uses_cache(monkeypatch):
             raise Exception("Should not call network")
 
     downloader = MockDownloader()
-    monkeypatch.setattr(downloader, "read_from_cache", lambda *args: expected_text)
+    monkeypatch.setattr(downloader, "read_from_cache", lambda *args: expected_doc.content)
     monkeypatch.setattr(downloader, "is_cached", lambda *args: True)
     monkeypatch.setattr(downloader, "is_stale", lambda path, max_age_seconds: False)  # Force cache to be valid
 
     result = downloader.download_sgml(cik, accession)
-    assert result == expected_text
+    assert isinstance(result, SgmlTextDocument)
+    assert result.cik == expected_doc.cik
+    assert result.accession_number == expected_doc.accession_number
+    assert result.content == expected_doc.content
+    print(repr(result))

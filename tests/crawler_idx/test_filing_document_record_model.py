@@ -13,7 +13,7 @@ import pytest
 from sqlalchemy import inspect, create_engine
 from models.orm_models.filing_metadata import FilingMetadata
 from models.orm_models.filing_documents import FilingDocument
-from models.dataclasses.filing_document import FilingDocument as FilingDocDC
+from models.dataclasses.filing_document_record import FilingDocument as FilingDocDC
 from models.adapters.dataclass_to_orm import convert_filing_doc_to_orm
 from models.base import Base
 from sqlalchemy.orm import Session

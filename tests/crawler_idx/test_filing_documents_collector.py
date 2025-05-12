@@ -15,6 +15,8 @@ import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from models.dataclasses.sgml_text_document import SgmlTextDocument
+from models.dataclasses.filing_document_record import FilingDocumentRecord
 from collectors.crawler_idx.filing_documents_collector import FilingDocumentsCollector
 from models.orm_models.filing_metadata import FilingMetadata as FilingMetadataORM
 from models.base import Base
@@ -51,7 +53,12 @@ def sample_metadata_record(test_db_session):
 def test_collect_returns_expected_documents(test_db_session, sample_metadata_record):
     fixture_text = FIXTURE_SGML_PATH.read_text(encoding="utf-8")
 
-    with patch("downloaders.sgml_downloader.SgmlDownloader.download_sgml", return_value=fixture_text):
+    with patch("downloaders.sgml_downloader.SgmlDownloader.download_sgml") as mock_download:
+        mock_download.return_value = SgmlTextDocument(
+            cik="0000921895",
+            accession_number="0000921895-25-001190",
+            content=fixture_text
+        )
         config = ConfigLoader.load_config()
         user_agent = config["sec_downloader"]["user_agent"]
 
@@ -59,6 +66,6 @@ def test_collect_returns_expected_documents(test_db_session, sample_metadata_rec
         results = collector.collect("2025-05-10")
 
         assert isinstance(results, list)
-        assert len(results) > 0
-        assert all(hasattr(doc, "accession_number") for doc in results)
+        assert all(isinstance(doc, FilingDocumentRecord) for doc in results)
         assert all(doc.accessible for doc in results)
+        assert any(doc.is_primary for doc in results)

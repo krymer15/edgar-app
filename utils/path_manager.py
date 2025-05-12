@@ -53,6 +53,43 @@ def build_raw_filepath(
     log_debug(f"📁 [Debug] Saving to: {full_path}")
     return full_path
 
+def build_raw_filepath_by_type(
+    # Example: build_raw_filepath_by_type("sgml", "2024", "0000320193", "10-K", "000032019324000011", "submission.txt")
+
+    file_type: str,  # One of: "sgml", "html_index", "exhibits", "xml"
+    year: str,
+    cik: str,
+    form_type: str,
+    accession_or_subtype: str,
+    filename: str,
+    force_base_path: str = None
+) -> str:
+    """
+    Builds a full structured filepath for a given raw file type under /data/raw/{file_type}/.
+    Example: /data/raw/sgml/CIK/year/accession/file.txt
+    """
+    if file_type not in ("sgml", "html_index", "exhibits", "xml"):
+        raise ValueError(f"Unsupported file_type: {file_type}")
+
+    base_path = (
+        force_base_path
+        or STORAGE_CONFIG.get("base_data_path", "data/")
+    )
+
+    subfolder_template = "{cik}/{year}/{form_type}/{accession_or_subtype}/"
+    subfolder = subfolder_template.format(
+        file_type=file_type,
+        cik=cik,
+        year=year,
+        form_type=form_type,
+        accession_or_subtype=accession_or_subtype
+    )
+
+    full_path = os.path.join(base_path, "raw", subfolder, filename)
+    log_debug(f"📁 [Debug] Saving to ({file_type}): {full_path}")
+    return full_path
+
+
 def build_processed_filepath(
     year: str,
     cik: str,

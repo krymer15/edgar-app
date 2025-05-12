@@ -3,7 +3,7 @@
 from sqlalchemy.exc import SQLAlchemyError
 from writers.base_writer import BaseWriter
 from models.adapters.dataclass_to_orm import convert_filing_doc_to_orm
-from models.dataclasses.filing_document import FilingDocument as FilingDocDC
+from models.dataclasses.filing_document_record import FilingDocumentRecord as FilingDocDC
 from models.orm_models.filing_documents import FilingDocument as FilingDocORM
 from utils.report_logger import log_info, log_warn, log_error
 
@@ -42,6 +42,7 @@ class FilingDocumentsWriter(BaseWriter):
 
                     if updated_fields:
                         updated += 1
+                        log_info(f"🔁 Updated: {repr(dc)}")
                     else:
                         skipped += 1
                     continue
@@ -49,16 +50,17 @@ class FilingDocumentsWriter(BaseWriter):
                 new_doc = convert_filing_doc_to_orm(dc)
                 self.db_session.add(new_doc)
                 written += 1
+                log_info(f"✅ Written: {repr(dc)}")
 
             except SQLAlchemyError as e:
                 self.db_session.rollback()
-                log_error(f"❌ DB error processing document {dc.filename or dc.source_url}: {e}")
+                log_error(f"DB error processing document {dc.filename or dc.source_url}: {e}")
                 continue
 
         try:
             self.db_session.commit()
         except SQLAlchemyError as e:
             self.db_session.rollback()
-            log_error(f"❌ Final commit failed: {e}")
+            log_error(f"Final commit failed: {e}")
 
         log_info(f"📝 Filing documents — Written: {written}, Updated: {updated}, Skipped: {skipped}")

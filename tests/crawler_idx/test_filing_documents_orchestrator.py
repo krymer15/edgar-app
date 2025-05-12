@@ -13,7 +13,7 @@ sys.path.insert(
 import pytest
 from unittest.mock import MagicMock, patch
 from orchestrators.crawler_idx.filing_documents_orchestrator import FilingDocumentsOrchestrator
-from models.dataclasses.filing_document import FilingDocument
+from models.dataclasses.filing_document_record import FilingDocumentRecord
 
 @patch("orchestrators.crawler_idx.filing_documents_orchestrator.FilingDocumentsCollector")
 @patch("orchestrators.crawler_idx.filing_documents_orchestrator.FilingDocumentsWriter")
@@ -28,7 +28,7 @@ def test_run_calls_orchestrate_and_writer(mock_config_loader, mock_get_db_sessio
 
     mock_collector_instance = MagicMock()
     mock_writer_instance = MagicMock()
-    mock_doc = FilingDocument(
+    mock_doc = FilingDocumentRecord(
         accession_number="0001234567-21-000001",
         cik="1234567",
         document_type="primary",

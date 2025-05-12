@@ -1,6 +1,6 @@
 import os
 import unittest
-from utils.path_manager import build_raw_filepath, build_processed_filepath, build_cache_path
+from utils.path_manager import build_raw_filepath, build_processed_filepath, build_cache_path, build_raw_filepath_by_type
 
 class TestPathManager(unittest.TestCase):
     def test_build_raw_filepath(self):
@@ -13,6 +13,41 @@ class TestPathManager(unittest.TestCase):
         )
         self.assertIn("2025", result)
         self.assertTrue(result.endswith("example.txt"))
+
+    def test_build_raw_filepath_by_type(self):
+        result = build_raw_filepath_by_type(
+            file_type="sgml",
+            year="2024",
+            cik="0000320193",
+            form_type="10-K",
+            accession_or_subtype="000032019324000011",
+            filename="submission.txt"
+        )
+        # Verify structure
+        self.assertIn("/raw/sgml/0000320193/2024/10-K/000032019324000011/", result.replace("\\", "/"))
+        self.assertTrue(result.endswith("submission.txt"))
+
+        result_html = build_raw_filepath_by_type(
+            file_type="html_index",
+            year="2024",
+            cik="0000320193",
+            form_type="10-K",
+            accession_or_subtype="000032019324000011",
+            filename="index.html"
+        )
+        self.assertIn("/raw/html_index/0000320193/2024/10-K/000032019324000011/", result_html.replace("\\", "/"))
+        self.assertTrue(result_html.endswith("index.html"))
+
+        # Test invalid type
+        with self.assertRaises(ValueError):
+            build_raw_filepath_by_type(
+                file_type="pdf",  # unsupported
+                year="2024",
+                cik="0000320193",
+                form_type="10-K",
+                accession_or_subtype="000032019324000011",
+                filename="doc.pdf"
+            )
 
     def test_build_processed_filepath(self):
         result = build_processed_filepath(

@@ -16,7 +16,7 @@ from sqlalchemy.orm import sessionmaker, clear_mappers
 
 from models.base import Base
 from models.orm_models.filing_documents import FilingDocument as FilingDocORM
-from models.dataclasses.filing_document import FilingDocument as FilingDocDC
+from models.dataclasses.filing_document_record import FilingDocumentRecord as FilingDocDC
 from writers.crawler_idx.filing_documents_writer import FilingDocumentsWriter
 
 

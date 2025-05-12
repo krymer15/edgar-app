@@ -8,6 +8,7 @@
 import os
 import time
 from downloaders.sec_downloader import SECDownloader
+from models.dataclasses.sgml_text_document import SgmlTextDocument
 from utils.path_manager import build_cache_path
 from utils.url_builder import construct_sgml_txt_url
 from utils.report_logger import log_info, log_warn, log_error
@@ -41,21 +42,23 @@ class SgmlDownloader(SECDownloader):
         with open(path, "w", encoding="utf-8") as f:
             f.write(content)
 
-    def download_sgml(self, cik: str, accession_number: str) -> str:
+    def download_sgml(self, cik: str, accession_number: str) -> SgmlTextDocument:
         path = build_cache_path(cik, accession_number)
         
+        # Use cache if available
         if self.use_cache and self.is_cached(cik, accession_number):
             if not self.is_stale(path, max_age_seconds=86400):  # 24-hour TTL cache invalidation
                 log_info(f"⚡ Cache hit for SGML: {accession_number}")
-                return self.read_from_cache(cik, accession_number)
+                content = self.read_from_cache(cik, accession_number)
+                return SgmlTextDocument(cik=cik, accession_number=accession_number, content=content)
             else:
                 log_info(f"♻️ Cache stale for SGML: {accession_number} — re-downloading.")
 
-        url = construct_sgml_txt_url(cik, accession_number)
+        url = construct_sgml_txt_url(cik, accession_number) # returning a raw pointer, not a dataclass
         log_info(f"📥 Downloading SGML from SEC for {accession_number}")
         content = self.download_html(url)
 
         if self.use_cache:
             self.write_to_cache(cik, accession_number, content)
 
-        return content
+        return SgmlTextDocument(cik=cik, accession_number=accession_number, content=content)

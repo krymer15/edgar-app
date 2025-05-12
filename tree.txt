@@ -42,11 +42,6 @@
 │   │   ├── filing_writer.py
 │   │   ├── parsed_sgml_writer.py
 │   │   └── sgml_doc_writer.py
-├── cleaners/
-│   └── README.md
-│   ├── html/
-│   ├── sgml/
-│   ├── xbrl/
 ├── collectors/
 │   ├── README.md
 │   └── base_collector.py
@@ -75,14 +70,13 @@
 │   ├── SEC_Form_Analysis_Priority.csv
 │   ├── cleaning_and_parsing.md
 │   ├── data_symlink_handling.md
-│   ├── dataclasses.md
+│   ├── dataclass_architecture.md
 │   ├── folder_structure.md
 │   ├── mapping_filings_to_fiscal_periods.md
 │   ├── parsers_subclass_specialization.md
-│   ├── path_generation_standards.md
+│   ├── pipeline_overview.md
 │   ├── project_naming_and_git_update.md
 │   ├── sec_forms.md
-│   ├── specialized_subclasses.md
 │   └── universal_script_header.md
 ├── downloaders/
 │   ├── README.md
@@ -92,8 +86,6 @@
 │   └── sgml_downloader.py
 ├── external_data/
 │   └── market_data.py
-├── extractors/
-│   └── README.md
 ├── integrations/
 │   ├── notion/
 │   │   └── notion_writer.py
@@ -113,9 +105,10 @@
 │   │   ├── README.md
 │   │   ├── __init__.py
 │   │   ├── filing_document.py
+│   │   ├── filing_document_metadata.py
 │   │   ├── filing_metadata.py
-│   │   ├── parsed_document.py
-│   │   └── raw_document.py
+│   │   ├── raw_document.py
+│   │   └── sgml_text_document.py
 │   ├── orm_models/
 │   │   ├── README.md
 │   │   ├── __init__.py
@@ -145,6 +138,7 @@
 │   ├── __init__.py
 │   └── base_orchestrator.py
 │   ├── crawler_idx/
+│   │   ├── README.md
 │   │   ├── daily_ingestion_orchestrator.py
 │   │   ├── filing_documents_orchestrator.py
 │   │   └── filing_metadata_orchestrator.py
@@ -177,9 +171,11 @@
 │   │   └── forms1_parser.py
 │   ├── html/
 │   ├── idx/
+│   │   ├── README.md
 │   │   └── idx_parser.py
 │   ├── sgml/
-│   │   └── sgml_filing_parser.py
+│   │   ├── indexers/
+│   │   │   └── sgml_document_indexer.py
 │   ├── utils/
 │   │   └── parser_utils.py
 │   ├── xbrl/
@@ -217,6 +213,10 @@
 │   │   │   └── submissions_metadata.sql
 ├── summarizers/
 │   └── README.md
+├── test_data/
+│   ├── cache_sgml/
+│   │   ├── 2025/
+│   │   │   ├── 0000000000/
 ├── tests/
 │   ├── README.md
 │   └── __init__.py
@@ -252,6 +252,7 @@
 │   │   ├── test_filing_blocks.txt
 │   │   └── test_filing_raw.html
 │   ├── shared/
+│   │   ├── test_cache_manager.py
 │   │   ├── test_config_loader.py
 │   │   ├── test_path_manager.py
 │   │   ├── test_report_logger.py
@@ -265,6 +266,7 @@
 ├── utils/
 │   ├── README.md
 │   ├── __init__.py
+│   ├── cache_manager.py
 │   ├── get_project_root.py
 │   ├── path_manager.py
 │   ├── report_logger.py
@@ -274,6 +276,7 @@
 │   ├── README.md
 │   └── base_writer.py
 │   ├── crawler_idx/
+│   │   ├── README.md
 │   │   ├── filing_documents_writer.py
 │   │   └── filing_metadata_writer.py
 │   ├── forms/

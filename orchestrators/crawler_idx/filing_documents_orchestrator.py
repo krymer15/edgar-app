@@ -1,6 +1,6 @@
 # orchestrators/filing_documents_orchestrator.py
 
-# Parses SGML .txt to populate filing_documents
+# Indexes SGML .txt documents to populate filing_documents table
 
 from orchestrators.base_orchestrator import BaseOrchestrator
 from collectors.crawler_idx.filing_documents_collector import FilingDocumentsCollector
@@ -26,13 +26,13 @@ class FilingDocumentsOrchestrator(BaseOrchestrator):
             documents = self.collector.collect(target_date)
             if limit:
                 documents = documents[:limit]
-            log_info(f"[DOCS] Collected {len(documents)} filing documents for {target_date}")
+            log_info(f"[DOCS] Indexed {len(documents)} filing document records for {target_date}")
             self.writer.write_documents(documents)
         except Exception as e:
             log_warn(f"[DOCS] Error during orchestrate(): {e}")
             raise
 
     def run(self, target_date: str, limit: int = None):
-        log_info(f"[DOCS] Starting document ingestion for {target_date}")
+        log_info(f"[DOCS] Starting SGML indexing for {target_date}")
         self.orchestrate(target_date, limit)
-        log_info(f"[DOCS] Completed document ingestion for {target_date}")
+        log_info(f"[DOCS] Completed SGML indexing for {target_date}")
