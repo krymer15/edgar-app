@@ -12,15 +12,15 @@ sys.path.insert(
 import pytest
 from sqlalchemy import inspect, create_engine
 from models.orm_models.filing_metadata import FilingMetadata
-from models.orm_models.filing_documents import FilingDocument
-from models.dataclasses.filing_document_record import FilingDocument as FilingDocDC
+from models.orm_models.filing_document_orm import FilingDocumentORM
+from models.dataclasses.filing_document_record import FilingDocumentRecord as FilingDocDC
 from models.adapters.dataclass_to_orm import convert_filing_doc_to_orm
 from models.base import Base
 from sqlalchemy.orm import Session
 import uuid
 
 def test_orm_mapping_matches_ddl():
-    mapper = inspect(FilingDocument)
+    mapper = inspect(FilingDocumentORM)
     cols = {c.key: c for c in mapper.columns}
 
     # Primary key

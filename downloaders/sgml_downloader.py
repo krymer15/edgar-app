@@ -2,7 +2,7 @@
 
 '''
 # Role: Downloads SGML .txt using inherited retry logic
-- Uses caching to mitigate using SgmlDownloader twice upon parsing metadata and then writing sgml to disk.
+- Uses caching to mitigate using SgmlDownloader twice upon parsing metadata from sgml and then writing sgml to disk.
 '''
 
 import os

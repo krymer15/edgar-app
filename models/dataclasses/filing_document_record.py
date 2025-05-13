@@ -5,8 +5,13 @@ from typing import Optional
 
 @dataclass
 class FilingDocumentRecord:
-    '''
+    r'''
     The dataclass mirror of the ORM model, not a full document (e.g., no file content). Adding Record suffix clarifies it is a structured metadata entry.
+    - Post-Adapter, ORM-Ready Format
+    - Normalized, DB-ready metadata record (ORM-compatible)
+    - Converted to → ORM model (FilingDocument) -- models\orm_models\filing_documents.py
+    - Final Destination: Persistent → written to DB
+    - Used by: FilingDocumentsCollector, FilingDocumentsWriter
     '''
     accession_number: str
     cik: str

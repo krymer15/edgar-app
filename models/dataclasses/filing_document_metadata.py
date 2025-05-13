@@ -8,6 +8,12 @@ class FilingDocumentMetadata:
     """
     Pointer to a declared document within an SEC filing (e.g., exhibit or primary doc).
     This class holds metadata only — it does not include file content.
+    - Parser Output / Pre-Adapter Metadata
+    - SgmlDocumentIndexer (parsing step)
+    - Purpose: Temporary metadata pointer after parsing SGML
+    - Converted To	→ FilingDocumentRecord (via adapter)
+    - Content Carried: No actual document text or binary
+    - Final Destination:	Intermediate → gets transformed
     """
 
     cik: str

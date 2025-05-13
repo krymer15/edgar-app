@@ -47,7 +47,8 @@
 │   └── base_collector.py
 │   ├── crawler_idx/
 │   │   ├── filing_documents_collector.py
-│   │   └── filing_metadata_collector.py
+│   │   ├── filing_metadata_collector.py
+│   │   └── sgml_disk_collector.py
 │   ├── submissions_api/
 │   │   └── submissions_collector.py
 ├── config/
@@ -104,15 +105,15 @@
 │   ├── dataclasses/
 │   │   ├── README.md
 │   │   ├── __init__.py
-│   │   ├── filing_document.py
 │   │   ├── filing_document_metadata.py
+│   │   ├── filing_document_record.py
 │   │   ├── filing_metadata.py
 │   │   ├── raw_document.py
 │   │   └── sgml_text_document.py
 │   ├── orm_models/
 │   │   ├── README.md
 │   │   ├── __init__.py
-│   │   ├── filing_documents.py
+│   │   ├── filing_document_orm.py
 │   │   └── filing_metadata.py
 │   ├── schemas/
 │   │   └── index_record_model.py
@@ -175,6 +176,7 @@
 │   │   └── idx_parser.py
 │   ├── sgml/
 │   │   ├── indexers/
+│   │   │   ├── README.md
 │   │   │   └── sgml_document_indexer.py
 │   ├── utils/
 │   │   └── parser_utils.py
@@ -227,8 +229,8 @@
 │   ├── crawler_idx/
 │   │   ├── test_cli_ingestion.py
 │   │   ├── test_daily_ingestion_orchestrator.py
+│   │   ├── test_filing_document_record_model.py
 │   │   ├── test_filing_documents_collector.py
-│   │   ├── test_filing_documents_model.py
 │   │   ├── test_filing_documents_orchestrator.py
 │   │   ├── test_filing_documents_writer.py
 │   │   ├── test_filing_metadata_collector.py
@@ -238,7 +240,8 @@
 │   │   ├── test_idx_parser.py
 │   │   ├── test_raw_document.py
 │   │   ├── test_run_daily_documents_ingest.py
-│   │   └── test_run_daily_metadata_ingest.py
+│   │   ├── test_run_daily_metadata_ingest.py
+│   │   └── test_sgml_disk_collector.py
 │   ├── fixtures/
 │   │   ├── 0000921895-25-001190.txt
 │   │   ├── app_config_test.yaml
@@ -252,13 +255,15 @@
 │   │   ├── test_filing_blocks.txt
 │   │   └── test_filing_raw.html
 │   ├── shared/
+│   │   ├── README.md
 │   │   ├── test_cache_manager.py
 │   │   ├── test_config_loader.py
 │   │   ├── test_path_manager.py
+│   │   ├── test_raw_file_writer.py
 │   │   ├── test_report_logger.py
 │   │   ├── test_sec_downloader.py
-│   │   ├── test_sgml_downloader.py
-│   │   ├── test_sgml_parser.py
+│   │   ├── test_sgml_indexer.py
+│   │   ├── test_sgml_text_downloader.py
 │   │   └── test_ticker_cik_mapper.py
 │   ├── submissions_api/
 │   │   ├── test_submissions_collector.py
@@ -283,5 +288,5 @@
 │   │   ├── form4_writer.py
 │   │   └── xml_metadata_writer.py
 │   ├── shared/
-│   │   └── document_writer.py
+│   │   └── raw_file_writer.py
 │   ├── submissions_api/

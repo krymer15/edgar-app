@@ -5,7 +5,7 @@
 from sqlalchemy import Column, String, Date, TIMESTAMP, text, Text
 from sqlalchemy.orm import relationship
 from models.base import Base
-from models.orm_models.filing_documents import FilingDocument
+from models.orm_models.filing_document_orm import FilingDocumentORM
 
 class FilingMetadata(Base):
     __tablename__ = "filing_metadata"
@@ -28,7 +28,7 @@ class FilingMetadata(Base):
                      )
 
     documents = relationship(
-        "FilingDocument",
+        "FilingDocumentORM",
         back_populates="filing",
         cascade="all, delete-orphan",
     )

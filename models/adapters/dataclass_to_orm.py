@@ -8,7 +8,7 @@ from models.dataclasses.filing_metadata import FilingMetadata as FilingMetadataD
 from models.orm_models.filing_metadata import FilingMetadata as FilingMetadataORM
 
 from models.dataclasses.filing_document_record import FilingDocumentRecord as FilingDocDC
-from models.orm_models.filing_documents import FilingDocument as FilingDocORM
+from models.orm_models.filing_document_orm import FilingDocumentORM
 
 from models.dataclasses.filing_document_metadata import FilingDocumentMetadata
 
@@ -21,8 +21,8 @@ def convert_to_orm(dataclass_obj: FilingMetadataDC) -> FilingMetadataORM:
         filing_url=dataclass_obj.filing_url,
     )
 
-def convert_filing_doc_to_orm(dc: FilingDocDC) -> FilingDocORM:
-    return FilingDocORM(
+def convert_filing_doc_to_orm(dc: FilingDocDC) -> FilingDocumentORM:
+    return FilingDocumentORM(
         accession_number=dc.accession_number,
         cik=dc.cik,
         document_type=dc.document_type,

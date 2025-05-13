@@ -4,7 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from writers.base_writer import BaseWriter
 from models.adapters.dataclass_to_orm import convert_filing_doc_to_orm
 from models.dataclasses.filing_document_record import FilingDocumentRecord as FilingDocDC
-from models.orm_models.filing_documents import FilingDocument as FilingDocORM
+from models.orm_models.filing_document_orm import FilingDocumentORM
 from utils.report_logger import log_info, log_warn, log_error
 
 class FilingDocumentsWriter(BaseWriter):
@@ -24,7 +24,7 @@ class FilingDocumentsWriter(BaseWriter):
         for dc in documents:
             try:
                 # Deduplication check by accession_number + document_type + source_url
-                existing = self.db_session.query(FilingDocORM).filter_by(
+                existing = self.db_session.query(FilingDocumentORM).filter_by(
                     accession_number=dc.accession_number,
                     document_type=dc.document_type,
                     source_url=dc.source_url

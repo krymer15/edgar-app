@@ -6,7 +6,12 @@ from sqlalchemy.orm import relationship
 from models.base import Base
 from uuid import uuid4 # for SQLite testing compatibility
 
-class FilingDocument(Base):
+class FilingDocumentORM(Base):
+    '''
+    The actual SQLAlchemy ORM class that defines the filing_documents table in Postgres.
+    - convert_filing_doc_to_orm() in dataclass_to_orm.py converts a FilingDocumentRecord (DC) into a FilingDocument (ORM model)
+      → see its use in FilingDocumentsWriter.
+    '''
     __tablename__ = "filing_documents"
 
     id                = Column(

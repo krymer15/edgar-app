@@ -9,6 +9,26 @@ Contains all data definitions for the EDGAR pipeline.
 - **adapters/**  
   Conversion utilities between dataclasses and ORM models (both directions).
 
+## Data Flows among Models:
+
+### `sgml`:
+
+```markdown
+SGML content (`.txt`)
+   ↓
+`SgmlDocumentIndexer` → [FilingDocumentMetadata]
+   ↓ adapter
+`convert_parsed_doc_to_filing_doc()`
+   ↓
+`FilingDocumentRecord` (cleaned dataclass)
+   ↓ writer
+`convert_filing_doc_to_orm()`
+   ↓
+`FilingDocument` (SQLAlchemy ORM model)
+   ↓
+Postgres
+```
+
 ## Reverse Mapping: `orm_to_dataclass()`
 Your orchestrators shouldn’t import SQLAlchemy models directly. Instead, provide adapter functions:
 
