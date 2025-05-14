@@ -17,6 +17,10 @@ class SgmlDownloader(SECDownloader):
     def __init__(self, user_agent: str, request_delay_seconds: float = 1.0, use_cache: bool = True):
         super().__init__(user_agent=user_agent, request_delay_seconds=request_delay_seconds)
         self.use_cache = use_cache
+        self.memory_cache = {} # key: (cik, accession, year) → value: SgmlTextDocument
+
+    def clear_memory_cache(self):
+        self.memory_cache.clear()
 
     def is_stale(self, path: str, max_age_seconds: int) -> bool:
         try:
@@ -25,40 +29,59 @@ class SgmlDownloader(SECDownloader):
         except OSError:
             return True  # Treat unreadable or missing file as stale
 
-    def is_cached(self, cik: str, accession_number: str) -> bool:
-        return os.path.exists(build_cache_path(cik, accession_number))
+    def is_cached(self, cik: str, accession_number: str, year: str) -> bool:
+        path = build_cache_path(cik, accession_number, year)
+        return path is not None and os.path.exists(path)
 
-    def read_from_cache(self, cik: str, accession_number: str) -> str:
-        path = build_cache_path(cik, accession_number)
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                return f.read()
-        except Exception as e:
-            raise IOError(f"Cache read failed at {path}: {str(e)}")
+    def read_from_cache(self, cik: str, accession_number: str, year: str) -> str:
+        path = build_cache_path(cik, accession_number, year)
+        if not path:
+            raise ValueError(f"[read_from_cache] Missing cache path for {accession_number}")
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
 
-    def write_to_cache(self, cik: str, accession_number: str, content: str):
-        path = build_cache_path(cik, accession_number)
+    def write_to_cache(self, cik: str, accession_number: str, content: str, year: str):
+        path = build_cache_path(cik, accession_number, year)
+        log_info(f"[WRITE] Caching SGML: {accession_number} → {path}")
+
+        if not path:
+            log_warn(f"[write_to_cache] No cache path for {accession_number}, skipping write.")
+            return
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             f.write(content)
 
-    def download_sgml(self, cik: str, accession_number: str) -> SgmlTextDocument:
-        path = build_cache_path(cik, accession_number)
-        
-        # Use cache if available
-        if self.use_cache and self.is_cached(cik, accession_number):
-            if not self.is_stale(path, max_age_seconds=86400):  # 24-hour TTL cache invalidation
+    def download_sgml(self, cik: str, accession_number: str, year: str, write_cache: bool = True) -> SgmlTextDocument:
+        key = (cik, accession_number, year)
+        if key in self.memory_cache:
+            log_info(f"🔁 Reusing in-memory SGML for {accession_number}")
+            return self.memory_cache[key]
+
+        log_info(f"[DEBUG] Checking SGML cache for: {accession_number}, year={year}")
+        path = build_cache_path(cik, accession_number, year)
+        log_info(f"[DEBUG] Cache path resolved: {path}")
+
+        if not path:
+            log_warn(f"[download_sgml] Cannot resolve cache path for {accession_number}")
+            return SgmlTextDocument(cik=cik, accession_number=accession_number, content="")
+
+        if self.use_cache and self.is_cached(cik, accession_number, year):
+            if not self.is_stale(path, max_age_seconds=86400):
                 log_info(f"⚡ Cache hit for SGML: {accession_number}")
-                content = self.read_from_cache(cik, accession_number)
-                return SgmlTextDocument(cik=cik, accession_number=accession_number, content=content)
+                content = self.read_from_cache(cik, accession_number, year)
+                doc = SgmlTextDocument(cik=cik, accession_number=accession_number, content=content)
+                self.memory_cache[key] = doc
+                return doc
             else:
                 log_info(f"♻️ Cache stale for SGML: {accession_number} — re-downloading.")
 
-        url = construct_sgml_txt_url(cik, accession_number) # returning a raw pointer, not a dataclass
+        url = construct_sgml_txt_url(cik, accession_number)
         log_info(f"📥 Downloading SGML from SEC for {accession_number}")
         content = self.download_html(url)
 
-        if self.use_cache:
-            self.write_to_cache(cik, accession_number, content)
+        if self.use_cache and write_cache:
+            self.write_to_cache(cik, accession_number, content, year)
 
-        return SgmlTextDocument(cik=cik, accession_number=accession_number, content=content)
+        doc = SgmlTextDocument(cik=cik, accession_number=accession_number, content=content)
+        self.memory_cache[key] = doc
+        return doc

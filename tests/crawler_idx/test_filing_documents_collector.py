@@ -69,3 +69,19 @@ def test_collect_returns_expected_documents(test_db_session, sample_metadata_rec
         assert all(isinstance(doc, FilingDocumentRecord) for doc in results)
         assert all(doc.accessible for doc in results)
         assert any(doc.is_primary for doc in results)
+
+def test_collector_initializes_with_expected_params(test_db_session):
+    from downloaders.sgml_downloader import SgmlDownloader
+
+    downloader = SgmlDownloader(user_agent="TestBot", use_cache=True)
+    collector = FilingDocumentsCollector(
+        db_session=test_db_session,
+        user_agent="TestBot",
+        use_cache=True,
+        write_cache=False,
+        downloader=downloader
+    )
+
+    assert collector.use_cache is True
+    assert collector.write_cache is False
+    assert collector.downloader is downloader

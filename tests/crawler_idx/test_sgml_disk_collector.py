@@ -84,7 +84,8 @@ def test_sgml_disk_collector_writes_file(tmp_path, monkeypatch, test_db_session,
         collector = SgmlDiskCollector(
             db_session=test_db_session,
             user_agent=user_agent,
-            use_cache=True
+            use_cache=True,
+            write_cache=True
         )
         results = collector.collect("2025-05-10")
 

@@ -5,7 +5,9 @@
 ├── requirements.txt
 └── tree.txt
 ├── archive/
-│   └── html_extractors.py
+│   ├── html_extractors.py
+│   ├── test_cli_ingestion.py
+│   └── test_daily_ingestion_orchestrator.py
 │   ├── collectors/
 │   │   └── daily_index_collector.py
 │   ├── db/
@@ -32,6 +34,7 @@
 │   │   ├── ingest_sgml_batch_from_idx.py
 │   │   ├── ingest_sgml_from_cli.py
 │   │   ├── init_db.py
+│   │   ├── run_daily_ingestion.py
 │   │   └── test_query.py
 │   ├── utils/
 │   │   ├── field_mapper.py
@@ -140,9 +143,10 @@
 │   └── base_orchestrator.py
 │   ├── crawler_idx/
 │   │   ├── README.md
-│   │   ├── daily_ingestion_orchestrator.py
+│   │   ├── daily_ingestion_pipeline.py
 │   │   ├── filing_documents_orchestrator.py
-│   │   └── filing_metadata_orchestrator.py
+│   │   ├── filing_metadata_orchestrator.py
+│   │   └── sgml_disk_orchestrator.py
 │   ├── forms/
 │   │   └── form4_xml_orchestrator.py
 │   ├── legacy/
@@ -183,11 +187,12 @@
 │   ├── xbrl/
 ├── scripts/
 │   ├── README.md
-│   ├── __init__.py
-│   └── run_daily_ingestion.py
+│   └── __init__.py
 │   ├── crawler_idx/
 │   │   ├── run_daily_documents_ingest.py
-│   │   └── run_daily_metadata_ingest.py
+│   │   ├── run_daily_metadata_ingest.py
+│   │   ├── run_daily_pipeline_ingest.py
+│   │   └── run_sgml_disk_ingest.py
 │   ├── devtools/
 │   │   ├── cleanup_test_data.py
 │   │   ├── clear_test_records.py
@@ -216,9 +221,15 @@
 ├── summarizers/
 │   └── README.md
 ├── test_data/
-│   ├── cache_sgml/
-│   │   ├── 2025/
-│   │   │   ├── 0000000000/
+│   ├── raw/
+│   │   ├── 1084869/
+│   │   │   ├── 2025/
+│   │   │   │   ├── 10-Q/
+│   │   │   │   │   ├── 0001084869-25-000007/
+│   │   │   │   │   │   └── 0001084869-25-000007.txt
+│   │   │   │   ├── EX-31.1/
+│   │   │   │   │   ├── 0001084869-25-000007/
+│   │   │   │   │   │   └── 0001084869-25-000007.txt
 ├── tests/
 │   ├── README.md
 │   └── __init__.py
@@ -227,8 +238,7 @@
 │   │   ├── test_file_saver.py
 │   │   └── test_filing_writer.py
 │   ├── crawler_idx/
-│   │   ├── test_cli_ingestion.py
-│   │   ├── test_daily_ingestion_orchestrator.py
+│   │   ├── test_daily_ingestion_pipeline.py
 │   │   ├── test_filing_document_record_model.py
 │   │   ├── test_filing_documents_collector.py
 │   │   ├── test_filing_documents_orchestrator.py
@@ -241,9 +251,12 @@
 │   │   ├── test_raw_document.py
 │   │   ├── test_run_daily_documents_ingest.py
 │   │   ├── test_run_daily_metadata_ingest.py
-│   │   └── test_sgml_disk_collector.py
+│   │   ├── test_run_daily_pipeline_ingest.py
+│   │   ├── test_sgml_disk_collector.py
+│   │   └── test_sgml_disk_orchestrator.py
 │   ├── fixtures/
 │   │   ├── 0000921895-25-001190.txt
+│   │   ├── 0000925421-24-000007.txt
 │   │   ├── app_config_test.yaml
 │   │   ├── crawler_sample.idx
 │   │   └── fixture_loader.py
@@ -272,6 +285,7 @@
 │   ├── README.md
 │   ├── __init__.py
 │   ├── cache_manager.py
+│   ├── filing_calendar.py
 │   ├── get_project_root.py
 │   ├── path_manager.py
 │   ├── report_logger.py

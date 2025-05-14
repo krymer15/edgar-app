@@ -8,6 +8,6 @@ folders_to_delete = [
 for folder in folders_to_delete:
     if os.path.exists(folder):
         shutil.rmtree(folder)
-        print(f"✅ Deleted: {folder}")
+        print(f"Deleted: {folder}")
     else:
-        print(f"ℹ️ Skipped (not found): {folder}")
+        print(f"ℹSkipped (not found): {folder}")

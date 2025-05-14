@@ -29,9 +29,9 @@ def test_cache_read_write(tmp_path, monkeypatch):
     downloader = SgmlDownloader(user_agent="test-agent", use_cache=True)
 
     # Write and read from cache
-    downloader.write_to_cache(cik, accession, expected_text)
-    assert downloader.is_cached(cik, accession)
-    content = downloader.read_from_cache(cik, accession)
+    downloader.write_to_cache(cik, accession, expected_text, year="2025")
+    assert downloader.is_cached(cik, accession, year="2025")
+    content = downloader.read_from_cache(cik, accession, year="2025")
     assert content == expected_text
 
 def test_download_sgml_uses_cache(monkeypatch):
@@ -54,7 +54,7 @@ def test_download_sgml_uses_cache(monkeypatch):
     monkeypatch.setattr(downloader, "is_cached", lambda *args: True)
     monkeypatch.setattr(downloader, "is_stale", lambda path, max_age_seconds: False)  # Force cache to be valid
 
-    result = downloader.download_sgml(cik, accession)
+    result = downloader.download_sgml(cik, accession, year="2025")
     assert isinstance(result, SgmlTextDocument)
     assert result.cik == expected_doc.cik
     assert result.accession_number == expected_doc.accession_number

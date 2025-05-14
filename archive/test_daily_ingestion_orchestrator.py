@@ -1,7 +1,7 @@
 # tests/test_daily_ingestion_orchestrator.py
 
 from unittest.mock import patch, MagicMock
-from orchestrators.crawler_idx.daily_ingestion_orchestrator import DailyIngestionOrchestrator
+from orchestrators.crawler_idx.daily_ingestion_pipeline import DailyIngestionOrchestrator
 
 @patch("orchestrators.daily_ingestion_orchestrator.FilingMetadataOrchestrator")
 @patch("orchestrators.daily_ingestion_orchestrator.FilingDocumentsOrchestrator")

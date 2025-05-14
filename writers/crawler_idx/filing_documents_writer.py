@@ -42,9 +42,10 @@ class FilingDocumentsWriter(BaseWriter):
 
                     if updated_fields:
                         updated += 1
-                        log_info(f"🔁 Updated: {repr(dc)}")
+                        log_info(f"Updated: {repr(dc)}")
                     else:
                         skipped += 1
+                        log_info(f"Skipped (unchanged): {dc.accession_number} → {dc.filename or dc.source_url}")
                     continue
 
                 new_doc = convert_filing_doc_to_orm(dc)

@@ -49,7 +49,7 @@ def test_run_calls_orchestrate_and_writer(mock_config_loader, mock_get_db_sessio
     orchestrator.run(target_date="2025-05-01", limit=None)
 
     # Assertions
-    mock_collector_instance.collect.assert_called_once_with("2025-05-01")
+    mock_collector_instance.collect.assert_called_once_with("2025-05-01", limit=None)
     mock_writer_instance.write_documents.assert_called_once_with([mock_doc])
 
 @patch("orchestrators.crawler_idx.filing_documents_orchestrator.FilingDocumentsCollector")
@@ -73,7 +73,7 @@ def test_run_respects_limit(mock_config_loader, mock_get_db_session, mock_writer
     orchestrator = FilingDocumentsOrchestrator()
     orchestrator.run(target_date="2025-05-01", limit=3)
 
-    mock_collector_instance.collect.assert_called_once_with("2025-05-01")
+    mock_collector_instance.collect.assert_called_once_with("2025-05-01", limit=3)
     mock_writer_instance.write_documents.assert_called_once_with(mock_docs[:3])
 
 @patch("orchestrators.crawler_idx.filing_documents_orchestrator.FilingDocumentsCollector")
@@ -95,3 +95,30 @@ def test_run_raises_and_logs_on_error(mock_config_loader, mock_get_db_session, m
 
     with pytest.raises(RuntimeError, match="Boom"):
         orchestrator.run(target_date="2025-05-01")
+
+@patch("orchestrators.crawler_idx.filing_documents_orchestrator.FilingDocumentsWriter")
+@patch("orchestrators.crawler_idx.filing_documents_orchestrator.FilingDocumentsCollector")
+@patch("orchestrators.crawler_idx.filing_documents_orchestrator.get_db_session")
+@patch("orchestrators.crawler_idx.filing_documents_orchestrator.ConfigLoader")
+def test_init_passes_write_cache_and_downloader(mock_config_loader, mock_get_db_session, mock_collector_cls, mock_writer_cls):
+    mock_config_loader.load_config.return_value = {
+        "sec_downloader": {"user_agent": "TestBot/1.0"}
+    }
+
+    from downloaders.sgml_downloader import SgmlDownloader
+    downloader = SgmlDownloader(user_agent="TestAgent", use_cache=True)
+
+    orchestrator = FilingDocumentsOrchestrator(
+        use_cache=True,
+        write_cache=False,
+        downloader=downloader
+    )
+
+    # Check that FilingDocumentsCollector was initialized with expected args
+    args, kwargs = mock_collector_cls.call_args
+
+    assert kwargs["use_cache"] is True
+    assert kwargs["write_cache"] is False
+    assert kwargs["downloader"] is not None
+    from downloaders.sgml_downloader import SgmlDownloader
+    assert isinstance(kwargs["downloader"], SgmlDownloader)

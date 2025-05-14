@@ -1,6 +1,6 @@
 import os
 from config.config_loader import ConfigLoader
-from utils.report_logger import log_debug
+from utils.report_logger import log_debug, log_warn
 
 # Load config once at module import
 CONFIG = ConfigLoader.load_config()
@@ -42,10 +42,11 @@ def build_raw_filepath(
     )
 
     subfolder_template = STORAGE_CONFIG.get("raw_subfolder_template", "{year}/{cik}/{form_type}/{accession_or_subtype}/")
+    safe_form_type = form_type.replace("/", "_")
     subfolder = subfolder_template.format(
         year=year,
         cik=cik,
-        form_type=form_type,
+        form_type=safe_form_type,
         accession_or_subtype=accession_or_subtype
     )
 
@@ -77,11 +78,12 @@ def build_raw_filepath_by_type(
     )
 
     subfolder_template = "{cik}/{year}/{form_type}/{accession_or_subtype}/"
+    safe_form_type = form_type.replace("/", "_")
     subfolder = subfolder_template.format(
         file_type=file_type,
         cik=cik,
         year=year,
-        form_type=form_type,
+        form_type=safe_form_type,
         accession_or_subtype=accession_or_subtype
     )
 
@@ -109,10 +111,11 @@ def build_processed_filepath(
     )
 
     subfolder_template = STORAGE_CONFIG.get("processed_subfolder_template", "{year}/{cik}/{form_type}/{accession_or_subtype}/")
+    safe_form_type = form_type.replace("/", "_")
     subfolder = subfolder_template.format(
         year=year,
         cik=cik,
-        form_type=form_type,
+        form_type=safe_form_type,
         accession_or_subtype=accession_or_subtype
     )
 
@@ -120,12 +123,17 @@ def build_processed_filepath(
     log_debug(f"📁 [Debug] Saving to: {full_path}")
     return full_path
 
-def build_cache_path(cik: str, accession: str) -> str:
+def build_cache_path(cik: str, accession: str, year: str = None) -> str:
     """
     Returns full path to cached SGML .txt file for a given CIK and accession.
     E.g. /data/cache_sgml/YYYY/CIK/accession.txt
+    Requires `year` from filing metadata (do not derive from accession).
     """
-    year = accession[:4]  # Assumes accession starts with YYYY
+    if not year:
+        # Fail loudly during dev or testing
+        log_warn(f"[CachePath] ⚠️ No year provided for {accession}; skipping cache path.")
+        return None# gracefully aborts caching
+
     base_path = STORAGE_CONFIG.get("base_data_path", "data/")
     cache_dir = os.path.join(base_path, "cache_sgml", year, cik)
     filename = f"{accession}.txt"

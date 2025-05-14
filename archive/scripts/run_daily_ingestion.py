@@ -11,7 +11,7 @@ except ImportError:
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import argparse
-from orchestrators.crawler_idx.daily_ingestion_orchestrator import DailyIngestionOrchestrator
+from orchestrators.crawler_idx.daily_ingestion_pipeline import DailyIngestionOrchestrator
 from config.config_loader import ConfigLoader
 from utils.report_logger import log_info
 from datetime import datetime
