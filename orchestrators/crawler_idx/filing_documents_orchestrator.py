@@ -23,19 +23,47 @@ class FilingDocumentsOrchestrator(BaseOrchestrator):
             downloader=downloader
             )
         self.writer = FilingDocumentsWriter(db_session=self.db_session)
+        self.config = config
 
-    def orchestrate(self, target_date: str, limit: int = None):
+    def orchestrate(self, target_date: str = None, limit: int = None, accession_filters: list[str] = None, 
+                    include_forms: list[str] = None):
+        # Resolve include_forms from config if not provided
+        if include_forms is None and accession_filters is None:
+            include_forms = self.config.get("crawler_idx", {}).get("include_forms_default", [])
+            
+            if include_forms:
+                log_info(f"[DOCS] Including forms: {include_forms}")
+        
         try:
-            documents = self.collector.collect(target_date, limit=limit)
-            if limit:
+            documents = self.collector.collect(
+                target_date=target_date,
+                limit=limit,
+                accession_filters=accession_filters,
+                include_forms=include_forms
+            )
+
+            # Optional safeguard if limit was only passed but not enforced inside collector
+            if limit and not accession_filters:
                 documents = documents[:limit]
-            log_info(f"[DOCS] Indexed {len(documents)} filing document records for {target_date}")
+
+            if accession_filters:
+                log_info(f"[DOCS] Indexed {len(documents)} documents filtered by {len(accession_filters)} accession(s)")
+            else:
+                log_info(f"[DOCS] Indexed {len(documents)} filing document records for {target_date}")
+
             self.writer.write_documents(documents)
+
         except Exception as e:
             log_warn(f"[DOCS] Error during orchestrate(): {e}")
             raise
 
-    def run(self, target_date: str, limit: int = None):
-        log_info(f"[DOCS] Starting SGML indexing for {target_date}")
-        self.orchestrate(target_date, limit)
-        log_info(f"[DOCS] Completed SGML indexing for {target_date}")
+    def run(self, target_date: str = None, limit: int = None, accession_filters: list[str] = None,
+            include_forms: list[str] = None):
+        log_info(f"[DOCS] Starting SGML indexing for {target_date or '[accession list]'}")
+        self.orchestrate(
+            target_date=target_date, 
+            limit=limit, 
+            accession_filters=accession_filters,
+            include_forms=include_forms
+        )
+        log_info(f"[DOCS] Completed SGML indexing for {target_date or '[accession list]'}")

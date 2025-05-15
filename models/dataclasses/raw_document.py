@@ -7,6 +7,7 @@ from datetime import date
 class RawDocument:
     accession_number: str
     cik: str
+    form_type: str                # e.g., "8-K"
     document_type: str            # e.g. “sgml”, “index_html”, etc.
     filename: str
     source_url: str

@@ -51,10 +51,11 @@ def test_orchestrator_passes_configured_args(mock_collector_cls, mock_get_db_ses
         write_cache=False,
         downloader=downloader
     )
-    orchestrator.orchestrate("2025-05-10", limit=1)
+    orchestrator.orchestrate(target_date="2025-05-10", accession_filters=None, limit=1)
 
     # Validate call args to collector
     _, kwargs = mock_collector_cls.call_args
     assert kwargs["use_cache"] is False
     assert kwargs["write_cache"] is False
     assert kwargs["downloader"] is downloader
+    assert kwargs.get("accession_filters") is None

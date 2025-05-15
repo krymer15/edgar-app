@@ -77,7 +77,7 @@ def build_raw_filepath_by_type(
         or STORAGE_CONFIG.get("base_data_path", "data/")
     )
 
-    subfolder_template = "{cik}/{year}/{form_type}/{accession_or_subtype}/"
+    subfolder_template = "{file_type}/{cik}/{year}/{form_type}/{accession_or_subtype}"
     safe_form_type = form_type.replace("/", "_")
     subfolder = subfolder_template.format(
         file_type=file_type,

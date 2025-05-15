@@ -20,6 +20,7 @@ load_dotenv()
 
 from downloaders.sgml_downloader import SgmlDownloader
 from models.dataclasses.sgml_text_document import SgmlTextDocument
+from orchestrators.crawler_idx.daily_ingestion_pipeline import DailyIngestionPipeline
     
 def mock_download_sgml(self, cik: str, accession_number: str, write_cache: bool = True) -> SgmlTextDocument:
     with open("tests/fixtures/0000925421-24-000007.txt", "r", encoding="utf-8") as f:
@@ -116,3 +117,17 @@ def test_pipeline_skips_holiday_or_weekend():
 
     assert result.returncode == 0, "Expected graceful exit on invalid filing day"
     assert "not a valid SEC filing day" in result.stdout
+
+def test_pipeline_avoids_redundant_sgml_download(monkeypatch):
+    call_counter = {"count": 0}
+
+    def mocked_download_html(self, url):
+        call_counter["count"] += 1
+        return "test SGML content"
+
+    monkeypatch.setattr(SgmlDownloader, "download_html", mocked_download_html)
+
+    pipeline = DailyIngestionPipeline(use_cache=True)
+    pipeline.run(target_date="2025-05-12", limit=1)
+
+    assert call_counter["count"] == 1, "SGML downloaded more than once!"

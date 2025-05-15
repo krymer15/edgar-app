@@ -2,14 +2,51 @@
 
 These scripts are entry points for running individual pipeline modules, typically invoked by a daily scheduler or meta-orchestrator.
 
-## Filing Metadata Ingestion
-- `scripts/crawler_idx/run_daily_metadata_ingest.py`
-- Supports `--date`, `--backfill`, `--limit`
+## `run_daily_metadata_ingest.py`
+Collects and writes filing metadata for a target date or backfill range.
 
-## Filing Documents Ingestion
-- `scripts/crawler_idx/run_daily_documents_ingest.py`
-- Supports `--date`, `--limit`
-- `--skip_forms` is planned but not yet implemented. This will allow form-type level exclusion (e.g. `424B2`, `8-K`) at the document ingestion layer.
+```bash
+python scripts/crawler_idx/run_daily_metadata_ingest.py --date 2025-05-12
+python scripts/crawler_idx/run_daily_metadata_ingest.py --backfill 3
+```
+Args:
+- `--date`: Single target date (YYYY-MM-DD)
+- `--backfill`: Backfill N previous valid filing days
+- `--limit`: Max filings per day
+- `--include_forms`: Form types to include (e.g., --include_forms 10-K 8-K)
+- `--skip_forms`: Form types to exclude
+
+## `run_daily_documents_ingest.py`
+Indexes all SGML filings into structured document records.
+
+```bash
+python scripts/crawler_idx/run_daily_documents_ingest.py --date 2025-05-12 --limit 100
+```
+Args:
+- `--date` (required): Target date
+- `--limit`: Max filings to process
+- ✅ No cache options exposed — always fresh downloads
+
+## `run_sgml_disk_ingest.py`
+Writes raw .txt SGML submissions to disk (e.g. for archiving or debugging).
+
+```bash
+python scripts/crawler_idx/run_sgml_disk_ingest.py --date 2025-05-12
+```
+Args:
+- `--date` (required): Target date
+- ✅ Uses in-memory content shared from prior stage if available
+
+## `run_daily_pipeline_ingest.py`
+Runs all three ingestion pipelines (metadata → documents → SGML download) using in-memory caching only.
+
+```bash
+python scripts/crawler_idx/run_daily_pipeline_ingest.py --date 2025-05-12 --limit 100
+```
+Args:
+- `--date` (required): Target SEC filing date (YYYY-MM-DD)
+- `--limit`: Max filings to process (applies to metadata stage only)
+- `--no_cache` (optional): Ignored; in-memory caching is always used
 
 ## Filtering by Form Type: `--include_forms`
 

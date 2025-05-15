@@ -15,8 +15,16 @@ class FilingMetadataOrchestrator(BaseOrchestrator):
         user_agent = config.get("sec_downloader", {}).get("user_agent", "SafeHarborBot/1.0")
         self.collector = FilingMetadataCollector(user_agent=user_agent)
         self.writer = FilingMetadataWriter()
+        self.config = config
 
     def orchestrate(self, date_str: str, limit: int = None, include_forms: list[str] = None):
+        # Resolve include_forms from config if not provided
+        if include_forms is None:
+            include_forms = self.config.get("crawler_idx", {}).get("include_forms_default", [])
+        
+        if include_forms:
+            log_info(f"[META] Including forms: {include_forms}")
+        
         try:
             parsed_records: list[FilingMetadata] = self.collector.collect(date_str, include_forms=include_forms)
             if limit:
@@ -29,5 +37,5 @@ class FilingMetadataOrchestrator(BaseOrchestrator):
 
     def run(self, date_str: str, limit: int = None, include_forms: list[str] = None):
         log_info(f"[META] Starting metadata ingestion for {date_str}")
-        self.orchestrate(date_str, limit)
+        self.orchestrate(date_str, limit, include_forms)
         log_info(f"[META] Completed metadata ingestion for {date_str}")

@@ -24,7 +24,7 @@ class RawFileWriter:
                 file_type=self.file_type,
                 year=year,
                 cik=raw_doc.cik,
-                form_type=raw_doc.document_type,
+                form_type=raw_doc.form_type,
                 accession_or_subtype=raw_doc.accession_number,
                 filename=raw_doc.filename,
             )

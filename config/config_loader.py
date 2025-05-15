@@ -4,6 +4,8 @@ import yaml
 import os
 from dotenv import load_dotenv  
 from utils.get_project_root import get_project_root
+from utils.report_logger import log_warn
+import logging
 
 class ConfigLoader:
     @staticmethod
@@ -26,39 +28,89 @@ class ConfigLoader:
 
         return config
 
+    @staticmethod
+    def get_default_include_forms() -> list:
+        """
+        Returns the default list of form types to include from the config.
+        This is a convenience method to use across the codebase.
+        """
+        config = ConfigLoader.load_config()
+        return config.get("crawler_idx", {}).get("include_forms_default", [])
     
-    ### Code below added for /config/form_type_rules.yaml functionality. Also see `config/app_config.yaml` ###
-    '''
-    Usage example below:
-        from utils.config_loader import ConfigLoader
-
-        form_rules = ConfigLoader.load_form_type_rules()
-        allowed_forms = ConfigLoader.extract_filing_forms(form_rules, include_optional=True)
-    '''
-
     @staticmethod
     def load_form_type_rules(config_filename: str = "config/form_type_rules.yaml") -> dict:
+        """
+        Load form type rules from yaml file.
+        
+        Args:
+            config_filename: Path to form_type_rules.yaml 
+            
+        Returns:
+            Dict containing form type rules
+        """
         project_root = get_project_root()
         config_path = os.path.join(project_root, config_filename)
 
         if not os.path.exists(config_path):
-            raise FileNotFoundError(f"Form type rules not found: {config_path}")
+            log_warn(f"Form type rules not found: {config_path}")
+            return {"form_type_rules": {}, "include_amendments": True}
 
-        with open(config_path, "r", encoding="utf-8") as f:
-            config = yaml.safe_load(f)
-
-        return config.get("form_type_rules", {})
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                raw = f.read()
+                
+            expanded = os.path.expandvars(raw)
+            config = yaml.safe_load(expanded)
+            
+            return config or {"form_type_rules": {}}
+            
+        except Exception as e:
+            log_warn(f"Error loading form type rules: {e}")
+            return {"form_type_rules": {}, "include_amendments": True}
 
     @staticmethod
     def extract_filing_forms(form_type_rules: dict, include_optional: bool = False) -> set:
+        """
+        Extract all form types from the form_type_rules structure.
+        
+        Args:
+            form_type_rules: Dict containing form type rules
+            include_optional: Whether to include optional form types
+            
+        Returns:
+            Set of all form types
+        """
         def flatten(d):
+            if isinstance(d, list):
+                return d
+                
+            result = []
             for v in d.values():
                 if isinstance(v, dict):
-                    yield from flatten(v)
+                    result.extend(flatten(v))
                 elif isinstance(v, list):
-                    yield from v
+                    result.extend(v)
+            return result
 
-        allowed = set(flatten(form_type_rules.get("core", {})))
+        core = form_type_rules.get("form_type_rules", {}).get("core", {})
+        allowed = set(flatten(core))
+        
         if include_optional:
-            allowed |= set(flatten(form_type_rules.get("optional", {})))
+            optional = form_type_rules.get("form_type_rules", {}).get("optional", {})
+            allowed |= set(flatten(optional))
+            
         return allowed
+        
+    @staticmethod
+    def get_all_form_types(include_optional: bool = False) -> set:
+        """
+        Convenience method to get all form types from rules.
+        
+        Args:
+            include_optional: Whether to include optional form types
+            
+        Returns:
+            Set of all form types
+        """
+        rules = ConfigLoader.load_form_type_rules()
+        return ConfigLoader.extract_filing_forms(rules, include_optional)

@@ -5,11 +5,18 @@ import sys
 from pathlib import Path
 from datetime import datetime, timezone
 from utils.get_project_root import get_project_root
-from config.config_loader import ConfigLoader
 
-# Load config
-_config = ConfigLoader.load_config()
-_log_level = _config.get("app", {}).get("log_level", "INFO").upper()
+# Avoid immediate import of ConfigLoader
+_config = None
+_log_level = None
+
+def _load_config():
+    """Load config lazily to avoid circular imports"""
+    global _config, _log_level
+    if _config is None:
+        from config.config_loader import ConfigLoader
+        _config = ConfigLoader.load_config()
+        _log_level = _config.get("app", {}).get("log_level", "INFO").upper()
 
 # Shared schema across all ingestion log rows
 CSV_FIELDNAMES = [
@@ -86,17 +93,32 @@ def safe_print(message: str, stream=sys.stdout):
         print(ascii_fallback, file=stream)
 
 def log_debug(message: str):
+    # Load config lazily
+    if _config is None:
+        _load_config()
+    
+    # Get runtime config for current log level
+    from config.config_loader import ConfigLoader
     runtime_config = ConfigLoader.load_config()
     level = runtime_config.get("app", {}).get("log_level", "INFO").upper()
+    
     if level == "DEBUG":
         safe_print(f"[DEBUG] {message}", stream=sys.stdout)
 
 
 def log_info(message: str):
+    # Load config lazily
+    if _config is None:
+        _load_config()
+        
     if _log_level in ("DEBUG", "INFO"):
         safe_print(f"[INFO] {message}", stream=sys.stdout)
 
 def log_warn(message: str):
+    # Load config lazily
+    if _config is None:
+        _load_config()
+        
     if _log_level in ("DEBUG", "INFO", "WARNING"):
         safe_print(f"[WARN] {message}", stream=sys.stderr)
 

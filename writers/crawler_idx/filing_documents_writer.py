@@ -51,7 +51,7 @@ class FilingDocumentsWriter(BaseWriter):
                 new_doc = convert_filing_doc_to_orm(dc)
                 self.db_session.add(new_doc)
                 written += 1
-                log_info(f"✅ Written: {repr(dc)}")
+                log_info(f"✅ Metadata record written: {repr(dc)}")
 
             except SQLAlchemyError as e:
                 self.db_session.rollback()

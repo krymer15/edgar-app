@@ -80,6 +80,7 @@
 │   ├── parsers_subclass_specialization.md
 │   ├── pipeline_overview.md
 │   ├── project_naming_and_git_update.md
+│   ├── readme-form-filtering.md
 │   ├── sec_forms.md
 │   └── universal_script_header.md
 ├── downloaders/
@@ -203,7 +204,10 @@
 │   ├── submissions_api/
 │   │   └── ingest_submissions.py
 │   ├── tools/
-│   │   └── backfill_xml_exhibits.py
+│   │   ├── backfill_xml_exhibits.py
+│   │   ├── debug_form_filtering.py
+│   │   ├── debug_form_validation.py
+│   │   └── test_form_validation.py
 ├── sql/
 │   ├── cleanup/
 │   │   └── clear_test_records.sql
@@ -222,14 +226,32 @@
 │   └── README.md
 ├── test_data/
 │   ├── raw/
-│   │   ├── 1084869/
-│   │   │   ├── 2025/
-│   │   │   │   ├── 10-Q/
-│   │   │   │   │   ├── 0001084869-25-000007/
-│   │   │   │   │   │   └── 0001084869-25-000007.txt
-│   │   │   │   ├── EX-31.1/
-│   │   │   │   │   ├── 0001084869-25-000007/
-│   │   │   │   │   │   └── 0001084869-25-000007.txt
+│   │   ├── sgml/
+│   │   │   ├── 318306/
+│   │   │   │   ├── 2025/
+│   │   │   │   │   ├── 8-K/
+│   │   │   │   │   │   ├── 0001641172-25-009564/
+│   │   │   │   │   │   │   └── 0001641172-25-009564.txt
+│   │   │   ├── 66740/
+│   │   │   │   ├── 2025/
+│   │   │   │   │   ├── 8-K/
+│   │   │   │   │   │   ├── 0000066740-25-000046/
+│   │   │   │   │   │   │   └── 0000066740-25-000046.txt
+│   │   │   ├── 910638/
+│   │   │   │   ├── 2025/
+│   │   │   │   │   ├── 8-K/
+│   │   │   │   │   │   ├── 0001193125-25-117890/
+│   │   │   │   │   │   │   └── 0001193125-25-117890.txt
+│   │   │   ├── 926282/
+│   │   │   │   ├── 2025/
+│   │   │   │   │   ├── 8-K/
+│   │   │   │   │   │   ├── 0000950170-25-069478/
+│   │   │   │   │   │   │   └── 0000950170-25-069478.txt
+│   │   │   ├── 927003/
+│   │   │   │   ├── 2025/
+│   │   │   │   │   ├── 8-K/
+│   │   │   │   │   │   ├── 0001558370-25-007223/
+│   │   │   │   │   │   │   └── 0001558370-25-007223.txt
 ├── tests/
 │   ├── README.md
 │   └── __init__.py
@@ -271,6 +293,7 @@
 │   │   ├── README.md
 │   │   ├── test_cache_manager.py
 │   │   ├── test_config_loader.py
+│   │   ├── test_form_type_validator.py
 │   │   ├── test_path_manager.py
 │   │   ├── test_raw_file_writer.py
 │   │   ├── test_report_logger.py
@@ -286,6 +309,7 @@
 │   ├── __init__.py
 │   ├── cache_manager.py
 │   ├── filing_calendar.py
+│   ├── form_type_validator.py
 │   ├── get_project_root.py
 │   ├── path_manager.py
 │   ├── report_logger.py

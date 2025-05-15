@@ -5,6 +5,7 @@ Run SGML filing document ingestion from crawler.idx-derived metadata.
 
 Usage:
     python scripts/crawler_idx/run_daily_documents_ingest.py --date 2024-12-20 --limit 50
+    python scripts/crawler_idx/run_daily_documents_ingest.py --date 2024-12-20 --include_forms 10-K 8-K
 """
 
 # 
@@ -32,6 +33,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.pa
 from orchestrators.crawler_idx.filing_documents_orchestrator import FilingDocumentsOrchestrator
 from utils.report_logger import log_info, log_error
 from utils.cache_manager import clear_sgml_cache
+from config.config_loader import ConfigLoader
 
 def validate_date(date_str):
     try:
@@ -44,22 +46,17 @@ def main():
     parser = argparse.ArgumentParser(description="Run SGML filing document ingestion.")
     parser.add_argument("--date", type=validate_date, required=True, help="Target date (YYYY-MM-DD)")
     parser.add_argument("--limit", type=int, help="Max number of documents to process")
-    parser.add_argument("--use_cache", action="store_true", help="Enable SGML caching")
-    parser.add_argument("--clear_cache", action="store_true", help="Delete SGML cache before running")
+    parser.add_argument("--include_forms", nargs="*", help="Only include specific form types (e.g. 10-K 8-K)")
     
     # Optional placeholder for --skip_forms, not yet implemented
     # parser.add_argument("--skip_forms", nargs="+", help="Form types to skip")
 
     args = parser.parse_args()
 
-    orchestrator = FilingDocumentsOrchestrator(use_cache=args.use_cache)
+    orchestrator = FilingDocumentsOrchestrator(use_cache=False)
     try:
-        log_info(f"[CLI] Starting filing document ingestion for {args.date} (limit={args.limit}, cache={args.use_cache})")
-        if args.clear_cache:
-            deleted = clear_sgml_cache()
-            log_info(f"🧹 Cleared {deleted} SGML cache files")
-
-        orchestrator.run(target_date=args.date, limit=args.limit)
+        log_info(f"[CLI] Starting filing document ingestion for {args.date} (limit={args.limit})")
+        orchestrator.run(target_date=args.date, limit=args.limit, include_forms=args.include_forms)
     except Exception as e:
         log_error(f"[CLI] Filing document ingestion failed: {e}")
         sys.exit(1)

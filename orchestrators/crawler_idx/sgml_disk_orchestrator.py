@@ -13,9 +13,17 @@ class SgmlDiskOrchestrator(BaseOrchestrator):
         self.user_agent = self.config["sec_downloader"]["user_agent"]
         self.use_cache = use_cache
         self.write_cache = write_cache
-        self.downloader=downloader
+        self.downloader = downloader
 
-    def orchestrate(self, target_date: str, limit: int = None) -> list[str]:
+    def orchestrate(self, target_date: str = None, limit: int = None, accession_filters: list[str] = None,
+                   include_forms: list[str] = None) -> list[str]:
+        # Resolve include_forms from config if not provided
+        if include_forms is None and accession_filters is None:
+            include_forms = self.config.get("crawler_idx", {}).get("include_forms_default", [])
+            
+            if include_forms:
+                log_info(f"[SGML] Including forms: {include_forms}")
+        
         with get_db_session() as session:
             collector = SgmlDiskCollector(
                 db_session=session,
@@ -24,12 +32,22 @@ class SgmlDiskOrchestrator(BaseOrchestrator):
                 write_cache=self.write_cache,
                 downloader=self.downloader
             )
-            written_files = collector.collect(target_date, limit=limit)
+            written_files = collector.collect(
+                target_date=target_date,
+                limit=limit,
+                accession_filters=accession_filters,
+                include_forms=include_forms
+            )
             log_info(f"✅ SGML collection complete: {len(written_files)} files written.")
             return written_files
 
-    def run(self, target_date: str, limit: int = None):
-        from utils.report_logger import log_info
-        log_info(f"[SGML] Starting SGML disk collection for {target_date}")
-        results = self.orchestrate(target_date, limit=limit)
-        log_info(f"[SGML] Completed SGML disk collection for {target_date} ({len(results)} written)")
+    def run(self, target_date: str = None, limit: int = None, accession_filters: list[str] = None,
+           include_forms: list[str] = None):
+        log_info(f"[SGML] Starting SGML disk collection for {target_date or '[accession list]'}")
+        results = self.orchestrate(
+            target_date=target_date, 
+            limit=limit, 
+            accession_filters=accession_filters,
+            include_forms=include_forms
+        )
+        log_info(f"[SGML] Completed SGML disk collection for {target_date or '[accession list]'} ({len(results)} written)")
