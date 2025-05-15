@@ -222,16 +222,13 @@
 │   │   ├── submissions_api/
 │   │   │   ├── companies_metadata.sql
 │   │   │   └── submissions_metadata.sql
+│   ├── migrations/
+│   │   └── add_processing_status_to_filing_metadata.sql
 ├── summarizers/
 │   └── README.md
 ├── test_data/
 │   ├── raw/
 │   │   ├── sgml/
-│   │   │   ├── 318306/
-│   │   │   │   ├── 2025/
-│   │   │   │   │   ├── 8-K/
-│   │   │   │   │   │   ├── 0001641172-25-009564/
-│   │   │   │   │   │   │   └── 0001641172-25-009564.txt
 │   │   │   ├── 66740/
 │   │   │   │   ├── 2025/
 │   │   │   │   │   ├── 8-K/
@@ -247,11 +244,6 @@
 │   │   │   │   │   ├── 8-K/
 │   │   │   │   │   │   ├── 0000950170-25-069478/
 │   │   │   │   │   │   │   └── 0000950170-25-069478.txt
-│   │   │   ├── 927003/
-│   │   │   │   ├── 2025/
-│   │   │   │   │   ├── 8-K/
-│   │   │   │   │   │   ├── 0001558370-25-007223/
-│   │   │   │   │   │   │   └── 0001558370-25-007223.txt
 ├── tests/
 │   ├── README.md
 │   └── __init__.py
@@ -311,6 +303,7 @@
 │   ├── filing_calendar.py
 │   ├── form_type_validator.py
 │   ├── get_project_root.py
+│   ├── job_tracker.py
 │   ├── path_manager.py
 │   ├── report_logger.py
 │   ├── ticker_cik_mapper.py

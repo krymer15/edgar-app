@@ -4,10 +4,14 @@ from orchestrators.crawler_idx.filing_metadata_orchestrator import FilingMetadat
 from orchestrators.crawler_idx.filing_documents_orchestrator import FilingDocumentsOrchestrator
 from orchestrators.crawler_idx.sgml_disk_orchestrator import SgmlDiskOrchestrator
 from downloaders.sgml_downloader import SgmlDownloader
-from utils.report_logger import log_info
+from utils.report_logger import log_info, log_warn, log_error
+from utils.job_tracker import create_job, get_job_progress, update_batch_status, update_record_status
 from config.config_loader import ConfigLoader
 from models.database import get_db_session
 from models.orm_models.filing_metadata import FilingMetadata
+from models.orm_models.filing_document_orm import FilingDocumentORM
+from datetime import datetime
+import traceback
 
 class DailyIngestionPipeline:
     def __init__(self, use_cache: bool = True):
@@ -16,7 +20,7 @@ class DailyIngestionPipeline:
         self.user_agent = self.config.get("sec_downloader", {}).get("user_agent", "SafeHarborBot/1.0")
         self.meta_orchestrator = FilingMetadataOrchestrator()
 
-        # Shared downloader instance of SgmlDownloader across Pipelines 2 and 3 to ensure sharing of `memory_cache` to avoid double downloads or writes of raw SGML files.
+        # Shared downloader instance of SgmlDownloader across Pipelines 2 and 3
         self.sgml_downloader = SgmlDownloader(
             user_agent=self.user_agent,
             use_cache=False
@@ -34,7 +38,19 @@ class DailyIngestionPipeline:
             downloader=self.sgml_downloader
         )
 
-    def run(self, target_date: str, limit: int = None, include_forms: list[str] = None):
+    def run(self, target_date: str, limit: int = None, include_forms: list[str] = None, 
+            retry_failed: bool = False, job_id: str = None, process_only: list[str] = None):
+        """
+        Run the daily ingestion pipeline with robust processing and status tracking.
+        
+        Args:
+            target_date: Target date in YYYY-MM-DD format
+            limit: Maximum number of records to process
+            include_forms: List of form types to include
+            retry_failed: Whether to retry failed records
+            job_id: Optional job ID for tracking related runs (will be created if not provided)
+            process_only: Optional list of specific accession numbers to process
+        """
         # Resolve include_forms from config if not provided
         if include_forms is None:
             include_forms = self.config.get("crawler_idx", {}).get("include_forms_default", [])
@@ -42,38 +58,115 @@ class DailyIngestionPipeline:
         if include_forms:
             log_info(f"[META] Including forms: {include_forms}")
         
-        # === Pipeline 1: FilingMetadata ===
-        log_info(f"[META] Starting filing metadata ingestion for {target_date}")
-        self.meta_orchestrator.run(date_str=target_date, limit=limit, include_forms=include_forms)
+        # Create or use job ID for tracking
+        if not job_id:
+            job_id = create_job(target_date, f"Daily ingestion for {target_date}")
+            log_info(f"[META] Created new job {job_id} for date {target_date}")
+        else:
+            log_info(f"[META] Using existing job {job_id}")
+            job_progress = get_job_progress(job_id)
+            log_info(f"[META] Job progress: {job_progress['completed']}/{job_progress['total']} completed, {job_progress['failed']} failed")
+        
+        # === Pipeline 1: FilingMetadata - Always run this to ensure we have all metadata ===
+        if not process_only:  # Skip metadata collection if specific accessions provided
+            log_info(f"[META] Starting filing metadata ingestion for {target_date}")
+            self.meta_orchestrator.run(date_str=target_date, limit=None, include_forms=include_forms)  # No limit for metadata collection
 
-        # === Lookup accession numbers just written ===
+        # === Find records to process ===
         with get_db_session() as session:
-            query = session.query(FilingMetadata.accession_number)\
-                .filter(FilingMetadata.filing_date == target_date)
+            # Start building the query
+            query = session.query(FilingMetadata)
             
-            # Apply form type filter if specified
-            if include_forms:
-                query = query.filter(FilingMetadata.form_type.in_(include_forms))
+            if process_only:
+                # Process specific accession numbers only
+                query = query.filter(FilingMetadata.accession_number.in_(process_only))
+            else:
+                # Apply date filter
+                query = query.filter(FilingMetadata.filing_date == target_date)
+                
+                # Apply form type filter if specified
+                if include_forms:
+                    query = query.filter(FilingMetadata.form_type.in_(include_forms))
+                
+                # Subquery to find already processed accession numbers
+                if not retry_failed:
+                    processed_subquery = session.query(FilingDocumentORM.accession_number)\
+                        .distinct(FilingDocumentORM.accession_number)\
+                        .subquery()
+                    
+                    # Filter out records that have already been processed
+                    query = query.filter(~FilingMetadata.accession_number.in_(processed_subquery))
+                
+                # Apply status filter based on retry_failed flag
+                if retry_failed:
+                    query = query.filter(FilingMetadata.processing_status == 'failed')
+                else:
+                    # Include records with NULL or 'pending' status
+                    query = query.filter(
+                        (FilingMetadata.processing_status.is_(None)) | 
+                        (FilingMetadata.processing_status == 'pending')
+                    )
+            
+            # Add consistent ordering and apply limit
+            query = query.order_by(FilingMetadata.accession_number)
             
             if limit:
                 query = query.limit(limit)
-
-            accession_results = query.all()
-            accession_filters = [a[0] for a in accession_results]
+            
+            # Execute query to get records
+            records_to_process = query.all()
+            accession_filters = [r.accession_number for r in records_to_process]
+            
+            log_info(f"[META] Selected {len(accession_filters)} records to process: {accession_filters}")
+            
+            # Update status to 'processing' and set job_id for selected records
+            for record in records_to_process:
+                record.processing_status = 'processing'
+                record.processing_started_at = datetime.now()
+                record.job_id = job_id
+                record.last_updated_by = f"DailyIngestionPipeline-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            
+            session.commit()
 
         if not accession_filters:
-            log_info(f"[META] No filings ingested for {target_date} (limit={limit}). Skipping downstream steps.")
+            log_info(f"[META] No records to process for {target_date} (limit={limit}). Skipping downstream steps.")
             return
 
-        # === Pipeline 2: FilingDocuments (SGML Index) ===
-        log_info(f"[DOCS] Starting document indexing for {target_date}")
-        self.docs_orchestrator.run(target_date=target_date, accession_filters=accession_filters)
+        # === Process each record individually with error handling ===
+        successfully_processed = []
+        failed_records = []
+        
+        for accession_number in accession_filters:
+            try:
+                log_info(f"[PIPELINE] Processing {accession_number}")
+                
+                # === Pipeline 2: FilingDocuments (SGML Index) ===
+                log_info(f"[DOCS] Document indexing for {accession_number}")
+                self.docs_orchestrator.run(accession_filters=[accession_number])
 
-        # === Pipeline 3: SGML Disk Writer ===
-        log_info(f"[SGML] Starting SGML disk download for {target_date}")
-        self.sgml_orchestrator.run(target_date=target_date, accession_filters=accession_filters)
+                # === Pipeline 3: SGML Disk Writer ===
+                log_info(f"[SGML] SGML disk download for {accession_number}")
+                self.sgml_orchestrator.run(accession_filters=[accession_number])
+                
+                # Mark as successfully processed
+                update_record_status(accession_number, 'completed')
+                successfully_processed.append(accession_number)
+                
+            except Exception as e:
+                error_msg = f"{str(e)}\n{traceback.format_exc()}"
+                log_error(f"[ERROR] Failed to process {accession_number}: {error_msg}")
+                update_record_status(accession_number, 'failed', error_msg)
+                failed_records.append((accession_number, error_msg))
 
         # Clear in-memory SGML cache to prevent memory leaks
         self.sgml_downloader.clear_memory_cache()
 
+        # Log summary
         log_info(f"[ALL] Daily ingestion pipeline completed for {target_date}")
+        log_info(f"[SUMMARY] Processed {len(accession_filters)} records:")
+        log_info(f"[SUMMARY] - {len(successfully_processed)} succeeded")
+        log_info(f"[SUMMARY] - {len(failed_records)} failed")
+        
+        # Report final job progress
+        job_progress = get_job_progress(job_id)
+        log_info(f"[JOB] Progress: {job_progress['completed']}/{job_progress['total']} completed ({job_progress['progress_pct']:.1f}%), {job_progress['failed']} failed")

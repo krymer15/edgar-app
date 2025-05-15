@@ -5,7 +5,6 @@ Pure logic for parsing SGML content already in memory. (Utility class)
 - Raw parser for SGML content
 '''
 
-import re
 from typing import List, Optional
 from utils.url_builder import construct_primary_document_url, normalize_cik
 from parsers.base_parser import BaseParser
@@ -18,17 +17,6 @@ IGNORE_EXTENSIONS = (
 )
 
 KNOWN_NOISE = ("SIGNATURE", "SIGNATURES", "EX-24", "IDEA: XBRL DOCUMENT")
-
-# Priority patterns for primary documents
-PRIMARY_DOC_PATTERNS = [
-    # Common filing main documents (case insensitive)
-    r"form.*8-k", r"form.*10-k", r"form.*10-q", r"form.*20-f", 
-    r"8-k", r"10-k", r"10-q", r"20-f", r"6-k",
-    r"^8k", r"^10k", r"^10q",
-    # Registration statements
-    r"form.*s-1", r"form.*s-3", r"form.*s-4", r"s-1", r"s-3", r"s-4"
-]
-
 
 class SgmlDocumentIndexer(BaseParser):
     '''
@@ -100,66 +88,92 @@ class SgmlDocumentIndexer(BaseParser):
     
     def _select_primary_document(self, exhibits, seq_map):
         """
-        Improved primary document selection with multiple heuristics:
-        1. First try to find an HTM/HTML file with sequence=1
-        2. Then try to find a file matching common form patterns
-        3. Fall back to the first HTM/HTML file if available
-        4. Otherwise use the first accessible XML file
+        Rule-based primary document selection that doesn't rely on regex patterns.
+        Uses explicit filename checks and prioritization rules.
         """
         # Filter to only accessible files
         accessible_exhibits = [ex for ex in exhibits if ex["accessible"]]
         if not accessible_exhibits:
             return None
+        
+        # Track matched files for each priority level
+        priority_matches = {
+            "priority1": [],  # HTML with sequence 1
+            "priority2": [],  # Form-named HTML files
+            "priority3": [],  # Any HTML file
+            "priority4": []   # XML files
+        }
+        
+        # Process each exhibit
+        for ex in accessible_exhibits:
+            filename = ex["filename"].lower()
+            sequence = seq_map.get(ex["filename"], 999)
             
-        # Priority 1: HTML/HTM files with sequence 1
-        seq_1_html = [
-            ex["filename"] for ex in accessible_exhibits 
-            if (ex["filename"].lower().endswith((".htm", ".html")) and 
-                seq_map.get(ex["filename"]) == 1)
-        ]
-        if seq_1_html:
-            return seq_1_html[0]
-            
-        # Priority 2: Files matching primary document patterns
-        for pattern in PRIMARY_DOC_PATTERNS:
-            pattern_regex = re.compile(pattern, re.IGNORECASE)
-            matching_files = [
-                ex["filename"] for ex in accessible_exhibits
-                if pattern_regex.search(ex["filename"])
-            ]
-            
-            # Prefer HTML files first, then any match
-            html_matches = [f for f in matching_files if f.lower().endswith((".htm", ".html"))]
-            if html_matches:
-                return html_matches[0]
-            elif matching_files:
-                return matching_files[0]
+            # HTML file with sequence 1
+            if filename.endswith((".htm", ".html")) and sequence == 1:
+                priority_matches["priority1"].append(ex["filename"])
                 
-        # Priority 3: Any HTM/HTML file (sorted by sequence)
-        html_files = [
-            ex["filename"] for ex in accessible_exhibits
-            if ex["filename"].lower().endswith((".htm", ".html"))
-        ]
-        if html_files:
-            # Sort by sequence number
-            html_files.sort(key=lambda f: seq_map.get(f, 999))
-            return html_files[0]
-            
-        # Priority 4: XML files as last resort
-        xml_files = [
-            ex["filename"] for ex in accessible_exhibits
-            if ex["filename"].lower().endswith(".xml")
-        ]
-        if xml_files:
-            xml_files.sort(key=lambda f: seq_map.get(f, 999))
-            return xml_files[0]
-            
+            # Form-named HTML files - explicit check for common form names
+            elif filename.endswith((".htm", ".html")) and (
+                "form" in filename or
+                "10-k" in filename or "10k" in filename or
+                "10-q" in filename or "10q" in filename or
+                "8-k" in filename or "8k" in filename or
+                "20-f" in filename or "6-k" in filename or
+                "s-1" in filename or "s-3" in filename or "s-4" in filename
+            ):
+                priority_matches["priority2"].append(ex["filename"])
+                
+            # Any other HTML file
+            elif filename.endswith((".htm", ".html")):
+                priority_matches["priority3"].append(ex["filename"])
+                
+            # XML files
+            elif filename.endswith(".xml"):
+                priority_matches["priority4"].append(ex["filename"])
+        
+        # Check priorities in order
+        for priority in ["priority1", "priority2", "priority3", "priority4"]:
+            if priority_matches[priority]:
+                # Sort by sequence number if multiple matches at same priority
+                sorted_matches = sorted(priority_matches[priority], 
+                                       key=lambda f: seq_map.get(f, 999))
+                return sorted_matches[0]
+        
         # Fallback: just return the first accessible file
-        return accessible_exhibits[0]["filename"]
+        return accessible_exhibits[0]["filename"] if accessible_exhibits else None
 
     def _extract_tag(self, tag: str, block: str) -> str:
-        match = re.search(rf"<{tag}>(.*?)\n", block)
-        return match.group(1).strip() if match else ""
+        """
+        Extract content between <TAG> and </TAG> or until newline if no closing tag,
+        using string operations instead of regex for better reliability.
+        """
+        # Define the opening and closing tags
+        open_tag = f"<{tag}>"
+        close_tag = f"</{tag}>"
+        
+        # Find the start position
+        start_pos = block.find(open_tag)
+        if start_pos == -1:
+            return ""  # Tag not found
+        
+        # Move past the opening tag
+        start_pos += len(open_tag)
+        
+        # Look for closing tag
+        close_pos = block.find(close_tag, start_pos)
+        
+        # If closing tag found, extract content between tags
+        if close_pos != -1:
+            return block[start_pos:close_pos].strip()
+        
+        # If no closing tag, look for next newline
+        newline_pos = block.find("\n", start_pos)
+        if newline_pos != -1:
+            return block[start_pos:newline_pos].strip()
+        
+        # If no newline either, return the rest of the content
+        return block[start_pos:].strip()
 
     def index_documents(self, txt_contents: str) -> list[FilingDocumentMetadata]:
         """
