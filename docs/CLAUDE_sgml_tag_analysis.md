@@ -5,6 +5,18 @@
 SEC EDGAR submissions are stored as SGML (Standard Generalized Markup Language) text files that contain structured data about filings and the entities involved. This document outlines the SGML structure for different form types, focusing on how to extract essential entity information like issuer and reporting party CIKs.
 
 ## SGML Analysis Requirements
+To properly handle all form types, we need to:
+
+1. Collect SGML Samples: Gather .txt submission files for each form type of interest
+2. Identify Section Patterns: Document how each form type structures its SGML:
+
+- <ISSUER> section format and location
+- <REPORTING-OWNER> section format (if present)
+- <SUBJECT-COMPANY> and <FILED-BY> sections for tender offers
+- Special tags for multi-company forms like S-4 and 425
+
+3. Extract Patterns for Each Form: Document which fields need to be extracted for each form type
+4. Create Pattern-Matching Utilities: Extend sgml_utils.py with form-specific extraction functions
 
 ### Collection Requirements
 

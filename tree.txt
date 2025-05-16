@@ -217,7 +217,8 @@
 │   ├── create/
 │   │   ├── crawler_idx/
 │   │   │   ├── filing_documents.sql
-│   │   │   └── filing_metadata.sql
+│   │   │   ├── filing_metadata.sql
+│   │   │   └── filing_parties.sql
 │   │   ├── forms/
 │   │   │   ├── form4_filings.sql
 │   │   │   ├── form4_transactions.sql
@@ -226,6 +227,7 @@
 │   │   │   ├── companies_metadata.sql
 │   │   │   └── submissions_metadata.sql
 │   ├── migrations/
+│   │   ├── add_issuer_cik_to_filing_documents.sql
 │   │   ├── add_issuer_info_to_filing_metadata.sql
 │   │   ├── add_processing_status_to_filing_metadata.sql
 │   │   └── rollback_issuer_columns.sql
@@ -241,6 +243,7 @@
 │   ├── crawler_idx/
 │   │   ├── test_daily_ingestion_pipeline.py
 │   │   ├── test_dataclass_to_orm.py
+│   │   ├── test_filing_document_issuer_cik.py
 │   │   ├── test_filing_document_record_model.py
 │   │   ├── test_filing_documents_collector.py
 │   │   ├── test_filing_documents_orchestrator.py
@@ -250,12 +253,15 @@
 │   │   ├── test_filing_metadata_orchestrator.py
 │   │   ├── test_filing_metadata_writer.py
 │   │   ├── test_idx_parser.py
+│   │   ├── test_issuer_cik_integration.py
+│   │   ├── test_migration_issuer_cik.py
 │   │   ├── test_raw_document.py
 │   │   ├── test_run_daily_documents_ingest.py
 │   │   ├── test_run_daily_metadata_ingest.py
 │   │   ├── test_run_daily_pipeline_ingest.py
 │   │   ├── test_sgml_disk_collector.py
-│   │   └── test_sgml_disk_orchestrator.py
+│   │   ├── test_sgml_disk_orchestrator.py
+│   │   └── test_writer_issuer_cik.py
 │   ├── fixtures/
 │   │   ├── 0000921895-25-001190.txt
 │   │   ├── 0000925421-24-000007.txt
