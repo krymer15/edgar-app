@@ -39,6 +39,10 @@ def test_orm_mapping_matches_ddl():
     for field in ["cik", "form_type", "filing_date", "filing_url"]:
         assert field in cols
 
+    # verify removed columns don't exist
+    assert "issuer_cik" not in cols
+    assert "is_issuer" not in cols
+
     # types
     assert str(cols["filing_date"].type) == "DATE"
     assert "TIMESTAMP" in str(cols["created_at"].type).upper()

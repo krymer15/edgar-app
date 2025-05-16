@@ -15,7 +15,7 @@ sys.path.insert(
 import pytest
 from datetime import date
 from pathlib import Path
-
+from unittest.mock import MagicMock, patch
 from collectors.crawler_idx.filing_metadata_collector import FilingMetadataCollector
 from models.dataclasses.filing_metadata import FilingMetadata
 
@@ -46,3 +46,20 @@ def test_collect_filters_by_include_forms():
     collector = FilingMetadataCollector(user_agent="test-agent")
     results = collector.collect(SAMPLE_DATE, include_forms=["10-K"])
     assert all(r.form_type == "10-K" for r in results)
+
+def test_collect_handles_duplicate_accessions():
+    """Test that collector properly handles multiple records with the same accession number."""
+    # Patch the extract_issuer_cik_from_sgml function to return a known CIK
+    with patch("utils.sgml_utils.extract_issuer_cik_from_sgml") as mock_extract:
+        mock_extract.return_value = "0000123456"
+        
+        collector = FilingMetadataCollector(user_agent="test-agent")
+        results = collector.collect(SAMPLE_DATE)
+        
+        # Check that duplicates are handled properly
+        accession_counts = {}
+        for r in results:
+            accession_counts[r.accession_number] = accession_counts.get(r.accession_number, 0) + 1
+            
+        # There should be no duplicates in the results
+        assert all(count == 1 for count in accession_counts.values())

@@ -20,14 +20,7 @@ def convert_to_orm(dataclass_obj: FilingMetadataDC) -> FilingMetadataORM:
         filing_date=dataclass_obj.filing_date,
         filing_url=dataclass_obj.filing_url,
     )
-
-    # Add new fields if they exist on the dataclass
-    if hasattr(dataclass_obj, 'issuer_cik'):
-        orm_obj.issuer_cik = dataclass_obj.issuer_cik
     
-    if hasattr(dataclass_obj, 'is_issuer'):
-        orm_obj.is_issuer = dataclass_obj.is_issuer
-        
     return orm_obj
 
 def convert_filing_doc_to_orm(dc: FilingDocDC) -> FilingDocumentORM:
