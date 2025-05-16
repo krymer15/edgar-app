@@ -1,4 +1,5 @@
 ./
+├── CLAUDE.md
 ├── README.md
 ├── __init__,py
 ├── docker-compose.yml
@@ -71,6 +72,8 @@
 │   └── tree_view.py
 ├── docs/
 │   ├── 8k_item_codes.txt
+│   ├── CLAUDE_filing_issuer_reporter_relationship_handling.md
+│   ├── CLAUDE_sgml_tag_analysis.md
 │   ├── SEC_Form_Analysis_Priority.csv
 │   ├── cleaning_and_parsing.md
 │   ├── data_symlink_handling.md
@@ -227,19 +230,6 @@
 │   │   └── add_processing_status_to_filing_metadata.sql
 ├── summarizers/
 │   └── README.md
-├── test_data/
-│   ├── raw/
-│   │   ├── sgml/
-│   │   │   ├── 1600641/
-│   │   │   │   ├── 2025/
-│   │   │   │   │   ├── 10-Q/
-│   │   │   │   │   │   ├── 0001600641-25-000057/
-│   │   │   │   │   │   │   └── 0001600641-25-000057.txt
-│   │   │   ├── 893739/
-│   │   │   │   ├── 2025/
-│   │   │   │   │   ├── 4/
-│   │   │   │   │   │   ├── 0001296720-25-000004/
-│   │   │   │   │   │   │   └── 0001296720-25-000004.txt
 ├── tests/
 │   ├── README.md
 │   └── __init__.py

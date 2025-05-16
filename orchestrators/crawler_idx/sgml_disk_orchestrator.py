@@ -51,3 +51,4 @@ class SgmlDiskOrchestrator(BaseOrchestrator):
             include_forms=include_forms
         )
         log_info(f"[SGML] Completed SGML disk collection for {target_date or '[accession list]'} ({len(results)} written)")
+        
