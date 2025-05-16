@@ -13,6 +13,7 @@ from models.adapters.dataclass_to_orm import convert_parsed_doc_to_filing_doc
 from parsers.sgml.indexers.sgml_document_indexer import SgmlDocumentIndexer
 from downloaders.sgml_downloader import SgmlDownloader
 from utils.report_logger import log_info, log_error, log_warn
+from utils.sgml_utils import extract_issuer_cik_from_sgml
 
 class FilingDocumentsCollector:
     """Collects filing document records from SGML files"""
@@ -66,13 +67,37 @@ class FilingDocumentsCollector:
         all_docs = []
         for record in records:
             try:
+                # First attempt download using the record CIK
                 year = str(record.filing_date.year)
-                sgml_doc: SgmlTextDocument = self.downloader.download_sgml(
-                    record.cik, 
-                    record.accession_number,
-                    year=year,
-                    write_cache=self.write_cache
-                )
+                try:
+                    sgml_doc: SgmlTextDocument = self.downloader.download_sgml(
+                        record.cik, 
+                        record.accession_number,
+                        year=year,
+                        write_cache=self.write_cache
+                    )
+                    
+                    # For forms that may have issuer/reporting relationship
+                    if record.form_type in ["3", "4", "5", "13D", "13G", "13F-HR", "144"]:
+                        # Check if the CIK in the record is actually the issuer
+                        issuer_cik = extract_issuer_cik_from_sgml(sgml_doc.content)
+                        if issuer_cik and issuer_cik != record.cik:
+                            log_info(f"Record CIK {record.cik} is not the issuer ({issuer_cik}) for {record.accession_number}. Retrying download with issuer CIK.")
+                            # Retry download with issuer CIK
+                            sgml_doc = self.downloader.download_sgml(
+                                issuer_cik,
+                                record.accession_number,
+                                year=year,
+                                write_cache=self.write_cache
+                            )
+                except Exception as e:
+                    # If download fails with record CIK, we may be dealing with a reporting owner CIK
+                    # Try to reconstruct the canonical URL with a common issuer CIK pattern
+                    log_warn(f"Failed to download with CIK {record.cik} for {record.accession_number}, error: {e}")
+                    # Let this propagate to the outer exception handler
+                    raise
+                    
+                # Continue with parsing
                 parser = SgmlDocumentIndexer(record.cik, record.accession_number, record.form_type)
                 parsed_metadata = parser.index_documents(sgml_doc.content)
                 filing_docs = [convert_parsed_doc_to_filing_doc(doc) for doc in parsed_metadata]

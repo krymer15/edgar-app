@@ -12,6 +12,7 @@ from models.orm_models.filing_metadata import FilingMetadata
 from models.orm_models.filing_document_orm import FilingDocumentORM
 from datetime import datetime
 import traceback
+from sqlalchemy import select
 
 class DailyIngestionPipeline:
     def __init__(self, use_cache: bool = True):
@@ -90,12 +91,11 @@ class DailyIngestionPipeline:
                 
                 # Subquery to find already processed accession numbers
                 if not retry_failed:
-                    processed_subquery = session.query(FilingDocumentORM.accession_number)\
-                        .distinct(FilingDocumentORM.accession_number)\
-                        .subquery()
-                    
-                    # Filter out records that have already been processed
-                    query = query.filter(~FilingMetadata.accession_number.in_(processed_subquery))
+                    processed_accessions_query = select(FilingDocumentORM.accession_number)\
+                        .distinct()
+                    processed_accessions = session.execute(processed_accessions_query).scalars().all()
+                    if processed_accessions:
+                        query = query.filter(~FilingMetadata.accession_number.in_(processed_accessions))
                 
                 # Apply status filter based on retry_failed flag
                 if retry_failed:

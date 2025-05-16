@@ -13,6 +13,7 @@ from downloaders.sgml_downloader import SgmlDownloader
 from writers.shared.raw_file_writer import RawFileWriter
 from utils.path_manager import build_raw_filepath_by_type
 from utils.report_logger import log_info, log_warn
+from utils.sgml_utils import extract_issuer_cik_from_sgml
 
 class SgmlDiskCollector:
     def __init__(self, db_session: Session, user_agent: str, use_cache: bool = True, write_cache: bool = True, downloader: SgmlDownloader = None):
@@ -78,7 +79,7 @@ class SgmlDiskCollector:
                 year = str(record.filing.filing_date.year)
                 
                 # Skip if already written for this accession number
-                key = (cik, accession)
+                key = (accession)  # Only use accession as key since we're dealing with 1 SGML per accession
                 if key in seen_keys:
                     continue
                 seen_keys.add(key)
@@ -88,28 +89,60 @@ class SgmlDiskCollector:
                     file_type="sgml",
                     year=year,
                     cik=cik,
-                    form_type=form_type, # FilingMetadata.form_type
+                    form_type=form_type,
                     accession_or_subtype=accession,
-                    filename=f"{record.accession_number}.txt", # patch in submission .txt filename
+                    filename=f"{record.accession_number}.txt",
                 )
 
                 if os.path.exists(full_path):
                     log_info(f"Already written: {full_path}")
+                    written_paths.append(full_path)
                     continue
 
                 # Step 2: Fetch SGML (cache-aware)
-                sgml_doc = self.downloader.download_sgml(
-                    cik, 
-                    accession,
-                    year=year,
-                    write_cache=self.write_cache
-                )
+                try:
+                    sgml_doc = self.downloader.download_sgml(
+                        cik, 
+                        accession,
+                        year=year,
+                        write_cache=self.write_cache
+                    )
+                    
+                    # For forms that may have issuer/reporting relationship
+                    if form_type in ["3", "4", "5", "13D", "13G", "13F-HR", "144"]:
+                        # Check if the CIK in the record is actually the issuer
+                        issuer_cik = extract_issuer_cik_from_sgml(sgml_doc.content)
+                        if issuer_cik and issuer_cik != cik:
+                            log_info(f"Record CIK {cik} is not the issuer ({issuer_cik}) for {accession}. Retrying download with issuer CIK.")
+                            # Retry download with issuer CIK
+                            sgml_doc = self.downloader.download_sgml(
+                                issuer_cik,
+                                accession,
+                                year=year,
+                                write_cache=self.write_cache
+                            )
+                            # Update CIK for filepath generation
+                            cik = issuer_cik
+                            
+                            # Update the full path to use the issuer CIK
+                            full_path = build_raw_filepath_by_type(
+                                file_type="sgml",
+                                year=year,
+                                cik=cik,
+                                form_type=form_type,
+                                accession_or_subtype=accession,
+                                filename=f"{record.accession_number}.txt",
+                            )
+                except Exception as e:
+                    log_warn(f"Failed to download with CIK {cik} for {accession}, error: {e}")
+                    # Let this propagate to the outer exception handler
+                    raise
 
                 # Step 3: Wrap into RawDocument
                 raw_doc = RawDocument(
                     accession_number=accession,
-                    cik=cik,
-                    form_type=record.filing.form_type,
+                    cik=cik,  # Use the potentially updated issuer CIK
+                    form_type=form_type,
                     document_type=record.document_type,
                     filename=f"{record.accession_number}.txt",
                     source_url=record.source_url or "https://www.sec.gov",

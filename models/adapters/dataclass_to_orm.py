@@ -13,13 +13,22 @@ from models.orm_models.filing_document_orm import FilingDocumentORM
 from models.dataclasses.filing_document_metadata import FilingDocumentMetadata
 
 def convert_to_orm(dataclass_obj: FilingMetadataDC) -> FilingMetadataORM:
-    return FilingMetadataORM(
+    orm_obj = FilingMetadataORM(
         accession_number=dataclass_obj.accession_number,
         cik=dataclass_obj.cik,
         form_type=dataclass_obj.form_type,
         filing_date=dataclass_obj.filing_date,
         filing_url=dataclass_obj.filing_url,
     )
+
+    # Add new fields if they exist on the dataclass
+    if hasattr(dataclass_obj, 'issuer_cik'):
+        orm_obj.issuer_cik = dataclass_obj.issuer_cik
+    
+    if hasattr(dataclass_obj, 'is_issuer'):
+        orm_obj.is_issuer = dataclass_obj.is_issuer
+        
+    return orm_obj
 
 def convert_filing_doc_to_orm(dc: FilingDocDC) -> FilingDocumentORM:
     return FilingDocumentORM(

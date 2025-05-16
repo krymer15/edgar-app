@@ -7,9 +7,11 @@ from datetime import date as dt_date, datetime
 from typing import List, Union
 import requests
 
+from collections import defaultdict
 from collectors.base_collector import BaseCollector
 from models.dataclasses.filing_metadata import FilingMetadata
-from utils.report_logger import log_warn
+from utils.report_logger import log_warn, log_info
+from utils.sgml_utils import download_sgml_for_accession, extract_issuer_cik_from_sgml
 from parsers.idx.idx_parser import CrawlerIdxParser
 
 class FilingMetadataCollector(BaseCollector):
@@ -46,8 +48,70 @@ class FilingMetadataCollector(BaseCollector):
             all_records = CrawlerIdxParser.parse_lines(lines)
             if include_forms:
                 all_records = [r for r in all_records if r.form_type in include_forms]
-            return all_records
+            # Group records by accession number to identify potential duplicates
+            records_by_accession = defaultdict(list)
+            for record in all_records:
+                records_by_accession[record.accession_number].append(record)
+            
+            # Process each group to handle multi-CIK filings
+            final_records = []
+            for accession, records in records_by_accession.items():
+                # If only one record, no need for special handling
+                if len(records) == 1:
+                    records[0].is_issuer = True
+                    records[0].issuer_cik = records[0].cik
+                    final_records.append(records[0])
+                    continue
+                    
+                # Multiple records with same accession - likely Form 4/3/5
+                # Check if it's a form type that typically has issuer/reporting relationship
+                if any(r.form_type in ["4", "3", "5", "13D", "13G", "13F-HR"] for r in records):
+                    try:
+                        # Download the SGML content using the first record
+                        sgml_content = download_sgml_for_accession(
+                            records[0].cik, 
+                            accession, 
+                            self.user_agent
+                        )
+                        
+                        # Extract the issuer CIK
+                        issuer_cik = extract_issuer_cik_from_sgml(sgml_content)
+                        
+                        if issuer_cik:
+                            # Find the record that matches the issuer CIK
+                            issuer_record = next((r for r in records if r.cik == issuer_cik), None)
+                            
+                            # If found, add it to final records
+                            if issuer_record:
+                                issuer_record.is_issuer = True
+                                issuer_record.issuer_cik = issuer_cik
+                                final_records.append(issuer_record)
+                            else:
+                                # If not found, use the first record but update its issuer_cik
+                                records[0].is_issuer = True
+                                records[0].issuer_cik = issuer_cik
+                                final_records.append(records[0])
+                        else:
+                            # If issuer CIK couldn't be extracted, use the first record
+                            records[0].is_issuer = True
+                            records[0].issuer_cik = records[0].cik
+                            final_records.append(records[0])
+                    except Exception as e:
+                        # If any error occurs, fall back to using the first record
+                        log_warn(f"Error processing multi-CIK filing {accession}: {e}")
+                        records[0].is_issuer = True
+                        records[0].issuer_cik = records[0].cik
+                        final_records.append(records[0])
+                else:
+                    # For other form types, just use the first record
+                    records[0].is_issuer = True
+                    records[0].issuer_cik = records[0].cik
+                    final_records.append(records[0])
+            
+            log_info(f"Handled {len(all_records) - len(final_records)} duplicate CIK records")
+            return final_records
         except Exception as e:
             log_warn(f"[ERROR] Failed to parse crawler.idx: {e}")
             raise
-
+            
+        

@@ -223,27 +223,23 @@
 │   │   │   ├── companies_metadata.sql
 │   │   │   └── submissions_metadata.sql
 │   ├── migrations/
+│   │   ├── add_issuer_info_to_filing_metadata.sql
 │   │   └── add_processing_status_to_filing_metadata.sql
 ├── summarizers/
 │   └── README.md
 ├── test_data/
 │   ├── raw/
 │   │   ├── sgml/
-│   │   │   ├── 66740/
+│   │   │   ├── 1600641/
 │   │   │   │   ├── 2025/
-│   │   │   │   │   ├── 8-K/
-│   │   │   │   │   │   ├── 0000066740-25-000046/
-│   │   │   │   │   │   │   └── 0000066740-25-000046.txt
-│   │   │   ├── 910638/
+│   │   │   │   │   ├── 10-Q/
+│   │   │   │   │   │   ├── 0001600641-25-000057/
+│   │   │   │   │   │   │   └── 0001600641-25-000057.txt
+│   │   │   ├── 893739/
 │   │   │   │   ├── 2025/
-│   │   │   │   │   ├── 8-K/
-│   │   │   │   │   │   ├── 0001193125-25-117890/
-│   │   │   │   │   │   │   └── 0001193125-25-117890.txt
-│   │   │   ├── 926282/
-│   │   │   │   ├── 2025/
-│   │   │   │   │   ├── 8-K/
-│   │   │   │   │   │   ├── 0000950170-25-069478/
-│   │   │   │   │   │   │   └── 0000950170-25-069478.txt
+│   │   │   │   │   ├── 4/
+│   │   │   │   │   │   ├── 0001296720-25-000004/
+│   │   │   │   │   │   │   └── 0001296720-25-000004.txt
 ├── tests/
 │   ├── README.md
 │   └── __init__.py
@@ -306,6 +302,7 @@
 │   ├── job_tracker.py
 │   ├── path_manager.py
 │   ├── report_logger.py
+│   ├── sgml_utils.py
 │   ├── ticker_cik_mapper.py
 │   └── url_builder.py
 ├── writers/

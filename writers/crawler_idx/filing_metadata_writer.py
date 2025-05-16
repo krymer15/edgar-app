@@ -13,16 +13,14 @@ class FilingMetadataWriter:
 
     def upsert_many(self, records: list[FilingMetadataDC]):
         written = 0
-        try:
-            for record in records:
+        for record in records:
+            try:
                 orm_entry = convert_to_orm(record)
                 self.session.merge(orm_entry)
+                self.session.commit()
                 written += 1
-            self.session.commit()
-        except SQLAlchemyError as e:
-            self.session.rollback()
-            log_warn(f"[ERROR] Failed to write filing metadata: {e}")
-        finally:
-            self.session.close()
-
+            except SQLAlchemyError as e:
+                self.session.rollback()
+                log_warn(f"[ERROR] Failed to write filing metadata for {record.accession_number}: {e}")
+                
         log_info(f"✅ Metadata written: {written}")

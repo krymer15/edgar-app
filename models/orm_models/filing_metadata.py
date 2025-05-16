@@ -2,7 +2,7 @@
 
 ### mirrors DDL in `sql/create/crawler_idx/filing_metadata.sql`` ###
 
-from sqlalchemy import Column, String, Date, TIMESTAMP, text, Text, Enum
+from sqlalchemy import Column, String, Date, TIMESTAMP, text, Text, Enum, Boolean
 from sqlalchemy.orm import relationship
 from models.base import Base
 from models.orm_models.filing_document_orm import FilingDocumentORM
@@ -32,6 +32,8 @@ class FilingMetadata(Base):
     processing_error        = Column(Text, nullable=True)
     job_id                  = Column(String(36), nullable=True, index=True)
     last_updated_by         = Column(String(100), nullable=True)
+    issuer_cik              = Column(Text, nullable=True, index=True)
+    is_issuer               = Column(Boolean, nullable=False, server_default=text("true"))
 
     processing_status   = Column(Enum('pending', 'processing', 'completed', 'failed', 'skipped', 
                                 name='processing_status_enum'), nullable=True)

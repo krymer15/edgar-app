@@ -6,5 +6,13 @@ CREATE TABLE filing_metadata (
 	filing_url text NULL,
 	created_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
 	updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	processing_status "processing_status_enum" NULL,
+	processing_started_at timestamptz NULL,
+	processing_completed_at timestamptz NULL,
+	processing_error text NULL,
+	job_id varchar(36) NULL,
+	last_updated_by varchar(100) NULL,
+	CONSTRAINT check_processing_timestamps CHECK (((processing_completed_at IS NULL) OR (processing_started_at IS NULL) OR (processing_completed_at >= processing_started_at))),
 	CONSTRAINT filing_metadata_pkey PRIMARY KEY (accession_number)
 );
+CREATE INDEX idx_filing_metadata_job_id ON filing_metadata USING btree (job_id);

@@ -204,3 +204,46 @@ class SgmlDocumentIndexer(BaseParser):
             ))
 
         return documents
+    
+    def extract_issuer_info(self, txt_contents: str) -> dict:
+        """
+        Extract issuer information from SGML content.
+        Returns a dictionary with issuer details.
+        """
+        issuer_info = {}
+        
+        # Find the ISSUER section
+        issuer_section_start = txt_contents.find("<ISSUER>")
+        if issuer_section_start == -1:
+            return issuer_info
+            
+        issuer_section_end = txt_contents.find("</ISSUER>", issuer_section_start)
+        if issuer_section_end == -1:
+            issuer_section_end = txt_contents.find("<REPORTING-OWNER>", issuer_section_start)
+        
+        if issuer_section_end == -1:
+            return issuer_info
+        
+        issuer_section = txt_contents[issuer_section_start:issuer_section_end]
+        
+        # Extract key information
+        cik_start = issuer_section.find("CENTRAL INDEX KEY:")
+        if cik_start != -1:
+            cik_line_end = issuer_section.find("\n", cik_start)
+            if cik_line_end != -1:
+                cik_line = issuer_section[cik_start:cik_line_end]
+                cik = ''.join(c for c in cik_line if c.isdigit())
+                if cik:
+                    issuer_info["issuer_cik"] = cik
+                    
+        # Extract company name
+        name_start = issuer_section.find("COMPANY CONFORMED NAME:")
+        if name_start != -1:
+            name_line_end = issuer_section.find("\n", name_start)
+            if name_line_end != -1:
+                name_line = issuer_section[name_start:name_line_end]
+                parts = name_line.split(":")
+                if len(parts) > 1:
+                    issuer_info["issuer_name"] = parts[1].strip()
+        
+        return issuer_info
