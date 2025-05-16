@@ -28,6 +28,7 @@ class FilingDocumentMetadata:
     is_exhibit: bool = False
     is_data_support: bool = False
     accessible: bool = True
+    issuer_cik: Optional[str] = None  # New field
 
     def __repr__(self):
         return (
@@ -38,5 +39,6 @@ class FilingDocumentMetadata:
             f"type={self.type}, "
             f"primary={self.is_primary}, "
             f"exhibit={self.is_exhibit}, "
-            f"accessible={self.accessible})>"
+            f"accessible={self.accessible}, "
+            f"issuer_cik={self.issuer_cik})>"
         )

@@ -1,4 +1,4 @@
-# collectors/sgml_disk_collector.py
+# collectors/crawler_idx/sgml_disk_collector.py
 
 from typing import List, Optional
 import os
@@ -73,7 +73,7 @@ class SgmlDiskCollector:
 
         for record in results:
             try:
-                cik = record.cik
+                record_cik = record.cik
                 accession = record.accession_number
                 form_type = record.filing.form_type
                 year = str(record.filing.filing_date.year)
@@ -88,7 +88,7 @@ class SgmlDiskCollector:
                 full_path = build_raw_filepath_by_type(
                     file_type="sgml",
                     year=year,
-                    cik=cik,
+                    cik=record_cik,
                     form_type=form_type,
                     accession_or_subtype=accession,
                     filename=f"{record.accession_number}.txt",
@@ -100,9 +100,13 @@ class SgmlDiskCollector:
                     continue
 
                 # Step 2: Fetch SGML (cache-aware)
+                sgml_doc = None
+                issuer_cik = None
+                cik_to_use = record_cik  # Default to record CIK
+                
                 try:
                     sgml_doc = self.downloader.download_sgml(
-                        cik, 
+                        record_cik, 
                         accession,
                         year=year,
                         write_cache=self.write_cache
@@ -112,8 +116,8 @@ class SgmlDiskCollector:
                     if form_type in ["3", "4", "5", "13D", "13G", "13F-HR", "144"]:
                         # Check if the CIK in the record is actually the issuer
                         issuer_cik = extract_issuer_cik_from_sgml(sgml_doc.content)
-                        if issuer_cik and issuer_cik != cik:
-                            log_info(f"Record CIK {cik} is not the issuer ({issuer_cik}) for {accession}. Retrying download with issuer CIK.")
+                        if issuer_cik and issuer_cik != record_cik:
+                            log_info(f"Record CIK {record_cik} is not the issuer ({issuer_cik}) for {accession}. Retrying download with issuer CIK.")
                             # Retry download with issuer CIK
                             sgml_doc = self.downloader.download_sgml(
                                 issuer_cik,
@@ -122,26 +126,33 @@ class SgmlDiskCollector:
                                 write_cache=self.write_cache
                             )
                             # Update CIK for filepath generation
-                            cik = issuer_cik
+                            cik_to_use = issuer_cik
                             
                             # Update the full path to use the issuer CIK
                             full_path = build_raw_filepath_by_type(
                                 file_type="sgml",
                                 year=year,
-                                cik=cik,
+                                cik=cik_to_use,
                                 form_type=form_type,
                                 accession_or_subtype=accession,
                                 filename=f"{record.accession_number}.txt",
                             )
+                        else:
+                            # If no issuer CIK found or it matches the record CIK
+                            if not issuer_cik:
+                                issuer_cik = record_cik  # Default: set issuer_cik to record_cik
+                    else:
+                        # For regular documents, both CIKs are the same
+                        issuer_cik = record_cik
                 except Exception as e:
-                    log_warn(f"Failed to download with CIK {cik} for {accession}, error: {e}")
+                    log_warn(f"Failed to download with CIK {record_cik} for {accession}, error: {e}")
                     # Let this propagate to the outer exception handler
                     raise
 
                 # Step 3: Wrap into RawDocument
                 raw_doc = RawDocument(
                     accession_number=accession,
-                    cik=cik,  # Use the potentially updated issuer CIK
+                    cik=cik_to_use,  # Use the potentially updated issuer CIK
                     form_type=form_type,
                     document_type=record.document_type,
                     filename=f"{record.accession_number}.txt",
@@ -154,6 +165,7 @@ class SgmlDiskCollector:
                     is_exhibit=record.is_exhibit,
                     is_data_support=record.is_data_support,
                     accessible=record.accessible,
+                    issuer_cik=issuer_cik
                 )
 
                 # Step 4: Write to disk

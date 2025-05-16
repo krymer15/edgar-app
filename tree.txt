@@ -227,7 +227,8 @@
 │   │   │   └── submissions_metadata.sql
 │   ├── migrations/
 │   │   ├── add_issuer_info_to_filing_metadata.sql
-│   │   └── add_processing_status_to_filing_metadata.sql
+│   │   ├── add_processing_status_to_filing_metadata.sql
+│   │   └── rollback_issuer_columns.sql
 ├── summarizers/
 │   └── README.md
 ├── tests/
@@ -239,6 +240,7 @@
 │   │   └── test_filing_writer.py
 │   ├── crawler_idx/
 │   │   ├── test_daily_ingestion_pipeline.py
+│   │   ├── test_dataclass_to_orm.py
 │   │   ├── test_filing_document_record_model.py
 │   │   ├── test_filing_documents_collector.py
 │   │   ├── test_filing_documents_orchestrator.py

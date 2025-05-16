@@ -1,4 +1,4 @@
-# models/orm_models/filing_document.py
+# models/orm_models/filing_document_orm.py
 
 from sqlalchemy import Column, Text, Boolean, TIMESTAMP, ForeignKey, text
 from sqlalchemy.dialects.postgresql import UUID
@@ -44,6 +44,7 @@ class FilingDocumentORM(Base):
     accessible        = Column(Boolean,
                               server_default=text("true"),
                               nullable=False)
+    issuer_cik        = Column(Text, nullable=True)  # New field
     created_at        = Column(
                           TIMESTAMP(timezone=True),
                           server_default=text("CURRENT_TIMESTAMP"),

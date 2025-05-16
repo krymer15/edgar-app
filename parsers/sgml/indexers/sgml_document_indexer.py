@@ -184,6 +184,10 @@ class SgmlDocumentIndexer(BaseParser):
         primary_doc_url = result.get("primary_document_url")
         exhibits = result.get("exhibits", [])
 
+        # Extract issuer CIK if possible
+        issuer_info = self.extract_issuer_info(txt_contents)
+        issuer_cik = issuer_info.get("issuer_cik")
+
         documents = []
         for ex in exhibits:
             filename = ex.get("filename", "").strip()
@@ -200,7 +204,8 @@ class SgmlDocumentIndexer(BaseParser):
                 is_primary=(primary_doc_url and filename in primary_doc_url),
                 is_exhibit=not filename.lower().endswith(".xml"),
                 is_data_support=filename.lower().endswith(".xml"),
-                accessible=ex.get("accessible", True)
+                accessible=ex.get("accessible", True),
+                issuer_cik=issuer_cik  # New field
             ))
 
         return documents

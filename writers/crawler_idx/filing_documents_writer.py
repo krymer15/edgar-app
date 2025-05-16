@@ -31,13 +31,16 @@ class FilingDocumentsWriter(BaseWriter):
                 ).first()
 
                 if existing:
-                    # Update only if something changed (minimal update for now)
+                    # Update if something changed (now including issuer_cik field)
                     updated_fields = False
                     if existing.description != dc.description:
                         existing.description = dc.description
                         updated_fields = True
                     if existing.accessible != dc.accessible:
                         existing.accessible = dc.accessible
+                        updated_fields = True
+                    if existing.issuer_cik != dc.issuer_cik and dc.issuer_cik is not None:
+                        existing.issuer_cik = dc.issuer_cik
                         updated_fields = True
 
                     if updated_fields:

@@ -49,7 +49,7 @@ class FilingDocumentsCollector:
         elif target_date:
             query = query.filter(FilingMetadata.filing_date == target_date)
 
-        # Apply form type filtering if specified and not using accession filters
+            # Apply form type filtering if specified and not using accession filters
             if include_forms:
                 log_info(f"[DOCS] Filtering documents by form types: {include_forms}")
                 query = query.filter(FilingMetadata.form_type.in_(include_forms))
@@ -69,8 +69,11 @@ class FilingDocumentsCollector:
             try:
                 # First attempt download using the record CIK
                 year = str(record.filing_date.year)
+                sgml_doc = None
+                issuer_cik = None
+                
                 try:
-                    sgml_doc: SgmlTextDocument = self.downloader.download_sgml(
+                    sgml_doc = self.downloader.download_sgml(
                         record.cik, 
                         record.accession_number,
                         year=year,
@@ -90,6 +93,13 @@ class FilingDocumentsCollector:
                                 year=year,
                                 write_cache=self.write_cache
                             )
+                        else:
+                            # If no issuer CIK was found or it matches the record CIK
+                            if not issuer_cik:
+                                issuer_cik = record.cik  # Default to record CIK
+                    else:
+                        # For regular forms, both CIKs are the same
+                        issuer_cik = record.cik
                 except Exception as e:
                     # If download fails with record CIK, we may be dealing with a reporting owner CIK
                     # Try to reconstruct the canonical URL with a common issuer CIK pattern
@@ -100,6 +110,12 @@ class FilingDocumentsCollector:
                 # Continue with parsing
                 parser = SgmlDocumentIndexer(record.cik, record.accession_number, record.form_type)
                 parsed_metadata = parser.index_documents(sgml_doc.content)
+                
+                # Add issuer_cik to the parsed metadata if not already set
+                for doc in parsed_metadata:
+                    if doc.issuer_cik is None:
+                        doc.issuer_cik = issuer_cik
+                
                 filing_docs = [convert_parsed_doc_to_filing_doc(doc) for doc in parsed_metadata]
                 all_docs.extend(filing_docs)
             except Exception as e:

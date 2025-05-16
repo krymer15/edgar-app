@@ -23,21 +23,6 @@ def convert_to_orm(dataclass_obj: FilingMetadataDC) -> FilingMetadataORM:
     
     return orm_obj
 
-def convert_filing_doc_to_orm(dc: FilingDocDC) -> FilingDocumentORM:
-    return FilingDocumentORM(
-        accession_number=dc.accession_number,
-        cik=dc.cik,
-        document_type=dc.document_type,
-        filename=dc.filename,
-        description=dc.description,
-        source_url=dc.source_url,
-        source_type=dc.source_type,
-        is_primary=dc.is_primary,
-        is_exhibit=dc.is_exhibit,
-        is_data_support=dc.is_data_support,
-        accessible=dc.accessible,
-    )
-
 def convert_parsed_doc_to_filing_doc(parsed: FilingDocumentMetadata) -> FilingDocDC:
     return FilingDocDC(
         accession_number=parsed.accession_number,
@@ -51,4 +36,21 @@ def convert_parsed_doc_to_filing_doc(parsed: FilingDocumentMetadata) -> FilingDo
         is_exhibit=parsed.is_exhibit,
         is_data_support=parsed.is_data_support,
         accessible=parsed.accessible,
+        issuer_cik=parsed.issuer_cik, 
+    )
+
+def convert_filing_doc_to_orm(dc: FilingDocDC) -> FilingDocumentORM:
+    return FilingDocumentORM(
+        accession_number=dc.accession_number,
+        cik=dc.cik,
+        document_type=dc.document_type,
+        filename=dc.filename,
+        description=dc.description,
+        source_url=dc.source_url,
+        source_type=dc.source_type,
+        is_primary=dc.is_primary,
+        is_exhibit=dc.is_exhibit,
+        is_data_support=dc.is_data_support,
+        accessible=dc.accessible,
+        issuer_cik=dc.issuer_cik, 
     )

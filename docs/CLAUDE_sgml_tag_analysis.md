@@ -371,3 +371,20 @@ def extract_form4_entities(sgml_content: str) -> dict:
 5. Integrate extraction logic with collector components
 
 This markdown file provides a detailed technical reference for understanding and parsing the SGML structure of various SEC filings. It includes examples of different form types, extraction strategies, and recommendations for implementation. 
+
+## Form Types with Special CIK Relationships
+
+| Form Type | Relationship Type | Primary Sections | Description |
+|-----------|------------------|------------------|-------------|
+| Form 3    | Issuer/Reporting Owner | `<ISSUER>`, `<REPORTING-OWNER>` | Initial beneficial ownership |
+| Form 4    | Issuer/Reporting Owner | `<ISSUER>`, `<REPORTING-OWNER>` | Changes in beneficial ownership |
+| Form 5    | Issuer/Reporting Owner | `<ISSUER>`, `<REPORTING-OWNER>` | Annual beneficial ownership |
+| 13D       | Issuer/Reporting Owner | `<SUBJECT-COMPANY>`, `<REPORTING-OWNER>` | Active ownership report |
+| 13G       | Issuer/Reporting Owner | `<SUBJECT-COMPANY>`, `<REPORTING-OWNER>` | Passive ownership report |
+| 13F-HR    | Institutional Investor/Holdings | `<REPORTING-OWNER>`, `<tableStart>` | Institutional holdings |
+| 144       | Issuer/Seller | `<ISSUER>`, `<REPORTING-OWNER>` | Sale of restricted securities |
+| SC TO-I   | Bidder/Target | `<SUBJECT-COMPANY>`, `<FILED-BY>` | Issuer tender offer |
+| SC TO-T   | Bidder/Target | `<SUBJECT-COMPANY>`, `<FILED-BY>` | Third-party tender offer |
+| DEFM14A   | Multiple Companies | Various | Merger proxy statement |
+| 425       | Multiple Companies | Various | Business combination communications |
+| S-4       | Multiple Companies | Various | Business combination registration |
