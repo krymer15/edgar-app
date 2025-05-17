@@ -1,5 +1,14 @@
 # parsers/forms/form4_parser.py
 
+"""
+This is a parser that:
+    - Processes the XML content within Form 4 filings
+    - Extracts detailed transaction data
+    - Handles both non-derivative and derivative transactions
+    - Builds a standardized output structure
+    - Requires the XML portion to be already extracted
+"""
+
 from parsers.base_parser import BaseParser
 from lxml import etree
 import io
