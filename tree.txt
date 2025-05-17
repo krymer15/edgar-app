@@ -72,9 +72,12 @@
 │   └── tree_view.py
 ├── docs/
 │   ├── 8k_item_codes.txt
+│   ├── CLAUDE_db_architecture_pipeline_reco.md
 │   ├── CLAUDE_filing_issuer_reporter_relationship_handling.md
+│   ├── CLAUDE_multi_cik_relationship_model.md
 │   ├── CLAUDE_sgml_tag_analysis.md
 │   ├── SEC_Form_Analysis_Priority.csv
+│   ├── claude_code_relationship_implementation_prompt.md
 │   ├── cleaning_and_parsing.md
 │   ├── data_symlink_handling.md
 │   ├── dataclass_architecture.md
@@ -186,6 +189,10 @@
 │   │   ├── indexers/
 │   │   │   ├── README.md
 │   │   │   └── sgml_document_indexer.py
+│   │   │   ├── forms/
+│   │   │   │   ├── form4-sgml-analysis.md
+│   │   │   │   ├── form4_indexer.py
+│   │   │   │   └── specialized_form_db_schema_proposal.md
 │   ├── utils/
 │   │   └── parser_utils.py
 │   ├── xbrl/

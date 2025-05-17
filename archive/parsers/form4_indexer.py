@@ -1,3 +1,8 @@
+"""
+  DEPRECATED: This module is being replaced by form4_sgml_indexer.py.
+  Use Form4SgmlIndexer instead for more comprehensive Form 4 processing.
+  """
+
 # parsers/sgml/indexers/forms/form4_indexer.py
 
 #TODO plug into rest of app and Form 4 pipeline(s).

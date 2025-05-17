@@ -3,6 +3,8 @@
 from orchestrators.crawler_idx.filing_metadata_orchestrator import FilingMetadataOrchestrator
 from orchestrators.crawler_idx.filing_documents_orchestrator import FilingDocumentsOrchestrator
 from orchestrators.crawler_idx.sgml_disk_orchestrator import SgmlDiskOrchestrator
+from orchestrators.forms.form4_orchestrator import Form4Orchestrator
+from parsers.sgml.indexers.sgml_indexer_factory import SgmlIndexerFactory
 from downloaders.sgml_downloader import SgmlDownloader
 from utils.report_logger import log_info, log_warn, log_error
 from utils.job_tracker import create_job, get_job_progress, update_batch_status, update_record_status
@@ -12,7 +14,7 @@ from models.orm_models.filing_metadata import FilingMetadata
 from models.orm_models.filing_document_orm import FilingDocumentORM
 from datetime import datetime
 import traceback
-from sqlalchemy import select
+from sqlalchemy import select, inspect
 
 class DailyIngestionPipeline:
     def __init__(self, use_cache: bool = True):
@@ -38,6 +40,35 @@ class DailyIngestionPipeline:
             write_cache=False,
             downloader=self.sgml_downloader
         )
+
+        # Create Form4Orchestrator with shared downloader
+        self.form4_orchestrator = Form4Orchestrator(
+            use_cache=use_cache,
+            write_cache=False,  # DailyIngestionPipeline convention
+            downloader=self.sgml_downloader  # Share the downloader
+        )
+
+        # Check for required tables
+        self.form4_processing_enabled = self._check_database_schema()
+
+    def _check_database_schema(self):
+        """Check if the database schema includes required Form 4 tables."""
+        try:
+            with get_db_session() as session:
+                inspector = inspect(session.bind)
+
+                required_tables = ["entities", "form4_filings", "form4_relationships", "form4_transactions"]
+                existing_tables = inspector.get_table_names()
+
+                missing_tables = [table for table in required_tables if table not in existing_tables]
+
+                if missing_tables:
+                    log_warn(f"Missing Form 4 tables: {missing_tables}. Form 4 processing will be skipped.")
+                    return False
+                return True
+        except Exception as e:
+            log_warn(f"Error checking database schema: {str(e)}. Form 4 processing will be disabled.")
+            return False
 
     def run(self, target_date: str, limit: int = None, include_forms: list[str] = None, 
             retry_failed: bool = False, job_id: str = None, process_only: list[str] = None):
@@ -139,7 +170,17 @@ class DailyIngestionPipeline:
         for accession_number in accession_filters:
             try:
                 log_info(f"[PIPELINE] Processing {accession_number}")
-                
+
+                # Get the filing metadata record
+                with get_db_session() as session:
+                    filing_record = session.query(FilingMetadata).filter_by(
+                        accession_number=accession_number
+                    ).first()
+
+                    if not filing_record:
+                        log_error(f"[ERROR] Filing metadata not found for {accession_number}")
+                        continue
+
                 # === Pipeline 2: FilingDocuments (SGML Index) ===
                 log_info(f"[DOCS] Document indexing for {accession_number}")
                 self.docs_orchestrator.run(accession_filters=[accession_number])
@@ -147,11 +188,29 @@ class DailyIngestionPipeline:
                 # === Pipeline 3: SGML Disk Writer ===
                 log_info(f"[SGML] SGML disk download for {accession_number}")
                 self.sgml_orchestrator.run(accession_filters=[accession_number])
-                
+
+                # === Form-Specific Processing ===
+                # Form 4 specialized processing
+                if filing_record.form_type.strip().upper() in ["4", "FORM 4", "4/A", "FORM 4/A"]:
+                    log_info(f"[FORM4] Processing Form 4 data for {accession_number}")
+
+                    # Use the dedicated Form4Orchestrator
+                    form4_result = self.form4_orchestrator.run(
+                        accession_filters=[accession_number],
+                        reprocess=True  # Process even if already exists
+                    )
+
+                    if form4_result and form4_result.get("succeeded", 0) > 0:
+                        log_info(f"[FORM4] Successfully processed Form 4 data for {accession_number}")
+                    else:
+                        log_warn(f"[FORM4] Failed to process Form 4 data for {accession_number}")
+                        # Note: We don't fail the entire pipeline if just the Form 4 specialized
+                        # processing fails, as the general document indexing succeeded
+
                 # Mark as successfully processed
                 update_record_status(accession_number, 'completed')
                 successfully_processed.append(accession_number)
-                
+
             except Exception as e:
                 error_msg = f"{str(e)}\n{traceback.format_exc()}"
                 log_error(f"[ERROR] Failed to process {accession_number}: {error_msg}")

@@ -40,6 +40,8 @@ class FilingMetadata(Base):
         cascade="all, delete-orphan",
     )
 
+    form4_filing = relationship("Form4Filing", back_populates="filing_metadata", uselist=False)
+
     def __repr__(self):
         return (
             f"<FilingMetadata "
