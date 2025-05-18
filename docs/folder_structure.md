@@ -98,7 +98,7 @@ edgar_app/
 │
 ├── scripts/                 # CLI entrypoints and dev scripts
 │   ├── run_daily_metadata.py
-│   ├── run_form4_xml_ingest.py
+│   ├── run_form4_ingest.py
 │   └── __init__.py
 │
 ├── tests/                   # Unit and integration tests

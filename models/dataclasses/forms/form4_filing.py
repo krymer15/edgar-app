@@ -35,9 +35,11 @@ class Form4FilingData:
     updated_at: Optional[datetime] = None
 
     def __post_init__(self):
-        # Normalize accession number
-        self.accession_number = self.accession_number.strip().replace('-', '')
-
+        # Normalize accession number - keep dashes to match filing_metadata
+        # Important: We MUST keep dashes in accession_number as this is a foreign key
+        # to filing_metadata table which uses dashed format
+        self.accession_number = self.accession_number.strip()
+        
         # Determine if this has multiple owners based on relationships
         if len(self.relationships) > 1:
             self.has_multiple_owners = True

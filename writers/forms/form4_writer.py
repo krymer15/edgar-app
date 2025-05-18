@@ -9,6 +9,8 @@ from writers.shared.entity_writer import EntityWriter
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from utils.report_logger import log_info, log_warn, log_error
+from utils.accession_formatter import format_for_db
+from models.dataclasses.entity import EntityData
 from typing import Dict, Optional, List, Any
 import uuid
 
@@ -20,6 +22,15 @@ class Form4Writer:
     def __init__(self, db_session: Session = None):
         self.db_session = db_session
         self.entity_writer = EntityWriter(db_session)
+        
+    def _extract_cik_from_accession(self, accession_number: str) -> str:
+        """Extract CIK from accession number - first 10 digits"""
+        # Remove any dashes
+        clean_acc = accession_number.replace('-', '')
+        # The first 10 digits are the CIK
+        if len(clean_acc) >= 10:
+            return clean_acc[:10]
+        return "0000000000"  # Fallback
 
     def write_form4_data(self, form4_data: Form4FilingData) -> Optional[Form4Filing]:
         """
@@ -32,13 +43,16 @@ class Form4Writer:
             Form4Filing ORM instance if successful, None otherwise
         """
         try:
+            # Format the accession number for database (with dashes)
+            db_accession_number = format_for_db(form4_data.accession_number)
+            
             # Check if form4 filing already exists
             existing_filing = self.db_session.query(Form4Filing).filter_by(
-                accession_number=form4_data.accession_number
+                accession_number=db_accession_number
             ).first()
 
             if existing_filing:
-                log_info(f"Form 4 filing already exists for {form4_data.accession_number}, updating")
+                log_info(f"Form 4 filing already exists for {db_accession_number}, updating")
                 # Delete existing relationships and transactions for clean update
                 self._delete_existing_data(existing_filing.id)
                 form4_filing = existing_filing
@@ -49,21 +63,21 @@ class Form4Writer:
             else:
                 # Create new Form 4 filing
                 form4_filing = Form4Filing(
-                    accession_number=form4_data.accession_number,
+                    accession_number=db_accession_number,
                     period_of_report=form4_data.period_of_report,
                     has_multiple_owners=form4_data.has_multiple_owners
                 )
 
                 self.db_session.add(form4_filing)
                 self.db_session.flush()  # Get ID without committing
-                log_info(f"Created new Form 4 filing record for {form4_data.accession_number}")
+                log_info(f"Created new Form 4 filing record for {db_accession_number}")
 
             # Process relationships and transactions
             self._write_relationships_and_transactions(form4_data, form4_filing)
 
             # Commit all changes
             self.db_session.commit()
-            log_info(f"Successfully wrote Form 4 data for {form4_data.accession_number}")
+            log_info(f"Successfully wrote Form 4 data for {db_accession_number}")
 
             return form4_filing
 
@@ -103,19 +117,39 @@ class Form4Writer:
                 issuer_entity = self.entity_writer.get_or_create_entity(form4_data.issuer_entity)
                 owner_entity = self.entity_writer.get_or_create_entity(form4_data.owner_entity)
             else:
-                # Use the IDs from the relationship data to get entities
-                # This is the normal code path when processing real data
-                # Get the entity objects by ID
+                # Need to get or create entity records first from Form4SgmlIndexer data
+                # Parse CIK out of the accession number (first 10 digits)
                 issuer_id = rel_data.issuer_entity_id
                 owner_id = rel_data.owner_entity_id
                 
-                # We need to use entities, not just IDs
                 log_info(f"Retrieving entity information by ID for relationship")
                 log_info(f"Using issuer_entity_id: {issuer_id}, owner_entity_id: {owner_id}")
                 
-                # Placeholder logic for now - in real implementation, 
-                # we would need to get entities by ID from the database
-                # For now, we'll simply use the IDs directly
+                # Create dummy EntityData objects since we need to save them to the DB
+                issuer_cik = self._extract_cik_from_accession(form4_data.accession_number)
+                issuer_entity_data = EntityData(
+                    cik=issuer_cik,
+                    name=f"Issuer CIK {issuer_cik}",
+                    entity_type="company",
+                    id=issuer_id  # Use the same ID from the relationship
+                )
+                
+                # Reporting owner CIK will just be a generated ID for now
+                owner_entity_data = EntityData(
+                    cik=f"owner_{str(owner_id)[-6:]}",  # Use last 6 chars of ID as a unique identifier
+                    name=f"Owner ID {str(owner_id)[-6:]}",
+                    entity_type="person",
+                    id=owner_id  # Use the same ID from the relationship
+                )
+                
+                # Create entities in the database
+                issuer_entity = self.entity_writer.get_or_create_entity(issuer_entity_data)
+                owner_entity = self.entity_writer.get_or_create_entity(owner_entity_data)
+                
+                # Commit the entities explicitly to ensure they're in the database
+                # before creating relationships that reference them
+                self.db_session.commit()
+                log_info(f"Committed entities to database before creating relationships")
                 
             # Create relationship
             relationship = Form4Relationship(

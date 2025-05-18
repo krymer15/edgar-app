@@ -1,36 +1,37 @@
-CREATE TABLE form4_transactions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    form4_filing_id UUID NOT NULL,
-    relationship_id UUID NOT NULL,
-    transaction_code TEXT NOT NULL,
-    transaction_date DATE NOT NULL,
-    security_title TEXT NOT NULL,
-    transaction_form_type TEXT,
-    shares_amount NUMERIC,
-    price_per_share NUMERIC,
-    ownership_nature TEXT, -- 'D' for Direct or 'I' for Indirect
-    is_derivative BOOLEAN NOT NULL DEFAULT FALSE,
-    equity_swap_involved BOOLEAN DEFAULT FALSE,
-    transaction_timeliness TEXT, -- 'P' for on time, 'L' for late
-    footnote_ids TEXT[],
-    indirect_ownership_explanation TEXT,
-    conversion_price NUMERIC,
-    exercise_date DATE,
-    expiration_date DATE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT form4_transactions_form4_filing_id_fkey
-        FOREIGN KEY (form4_filing_id)
-        REFERENCES form4_filings(id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE,
-    CONSTRAINT form4_transactions_relationship_id_fkey
-        FOREIGN KEY (relationship_id)
-        REFERENCES form4_relationships(id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
-);
+-- public.form4_transactions definition
 
--- Indexes to support joins by filing and relationship
-CREATE INDEX idx_form4_transactions_filing_id ON form4_transactions(form4_filing_id);
-CREATE INDEX idx_form4_transactions_relationship_id ON form4_transactions(relationship_id);
+-- Drop table
+
+-- DROP TABLE public.form4_transactions;
+
+CREATE TABLE public.form4_transactions (
+	id uuid DEFAULT gen_random_uuid() NOT NULL,
+	form4_filing_id uuid NOT NULL,
+	relationship_id uuid NOT NULL,
+	transaction_code text NOT NULL,
+	transaction_date date NOT NULL,
+	security_title text NOT NULL,
+	transaction_form_type text NULL,
+	shares_amount numeric NULL,
+	price_per_share numeric NULL,
+	ownership_nature text NULL,
+	is_derivative bool DEFAULT false NOT NULL,
+	equity_swap_involved bool DEFAULT false NULL,
+	transaction_timeliness text NULL,
+	footnote_ids _text NULL,
+	indirect_ownership_explanation text NULL,
+	conversion_price numeric NULL,
+	exercise_date date NULL,
+	expiration_date date NULL,
+	created_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT form4_transactions_pkey PRIMARY KEY (id)
+);
+CREATE INDEX idx_form4_transactions_filing_id ON public.form4_transactions USING btree (form4_filing_id);
+CREATE INDEX idx_form4_transactions_relationship_id ON public.form4_transactions USING btree (relationship_id);
+
+
+-- public.form4_transactions foreign keys
+
+ALTER TABLE public.form4_transactions ADD CONSTRAINT form4_transactions_form4_filing_id_fkey FOREIGN KEY (form4_filing_id) REFERENCES public.form4_filings(id) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE public.form4_transactions ADD CONSTRAINT form4_transactions_relationship_id_fkey FOREIGN KEY (relationship_id) REFERENCES public.form4_relationships(id) ON DELETE CASCADE ON UPDATE CASCADE;

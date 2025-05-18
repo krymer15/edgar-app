@@ -54,20 +54,20 @@ The Form 4 schema consists of several related tables:
 
 ### CLI Tools
 
-- **run_form4_xml_ingest.py**: Command-line tool for processing Form 4 filings
+- **run_form4_ingest.py**: Command-line tool for processing Form 4 filings
 
 ## Usage
 
 ### Process a Specific Form 4 Filing
 
 ```bash
-python scripts/forms/run_form4_xml_ingest.py --accession 0001234567-25-000001 --cik 0001234567 --date 2025-05-15
+python scripts/forms/run_form4_ingest.py --accession 0001234567-25-000001 --date 2025-05-15
 ```
 
 ### Process All Form 4 Filings for a Date
 
 ```bash
-python scripts/forms/run_form4_xml_ingest.py --date 2025-05-15 --limit 100
+python scripts/forms/run_form4_ingest.py --date 2025-05-15 --limit 100
 ```
 
 ## Implementation Details

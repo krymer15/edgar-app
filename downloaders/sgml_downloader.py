@@ -27,9 +27,20 @@ class SgmlDownloader(SECDownloader):
         super().__init__(user_agent=user_agent, request_delay_seconds=request_delay_seconds)
         self.use_cache = use_cache
         self.memory_cache = {} # key: (cik, accession, year) → value: SgmlTextDocument
+        self.url_cache = {}   # key: url → value: content
 
     def clear_memory_cache(self):
+        """Clear both memory caches."""
         self.memory_cache.clear()
+        self.url_cache.clear()
+
+    def has_in_memory_cache(self, url: str) -> bool:
+        """Check if a URL is in the memory cache."""
+        return url in self.url_cache
+
+    def get_from_memory_cache(self, url: str) -> str:
+        """Get content from memory cache by URL."""
+        return self.url_cache.get(url, "")
 
     def is_stale(self, path: str, max_age_seconds: int) -> bool:
         try:
@@ -78,7 +89,7 @@ class SgmlDownloader(SECDownloader):
         with open(path, "w", encoding="utf-8") as f:
             f.write(content)
 
-    def download_sgml(self, cik: str, accession_number: str, year: str, *, write_cache: bool = None) -> SgmlTextDocument:
+    def download_sgml(self, cik: str, accession_number: str, year: str = None, *, write_cache: bool = None) -> SgmlTextDocument:
         """
         Downloads the SGML submission text file for a given filing.
 
@@ -102,8 +113,19 @@ class SgmlDownloader(SECDownloader):
             - If the SGML is already in memory (from a prior download), it will be reused directly.
             - Disk caching is primarily retained for testing and offline debugging.
         """
+        # If year wasn't provided, extract it from accession
+        if year is None and len(accession_number) >= 10:
+            year_short = accession_number.split('-')[1] if '-' in accession_number else accession_number[2:4]
+            year = f"20{year_short}"  # Assuming all years are 2000+
+            
         key = (cik, accession_number, year)
+        url = construct_sgml_txt_url(cik, accession_number.replace('-', ''))
+        
+        # Update url_cache with this URL for future lookups
         if key in self.memory_cache:
+            # Also update the URL cache for direct lookups
+            content = self.memory_cache[key].content
+            self.url_cache[url] = content
             log_info(f"🔁 Reusing in-memory SGML for {accession_number}")
             return self.memory_cache[key]
 
@@ -121,6 +143,7 @@ class SgmlDownloader(SECDownloader):
                 content = self.read_from_cache(cik, accession_number, year)
                 doc = SgmlTextDocument(cik=cik, accession_number=accession_number, content=content)
                 self.memory_cache[key] = doc
+                self.url_cache[url] = content  # Also update the URL cache
                 return doc
             else:
                 log_info(f"♻️ Cache stale for SGML: {accession_number} — re-downloading.")
@@ -134,4 +157,5 @@ class SgmlDownloader(SECDownloader):
 
         doc = SgmlTextDocument(cik=cik, accession_number=accession_number, content=content)
         self.memory_cache[key] = doc
+        self.url_cache[url] = content  # Also update the URL cache
         return doc

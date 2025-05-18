@@ -1,12 +1,18 @@
-CREATE TABLE entities (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    cik TEXT NOT NULL UNIQUE,
-    name TEXT NOT NULL,
-    entity_type TEXT NOT NULL,  -- 'company', 'person', 'trust', 'group'
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT entity_type_check CHECK (entity_type IN ('company', 'person', 'trust', 'group'))
-);
+-- public.entities definition
 
--- Index on CIK (unique but also explicitly queried)
-CREATE INDEX idx_entities_cik ON entities(cik);
+-- Drop table
+
+-- DROP TABLE public.entities;
+
+CREATE TABLE public.entities (
+	id uuid DEFAULT gen_random_uuid() NOT NULL,
+	cik text NOT NULL,
+	"name" text NOT NULL,
+	entity_type text NOT NULL,
+	created_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT entities_cik_key UNIQUE (cik),
+	CONSTRAINT entities_pkey PRIMARY KEY (id),
+	CONSTRAINT entity_type_check CHECK ((entity_type = ANY (ARRAY['company'::text, 'person'::text, 'trust'::text, 'group'::text])))
+);
+CREATE INDEX idx_entities_cik ON public.entities USING btree (cik);

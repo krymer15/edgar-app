@@ -51,9 +51,11 @@ class Form4RelationshipData:
         if self.relationship_type not in valid_types:
             raise ValueError(f"Relationship type must be one of {valid_types}")
 
-        # Ensure at least one relationship type is specified
+        # If no relationship type is specified, default to "other" instead of raising an error
         if not any([self.is_director, self.is_officer, self.is_ten_percent_owner, self.is_other]):
-            raise ValueError("At least one relationship type must be specified")
+            self.is_other = True
+            self.other_text = "Form 4 Filer"
+            self.relationship_type = "other"
 
         # Ensure officer_title is present for officers
         if self.is_officer and not self.officer_title:

@@ -27,6 +27,7 @@
 │   │   └── xml_orchestrator_base.py
 │   ├── parsers/
 │   │   ├── daily_index_parser.py
+│   │   ├── form4_indexer.py
 │   │   └── sgml_document_processor.py
 │   ├── scripts/
 │   │   ├── debug_inspect_joined_sgml.py
@@ -76,12 +77,14 @@
 │   ├── CLAUDE_filing_issuer_reporter_relationship_handling.md
 │   ├── CLAUDE_multi_cik_relationship_model.md
 │   ├── CLAUDE_sgml_tag_analysis.md
+│   ├── CLAUDE_to_do.md
 │   ├── SEC_Form_Analysis_Priority.csv
 │   ├── claude_code_relationship_implementation_prompt.md
 │   ├── cleaning_and_parsing.md
 │   ├── data_symlink_handling.md
 │   ├── dataclass_architecture.md
 │   ├── folder_structure.md
+│   ├── form4_processing_documentation.md
 │   ├── mapping_filings_to_fiscal_periods.md
 │   ├── parsers_subclass_specialization.md
 │   ├── pipeline_overview.md
@@ -107,7 +110,6 @@
 │   ├── base.py
 │   ├── companies.py
 │   ├── database.py
-│   ├── form4_filing.py
 │   └── submissions.py
 │   ├── adapters/
 │   │   ├── README.md
@@ -115,16 +117,26 @@
 │   ├── dataclasses/
 │   │   ├── README.md
 │   │   ├── __init__.py
+│   │   ├── entity.py
 │   │   ├── filing_document_metadata.py
 │   │   ├── filing_document_record.py
 │   │   ├── filing_metadata.py
 │   │   ├── raw_document.py
 │   │   └── sgml_text_document.py
+│   │   ├── forms/
+│   │   │   ├── form4_filing.py
+│   │   │   ├── form4_relationship.py
+│   │   │   └── form4_transaction.py
 │   ├── orm_models/
 │   │   ├── README.md
 │   │   ├── __init__.py
+│   │   ├── entity_orm.py
 │   │   ├── filing_document_orm.py
 │   │   └── filing_metadata.py
+│   │   ├── forms/
+│   │   │   ├── form4_filing_orm.py
+│   │   │   ├── form4_relationship_orm.py
+│   │   │   └── form4_transaction_orm.py
 │   ├── schemas/
 │   │   └── index_record_model.py
 ├── monitors/
@@ -155,7 +167,7 @@
 │   │   ├── filing_metadata_orchestrator.py
 │   │   └── sgml_disk_orchestrator.py
 │   ├── forms/
-│   │   └── form4_xml_orchestrator.py
+│   │   └── form4_orchestrator.py
 │   ├── legacy/
 │   │   ├── batch_sgml_ingestion_orchestrator.py
 │   │   ├── daily_index_orchestrator.py
@@ -188,10 +200,11 @@
 │   ├── sgml/
 │   │   ├── indexers/
 │   │   │   ├── README.md
-│   │   │   └── sgml_document_indexer.py
+│   │   │   ├── sgml_document_indexer.py
+│   │   │   └── sgml_indexer_factory.py
 │   │   │   ├── forms/
 │   │   │   │   ├── form4-sgml-analysis.md
-│   │   │   │   ├── form4_indexer.py
+│   │   │   │   ├── form4_sgml_indexer.py
 │   │   │   │   └── specialized_form_db_schema_proposal.md
 │   ├── utils/
 │   │   └── parser_utils.py
@@ -210,7 +223,7 @@
 │   │   ├── process_company_filings.py
 │   │   └── test_postgres_connection.py
 │   ├── forms/
-│   │   └── run_form4_xml_ingest.py
+│   │   └── run_form4_ingest.py
 │   ├── submissions_api/
 │   │   └── ingest_submissions.py
 │   ├── tools/
@@ -224,10 +237,11 @@
 │   ├── create/
 │   │   ├── crawler_idx/
 │   │   │   ├── filing_documents.sql
-│   │   │   ├── filing_metadata.sql
-│   │   │   └── filing_parties.sql
+│   │   │   └── filing_metadata.sql
 │   │   ├── forms/
+│   │   │   ├── entities.sql
 │   │   │   ├── form4_filings.sql
+│   │   │   ├── form4_relationships.sql
 │   │   │   ├── form4_transactions.sql
 │   │   │   └── xml_metadata.sql
 │   │   ├── submissions_api/
@@ -237,6 +251,7 @@
 │   │   ├── add_issuer_cik_to_filing_documents.sql
 │   │   ├── add_issuer_info_to_filing_metadata.sql
 │   │   ├── add_processing_status_to_filing_metadata.sql
+│   │   ├── create_entities_table.sql
 │   │   └── rollback_issuer_columns.sql
 ├── summarizers/
 │   └── README.md
@@ -276,7 +291,11 @@
 │   │   ├── crawler_sample.idx
 │   │   └── fixture_loader.py
 │   ├── forms/
-│   │   └── test_form4_parser.py
+│   │   ├── test_form4_models.py
+│   │   ├── test_form4_orchestrator.py
+│   │   ├── test_form4_parser.py
+│   │   ├── test_form4_sgml_indexer.py
+│   │   └── test_form4_writer.py
 │   │   ├── fixtures/
 │   │   │   └── form4_sample.xml
 │   ├── output/
@@ -321,5 +340,6 @@
 │   │   ├── form4_writer.py
 │   │   └── xml_metadata_writer.py
 │   ├── shared/
+│   │   ├── entity_writer.py
 │   │   └── raw_file_writer.py
 │   ├── submissions_api/

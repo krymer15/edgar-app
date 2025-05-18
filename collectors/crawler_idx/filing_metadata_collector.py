@@ -18,10 +18,15 @@ class FilingMetadataCollector(BaseCollector):
     def __init__(self, user_agent: str):
         self.user_agent = user_agent
 
-    def collect(self, date: Union[str, dt_date], include_forms: list[str] = None) -> List[FilingMetadata]:
+    def collect(self, date: Union[str, dt_date], include_forms: list[str] = None, limit: int = None) -> List[FilingMetadata]:
         """
         Download and parse the SEC daily index (crawler.idx) for a given date.
         Returns a list of FilingMetadata dataclass instances.
+        
+        Args:
+            date: Date string (YYYY-MM-DD) or datetime.date object
+            include_forms: List of form types to include (e.g. ["10-K", "8-K"])
+            limit: Maximum number of records to return
         """
         if isinstance(date, str):
             try:
@@ -40,14 +45,24 @@ class FilingMetadataCollector(BaseCollector):
         url = f"https://www.sec.gov/Archives/edgar/daily-index/{year}/{quarter}/crawler.{date_compact}.idx"
         headers = {"User-Agent": self.user_agent}
         
-        response = requests.get(url, headers=headers)
+        log_info(f"[DEBUG] Downloading crawler.idx for {date_compact} from URL: {url}")
+        # Set a timeout to avoid hanging indefinitely
+        response = requests.get(url, headers=headers, timeout=30)
+        log_info(f"[DEBUG] Download completed. Status code: {response.status_code}, Size: {len(response.text)//1024} KB")
         response.raise_for_status()
 
         lines = response.text.splitlines()
+        log_info(f"[DEBUG] Parsing {len(lines)} lines from crawler.idx")
         try:
             all_records = CrawlerIdxParser.parse_lines(lines)
+            log_info(f"[DEBUG] Parsed {len(all_records)} records from crawler.idx")
             if include_forms:
                 all_records = [r for r in all_records if r.form_type in include_forms]
+            
+            # Apply limit early if provided (before expensive SGML downloads)
+            if limit and limit > 0:
+                all_records = all_records[:limit]
+                log_info(f"Limited to {limit} records before processing")
                 
             # Group records by accession number to identify potential duplicates
             records_by_accession = defaultdict(list)
@@ -67,11 +82,13 @@ class FilingMetadataCollector(BaseCollector):
                 if any(r.form_type in ["4", "3", "5", "13D", "13G", "13F-HR"] for r in records):
                     try:
                         # Download the SGML content using the first record
+                        log_info(f"[DEBUG] Downloading SGML for multi-CIK accession: {accession}")
                         sgml_content = download_sgml_for_accession(
                             records[0].cik, 
                             accession, 
                             self.user_agent
                         )
+                        log_info(f"[DEBUG] SGML download completed for {accession}")
                         
                         # Extract the issuer CIK
                         issuer_cik = extract_issuer_cik_from_sgml(sgml_content)
@@ -98,6 +115,7 @@ class FilingMetadataCollector(BaseCollector):
                     final_records.append(records[0])
             
             log_info(f"Handled {len(all_records) - len(final_records)} duplicate CIK records")
+            log_info(f"[DEBUG] Final record count after processing: {len(final_records)}")
             return final_records
         except Exception as e:
             log_warn(f"[ERROR] Failed to parse crawler.idx: {e}")

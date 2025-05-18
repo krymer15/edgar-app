@@ -30,6 +30,7 @@ class Form4Filing(Base):
     )
 
     # Relationships
+    # Restored relationship to filing_metadata
     filing_metadata = relationship("FilingMetadata", back_populates="form4_filing")
     relationships = relationship("Form4Relationship", back_populates="form4_filing", cascade="all, delete-orphan")
     transactions = relationship("Form4Transaction", back_populates="form4_filing", cascade="all, delete-orphan")

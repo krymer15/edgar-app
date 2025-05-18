@@ -6,6 +6,7 @@ from sqlalchemy import Column, String, Date, TIMESTAMP, text, Text, Enum
 from sqlalchemy.orm import relationship
 from models.base import Base
 from models.orm_models.filing_document_orm import FilingDocumentORM
+from models.orm_models.forms.form4_filing_orm import Form4Filing
 
 class FilingMetadata(Base):
     __tablename__ = "filing_metadata"
@@ -34,13 +35,18 @@ class FilingMetadata(Base):
     job_id                  = Column(String(36), nullable=True, index=True)
     last_updated_by         = Column(String(100), nullable=True)
     
+    # Use explicit class references since we're importing them
     documents = relationship(
-        "FilingDocumentORM",
+        FilingDocumentORM,
         back_populates="filing",
         cascade="all, delete-orphan",
     )
 
-    form4_filing = relationship("Form4Filing", back_populates="filing_metadata", uselist=False)
+    form4_filing = relationship(
+        Form4Filing, 
+        back_populates="filing_metadata", 
+        uselist=False
+    )
 
     def __repr__(self):
         return (

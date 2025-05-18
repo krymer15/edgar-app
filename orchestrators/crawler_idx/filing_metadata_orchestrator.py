@@ -26,9 +26,12 @@ class FilingMetadataOrchestrator(BaseOrchestrator):
             log_info(f"[META] Including forms: {include_forms}")
         
         try:
-            parsed_records: list[FilingMetadata] = self.collector.collect(date_str, include_forms=include_forms)
-            if limit:
-                parsed_records = parsed_records[:limit]
+            # Pass limit directly to collector
+            parsed_records: list[FilingMetadata] = self.collector.collect(
+                date_str, 
+                include_forms=include_forms,
+                limit=limit
+            )
             log_info(f"[META] Collected {len(parsed_records)} filing metadata records for {date_str}")
             self.writer.upsert_many(parsed_records)
         except Exception as e:

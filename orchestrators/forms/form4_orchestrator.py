@@ -10,6 +10,7 @@ from models.orm_models.filing_metadata import FilingMetadata
 from models.orm_models.forms.form4_filing_orm import Form4Filing
 from utils.report_logger import log_info, log_warn, log_error
 from utils.url_builder import construct_sgml_txt_url
+from utils.accession_formatter import format_for_url, format_for_filename, format_for_db
 from config.config_loader import ConfigLoader
 from datetime import datetime
 import os
@@ -38,7 +39,7 @@ class Form4Orchestrator(BaseOrchestrator):
             downloader: Shared SgmlDownloader instance (from DailyIngestionPipeline)
         """
         self.config = ConfigLoader.load_config()
-        self.base_data_path = self.config.get("paths", {}).get("base_data_path", "data")
+        self.base_data_path = self.config.get("storage", {}).get("base_data_path", "data")
         self.user_agent = self.config.get("sec_downloader", {}).get("user_agent", "SafeHarborBot/1.0")
 
         # Respect the same cache configuration as DailyIngestionPipeline
@@ -51,6 +52,7 @@ class Form4Orchestrator(BaseOrchestrator):
         else:
             self.downloader = SgmlDownloader(
                 user_agent=self.user_agent,
+                request_delay_seconds=0.1,
                 use_cache=self.use_cache
             )
 
@@ -144,7 +146,7 @@ class Form4Orchestrator(BaseOrchestrator):
                             self.base_data_path,
                             "raw_xml",
                             filing.cik,
-                            f"{filing.accession_number.replace('-', '')}_form4.xml"
+                            f"{format_for_filename(filing.accession_number)}_form4.xml"
                         )
                         os.makedirs(os.path.dirname(xml_path), exist_ok=True)
                         raw_writer.write_to_file(xml_content, xml_path)
@@ -280,18 +282,21 @@ class Form4Orchestrator(BaseOrchestrator):
         """
         Get SGML content for a filing using the most efficient source.
         Prioritizes memory cache, then disk cache, then downloading.
+        
+        This method is responsible for translating between dataclass and string 
+        representations as needed by different components.
 
         Args:
             cik: CIK
             accession_number: Accession number
 
         Returns:
-            SGML content or None if not found
+            String content of the SGML or None if not found
         """
         log_info(f"[FORM4] Getting SGML content for {accession_number}")
 
         # Try from the shared downloader's memory cache first
-        url = construct_sgml_txt_url(cik, accession_number)
+        url = construct_sgml_txt_url(cik, format_for_url(accession_number))
 
         # Check if the downloader has this URL in its memory cache
         if self.downloader.has_in_memory_cache(url):
@@ -307,16 +312,36 @@ class Form4Orchestrator(BaseOrchestrator):
 
         # Finally, try to download (this will also update memory cache)
         log_info(f"[FORM4] Downloading SGML for {accession_number}")
-        sgml_content = self.downloader.download_sgml(cik, accession_number)
-
-        # For standalone mode, write to disk if requested
-        if sgml_content and self.write_cache:
-            os.makedirs(os.path.dirname(sgml_path), exist_ok=True)
-            with open(sgml_path, 'w', encoding='utf-8') as f:
-                f.write(sgml_content)
-            log_info(f"[FORM4] Wrote SGML to disk at {sgml_path}")
-
-        return sgml_content
+        
+        # Extract year from accession number (assuming format: 0000123456-YY-123456)
+        year = None
+        if len(accession_number) >= 10 and '-' in accession_number:
+            parts = accession_number.split('-')
+            if len(parts) >= 2:
+                year_short = parts[1]
+                year = f"20{year_short}"  # Assuming all years are 2000+
+                
+        # Get SgmlTextDocument from downloader
+        sgml_doc = self.downloader.download_sgml(cik, accession_number, year)
+        
+        # Extract string content from the dataclass
+        if sgml_doc:
+            # Handle either SgmlTextDocument object or string
+            if hasattr(sgml_doc, 'content'):
+                sgml_content = sgml_doc.content
+            else:
+                sgml_content = str(sgml_doc)
+                
+            # For standalone mode, write to disk if requested
+            if sgml_content and self.write_cache:
+                os.makedirs(os.path.dirname(sgml_path), exist_ok=True)
+                with open(sgml_path, 'w', encoding='utf-8') as f:
+                    f.write(sgml_content)
+                log_info(f"[FORM4] Wrote SGML to disk at {sgml_path}")
+            
+            return sgml_content
+        
+        return None
 
     def _get_sgml_file_path(self, cik: str, accession_number: str) -> str:
         """
@@ -330,7 +355,7 @@ class Form4Orchestrator(BaseOrchestrator):
             Path to the SGML file
         """
         # Normalize accession number for path construction
-        acc_clean = accession_number.replace('-', '')
+        acc_clean = format_for_filename(accession_number)
 
         # Construct path based on config and standard pattern
         sgml_path = os.path.join(

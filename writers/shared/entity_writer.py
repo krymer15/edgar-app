@@ -58,8 +58,9 @@ class EntityWriter:
                 self._entity_cache[normalized_cik] = existing
                 return existing
 
-            # Create new entity
+            # Create new entity - use the ID from EntityData if provided
             new_entity = Entity(
+                id=entity_data.id,  # Use the provided ID to ensure foreign key references work
                 cik=normalized_cik,
                 name=entity_data.name,
                 entity_type=entity_data.entity_type

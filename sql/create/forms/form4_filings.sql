@@ -1,17 +1,22 @@
-CREATE TABLE form4_filings (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    accession_number TEXT NOT NULL,
-    period_of_report DATE,
-    has_multiple_owners BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT unique_form4_accession UNIQUE(accession_number),
-    CONSTRAINT form4_filings_accession_number_fkey
-        FOREIGN KEY (accession_number)
-        REFERENCES filing_metadata(accession_number)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
-);
+-- public.form4_filings definition
 
--- Index on accession_number for lookup joins
-CREATE INDEX idx_form4_filings_accession ON form4_filings(accession_number);
+-- Drop table
+
+-- DROP TABLE public.form4_filings;
+
+CREATE TABLE public.form4_filings (
+	id uuid DEFAULT gen_random_uuid() NOT NULL,
+	accession_number text NOT NULL,
+	period_of_report date NULL,
+	has_multiple_owners bool DEFAULT false NULL,
+	created_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT form4_filings_pkey PRIMARY KEY (id),
+	CONSTRAINT unique_form4_accession UNIQUE (accession_number)
+);
+CREATE INDEX idx_form4_filings_accession ON public.form4_filings USING btree (accession_number);
+
+
+-- public.form4_filings foreign keys
+
+ALTER TABLE public.form4_filings ADD CONSTRAINT form4_filings_accession_number_fkey FOREIGN KEY (accession_number) REFERENCES public.filing_metadata(accession_number) ON DELETE CASCADE ON UPDATE CASCADE;

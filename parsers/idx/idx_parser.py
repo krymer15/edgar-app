@@ -17,7 +17,13 @@ class CrawlerIdxParser:
                 start_index = i + 1
                 break
 
+        from utils.report_logger import log_info
+        log_info(f"[DEBUG] Starting to parse {len(lines) - start_index} data lines")
+        
+        line_count = 0
+        valid_count = 0
         for line in lines[start_index:]:
+            line_count += 1
             if not line.strip():
                 continue
 
@@ -51,9 +57,15 @@ class CrawlerIdxParser:
                     accession_number=accession_number,
                 )
                 parsed.append(record)
+                valid_count += 1
+                if valid_count % 1000 == 0:
+                    from utils.report_logger import log_info
+                    log_info(f"[DEBUG] Parsed {valid_count} valid records (processed {line_count} lines)")
 
             except Exception as e:
                 log_warn(f"[SKIPPED] Error parsing line: {line} — {e}")
                 continue
 
+        from utils.report_logger import log_info
+        log_info(f"[DEBUG] Parsing complete. Processed {line_count} lines, found {valid_count} valid records.")
         return parsed
