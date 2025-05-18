@@ -1,143 +1,178 @@
 # CLI Scripts
 
-These scripts are entry points for running individual pipeline modules, typically invoked by a daily scheduler or meta-orchestrator.
+This directory contains scripts that serve as entry points for running various EDGAR data processing pipelines. These scripts are designed to be invoked directly from the command line, used in scheduled tasks, or called by meta-orchestrators.
 
-## `run_daily_metadata_ingest.py`
+## Directory Structure
+
+```
+scripts/
+│
+├── crawler_idx/                # Daily index processing scripts
+│   ├── run_daily_pipeline_ingest.py     # Meta-script for all pipelines
+│   ├── run_daily_metadata_ingest.py     # Pipeline 1 (metadata)
+│   ├── run_daily_documents_ingest.py    # Pipeline 2 (documents)
+│   └── run_sgml_disk_ingest.py          # Pipeline 3 (SGML download)
+│
+├── forms/                      # Form-specific processing scripts
+│   └── run_form4_ingest.py             # Form 4 specialized processing
+│
+├── submissions_api/            # SEC Submissions API scripts
+│   └── ingest_submissions.py           # Process company submissions data
+│
+├── tools/                      # Utility and debug scripts
+│   ├── debug_form_filtering.py         # Test form type filtering
+│   ├── debug_form_validation.py        # Debug form type validation
+│   └── test_form_validation.py         # Test form validation logic
+│
+└── devtools/                   # Development tools
+    ├── cleanup_test_data.py            # Clean test data
+    ├── clear_test_records.py           # Clear test records from DB
+    ├── process_company_filings.py      # Process filings for a company
+    └── test_postgres_connection.py     # Test database connection
+```
+
+## Core Pipelines (crawler_idx)
+
+These scripts process data from the SEC's daily index feed (`crawler.idx`).
+
+### run_daily_pipeline_ingest.py
+
+Runs all three ingestion pipelines (metadata → documents → SGML download) with intelligent coordination.
+
+```bash
+python -m scripts.crawler_idx.run_daily_pipeline_ingest --date 2025-05-12 --limit 100
+python -m scripts.crawler_idx.run_daily_pipeline_ingest --date 2025-05-12 --include-forms 10-K 8-K
+python -m scripts.crawler_idx.run_daily_pipeline_ingest --retry-failed --job-id <uuid>
+```
+
+**Args:**
+- `--date`: Target SEC filing date (YYYY-MM-DD)
+- `--limit`: Max filings to process
+- `--include-forms`: Form types to include (e.g., 10-K 8-K)
+- `--job-id`: Job ID for continuing an existing job
+- `--retry-failed`: Retry failed records (requires --job-id)
+- `--accessions`: Process specific accession numbers
+- `--no-cache`: Disable SGML cache usage
+
+### run_daily_metadata_ingest.py (Pipeline 1)
+
 Collects and writes filing metadata for a target date or backfill range.
 
 ```bash
-python scripts/crawler_idx/run_daily_metadata_ingest.py --date 2025-05-12
-python scripts/crawler_idx/run_daily_metadata_ingest.py --backfill 3
+python -m scripts.crawler_idx.run_daily_metadata_ingest --date 2025-05-12
+python -m scripts.crawler_idx.run_daily_metadata_ingest --backfill 3
 ```
-Args:
+
+**Args:**
 - `--date`: Single target date (YYYY-MM-DD)
 - `--backfill`: Backfill N previous valid filing days
 - `--limit`: Max filings per day
 - `--include_forms`: Form types to include (e.g., --include_forms 10-K 8-K)
-- `--skip_forms`: Form types to exclude
 
-## `run_daily_documents_ingest.py`
+### run_daily_documents_ingest.py (Pipeline 2)
+
 Indexes all SGML filings into structured document records.
 
 ```bash
-python scripts/crawler_idx/run_daily_documents_ingest.py --date 2025-05-12 --limit 100
+python -m scripts.crawler_idx.run_daily_documents_ingest --date 2025-05-12 --limit 100
 ```
-Args:
+
+**Args:**
 - `--date` (required): Target date
 - `--limit`: Max filings to process
-- ✅ No cache options exposed — always fresh downloads
+- `--include_forms`: Form types to include
 
-## `run_sgml_disk_ingest.py`
-Writes raw .txt SGML submissions to disk (e.g. for archiving or debugging).
+### run_sgml_disk_ingest.py (Pipeline 3)
+
+Writes raw .txt SGML submissions to disk (e.g., for archiving or debugging).
 
 ```bash
-python scripts/crawler_idx/run_sgml_disk_ingest.py --date 2025-05-12
+python -m scripts.crawler_idx.run_sgml_disk_ingest --date 2025-05-12
 ```
-Args:
+
+**Args:**
 - `--date` (required): Target date
-- ✅ Uses in-memory content shared from prior stage if available
+- `--include_forms`: Form types to include
 
-## `run_daily_pipeline_ingest.py`
-Runs all three ingestion pipelines (metadata → documents → SGML download) using in-memory caching only.
+## Form-Specific Scripts (forms)
+
+These scripts provide specialized processing for specific SEC form types.
+
+### run_form4_ingest.py
+
+Processes Form 4 filings (Statement of Changes in Beneficial Ownership).
 
 ```bash
-python scripts/crawler_idx/run_daily_pipeline_ingest.py --date 2025-05-12 --limit 100
+python -m scripts.forms.run_form4_ingest --date 2025-05-12
+python -m scripts.forms.run_form4_ingest --accessions 0001234567-25-000123
 ```
-Args:
-- `--date` (required): Target SEC filing date (YYYY-MM-DD)
-- `--limit`: Max filings to process (applies to metadata stage only)
-- `--no_cache` (optional): Ignored; in-memory caching is always used
 
-## Filtering by Form Type: `--include_forms`
+**Args:**
+- `--date`: Target date (YYYY-MM-DD)
+- `--accessions`: Specific accession numbers to process
+- `--limit`: Limit number of records processed
+- `--reprocess`: Reprocess records even if already processed
+- `--write-xml`: Write raw XML content to disk
+- `--cache`: Use file cache (default is False for pipelines)
 
-The metadata ingestion CLI (`run_daily_metadata_ingest.py`) now supports form type filtering via:
-`python scripts/crawler_idx/run_daily_metadata_ingest.py --date 2025-05-10 --include_forms 10-K 8-K S-1`
+## Submissions API Scripts (submissions_api)
+
+These scripts work with the SEC's Company Submissions API.
+
+### ingest_submissions.py
+
+Processes company submissions data from JSON files into the database.
+
+```bash
+python -m scripts.submissions_api.ingest_submissions
+```
+
+This script processes all JSON files in the `data/raw/submissions/` directory, extracting company metadata and filing information into the database tables.
+
+## Filtering by Form Type
+
+Most scripts support form type filtering via the `--include_forms` parameter:
+
+```bash
+python -m scripts.crawler_idx.run_daily_metadata_ingest --date 2025-05-10 --include_forms 10-K 8-K S-1
+```
 
 If not provided, it defaults to the form types defined under `crawler_idx.include_forms_default` in `app_config.yaml`.
 
-This allows modular form-type-level ingestion and will support specialized pipelines (e.g., IPOs, Form 4, 10-K focus).
+Form type validation is handled by the `FormTypeValidator` class, which supports various form type formats and normalizations.
 
+## Common Features
 
-## All scripts support:
+All scripts support:
 - Config-based logging via `utils/report_logger.py`
 - Clean exit codes and stdout/stderr integration for use in Airflow or cron
+- Form type validation and normalization
+- Consistent parameter naming across scripts
 
+### Script Header
 
-# Conceptual pipelines
-
-Skeleton Specialized Pipeline
-Below is a conceptual “run_*” pipeline illustrating the flow for Form 4, 8-K and 10-K. You’d wire these up in your orchestrators or CLI scripts.
-
-## Form 4 Pipeline
+All scripts in this directory follow this standard pattern to ensure the project root is properly added to the Python path:
 
 ```python
-# scripts/run_form4_pipeline.py
+# scripts/your_module/your_script.py
 
-from collectors.filing_metadata_collector import FilingMetadataCollector
-from downloaders.xml_downloader import XMLDownloader
-from cleaners.form4.form4_cleaner import Form4Cleaner
-from parsers.form4.form4_parser import Form4Parser
-from writers.form4.form4_writer import Form4Writer
+import argparse
+import sys, os
 
-def run_form4_pipeline(date_str: str):
-    # 1. Phase 1: fetch metadata
-    metas = FilingMetadataCollector(form_type="4").collect(date_str)
-    
-    # 2. Phase 2: download raw XML
-    raw_docs = [ XMLDownloader().download(m) for m in metas ]
-    
-    # 3. Phase 3: clean XML
-    cleaned = [ Form4Cleaner().clean(doc) for doc in raw_docs ]
-    
-    # 4. Phase 4: parse into dataclass
-    parsed = [ Form4Parser().parse(doc) for doc in cleaned ]
-    
-    # 5. Phase 5: write to DB
-    Form4Writer().write_all(parsed)
+# === [Universal Header] Add project root to path ===
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)))
+
+# Now you can import project modules
+from utils.report_logger import log_info
 ```
 
-## Form 8-K Pipeline
+This pattern is used instead of direct imports to maintain compatibility across different execution environments.
 
-```python
-# scripts/run_eightk_pipeline.py
+## Usage in Production
 
-from collectors.filing_metadata_collector import FilingMetadataCollector
-from downloaders.sgml_downloader import SGMLDownloader
-from cleaners.sgml.sgml_cleaner import SGMLCleaner
-from parsers.eightk.eightk_parser import EightKParser
-from writers.eightk.eightk_writer import EightKWriter
+When running these scripts in production:
 
-def run_eightk_pipeline(date_str: str):
-    metas = FilingMetadataCollector(form_type="8-K").collect(date_str)
-    raw    = [ SGMLDownloader().download(m) for m in metas ]
-    clean  = [ SGMLCleaner().clean(d)     for d in raw ]
-    parsed = [ EightKParser().parse(d)    for d in clean ]
-    EightKWriter().write_all(parsed)
-```
-
-## Form 10-K Pipeline
-
-```python
-# scripts/run_tenk_pipeline.py
-
-from collectors.filing_metadata_collector import FilingMetadataCollector
-from downloaders.xbrl_downloader import XBRLDownloader
-from cleaners.xbrl.xbrl_cleaner import XBRLCleaner
-from parsers.tenk.tenk_parser import TenKParser
-from writers.tenk.tenk_writer import TenKWriter
-
-def run_tenk_pipeline(date_str: str):
-    metas  = FilingMetadataCollector(form_type="10-K").collect(date_str)
-    raw    = [ XBRLDownloader().download(m) for m in metas ]
-    clean  = [ XBRLCleaner().clean(d)       for d in raw ]
-    parsed = [ TenKParser().parse(d)       for d in clean ]
-    TenKWriter().write_all(parsed)
-```
-
-## 🔑 Key Takeaways
-- Shared base classes live at the root of each module (`base_parser.py`, `base_cleaner.py`, `base_writer.py`).
-- Form-specific logic is tucked into its own subfolder when parsing/cleaning/writing diverges.
-- Router (`parsers/router.py`) can dispatch form types to one of these specialized pipelines.
-- “Raw → Clean → Parse → Write” is the consistent flow for every form.
-
-This layout keeps your code highly modular, easy to navigate, and ready to scale as you add more form types or specialized logic.
+1. **Daily Ingestion**: Use `run_daily_pipeline_ingest.py` for complete processing
+2. **Selective Processing**: Use pipeline-specific scripts when you only need part of the process
+3. **Specialized Forms**: Use form-specific scripts for optimized processing
+4. **Backfilling**: Use `run_daily_metadata_ingest.py --backfill N` for historical data

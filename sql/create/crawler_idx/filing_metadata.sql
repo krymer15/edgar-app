@@ -1,4 +1,10 @@
-CREATE TABLE filing_metadata (
+-- public.filing_metadata definition
+
+-- Drop table
+
+-- DROP TABLE public.filing_metadata;
+
+CREATE TABLE public.filing_metadata (
 	accession_number text NOT NULL,
 	cik text NOT NULL,
 	form_type text NOT NULL,
@@ -6,7 +12,7 @@ CREATE TABLE filing_metadata (
 	filing_url text NULL,
 	created_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
 	updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
-	processing_status "processing_status_enum" NULL,
+	processing_status public."processing_status_enum" NULL,
 	processing_started_at timestamptz NULL,
 	processing_completed_at timestamptz NULL,
 	processing_error text NULL,
@@ -15,4 +21,4 @@ CREATE TABLE filing_metadata (
 	CONSTRAINT check_processing_timestamps CHECK (((processing_completed_at IS NULL) OR (processing_started_at IS NULL) OR (processing_completed_at >= processing_started_at))),
 	CONSTRAINT filing_metadata_pkey PRIMARY KEY (accession_number)
 );
-CREATE INDEX idx_filing_metadata_job_id ON filing_metadata USING btree (job_id);
+CREATE INDEX idx_filing_metadata_job_id ON public.filing_metadata USING btree (job_id);

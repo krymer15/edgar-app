@@ -75,6 +75,7 @@
 │   ├── 8k_item_codes.txt
 │   ├── CLAUDE_db_architecture_pipeline_reco.md
 │   ├── CLAUDE_filing_issuer_reporter_relationship_handling.md
+│   ├── CLAUDE_form_cik_summary.md
 │   ├── CLAUDE_multi_cik_relationship_model.md
 │   ├── CLAUDE_sgml_tag_analysis.md
 │   ├── CLAUDE_to_do.md
@@ -84,6 +85,8 @@
 │   ├── data_symlink_handling.md
 │   ├── dataclass_architecture.md
 │   ├── folder_structure.md
+│   ├── form4_entity_and_transaction_extraction.md
+│   ├── form4_entity_extraction.md
 │   ├── form4_extraction_issues.md
 │   ├── form4_processing_documentation.md
 │   ├── mapping_filings_to_fiscal_periods.md
@@ -291,6 +294,53 @@
 │   │   │   │   │   ├── 10-Q/
 │   │   │   │   │   │   ├── 0001213900-23-039984/
 │   │   │   │   │   │   │   └── 0001213900-23-039984.txt
+│   │   │   ├── 3570/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 4/
+│   │   │   │   │   │   ├── 0000003570-23-000069/
+│   │   │   │   │   │   │   └── 0000003570-23-000069.txt
+│   │   │   │   │   │   ├── 0000003570-23-000070/
+│   │   │   │   │   │   │   └── 0000003570-23-000070.txt
+│   │   ├── xml/
+│   │   │   ├── 1332551/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 4/
+│   │   │   │   │   │   ├── 0001104659-23-061036/
+│   │   │   │   │   │   │   └── 000110465923061036_form4.xml
+│   │   │   ├── 1508226/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 4/
+│   │   │   │   │   │   ├── 0001209191-23-029415/
+│   │   │   │   │   │   │   └── 000120919123029415_form4.xml
+│   │   │   ├── 1580808/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 4/
+│   │   │   │   │   │   ├── 000158080823000096/
+│   │   │   ├── 1591588/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 4/
+│   │   │   │   │   │   ├── 000120919123029607/
+│   │   │   ├── 1637873/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 4/
+│   │   │   │   │   │   ├── 0000899243-23-012964/
+│   │   │   │   │   │   │   └── 000089924323012964_form4.xml
+│   │   │   ├── 824142/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 4/
+│   │   │   │   │   │   ├── 0000824142-23-000099/
+│   │   │   │   │   │   │   └── 000082414223000099_form4.xml
+│   │   │   │   │   │   ├── 0000824142-23-000101/
+│   │   │   │   │   │   │   └── 000082414223000101_form4.xml
+│   │   │   ├── 935036/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 4/
+│   │   │   │   │   │   ├── 0001952333-23-000026/
+│   │   │   │   │   │   │   └── 000195233323000026_form4.xml
+│   │   │   │   │   │   ├── 0001952333-23-000028/
+│   │   │   │   │   │   │   └── 000195233323000028_form4.xml
+│   │   │   │   │   │   ├── 0001952333-23-000030/
+│   │   │   │   │   │   │   └── 000195233323000030_form4.xml
 ├── tests/
 │   ├── README.md
 │   └── __init__.py
@@ -325,8 +375,10 @@
 │   │   ├── 0000925421-24-000007.txt
 │   │   ├── app_config_test.yaml
 │   │   ├── crawler_sample.idx
-│   │   └── fixture_loader.py
+│   │   ├── fixture_loader.py
+│   │   └── sampleform4.xml
 │   ├── forms/
+│   │   ├── test_form4_entity_extraction.py
 │   │   ├── test_form4_models.py
 │   │   ├── test_form4_orchestrator.py
 │   │   ├── test_form4_parser.py

@@ -35,3 +35,22 @@ run_tests.bat
 Avoid running python tests/<file>.py directly — use -m to preserve import paths.
 
 Tests can include fixture files (e.g., XML samples) in tests/parsers/fixtures/
+
+## Universal Script Header
+
+If you're creating a new test file, include this header at the top of your script to ensure the project root is properly added to the Python path:
+
+```python
+# tests/your_module/your_test_file.py
+
+import unittest
+import sys, os
+
+# Add project root to path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)))
+
+# Now you can import project modules
+from your_module import YourClass
+```
+
+This pattern ensures your test can find all the modules in the project regardless of where it's run from.

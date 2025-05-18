@@ -1,154 +1,301 @@
-# parsers
+# Parsers
 
-Parsers transform raw or cleaned text into structured objects:
+Parsers transform raw or cleaned text into structured objects. This directory contains all parsing logic organized by document type and purpose.
 
-## Organizational Principle
-Parsers are grouped into subfolders by document type, such as:
+## Architecture Overview
 
-- IDX
-- SGML
-- HTML
-- XML (XBRL, Form 4, etc.)
+The parsing system follows a layered approach with a clear distinction between **Indexers** and **Parsers**:
 
-This reflects how documents are actually processed in the ingestion flow.
+1. **Indexers**: Extract document blocks, metadata, and pointers from container files
+   - Located in `indexers/` subfolders (e.g., `sgml/indexers/`, `idx/`, etc.)
+   - Primarily concerned with locating and extracting documents
+   - Return document metadata and pointers rather than fully parsed content
 
-Why?
+2. **Parsers**: Process specific document types and extract structured data
+   - Located in format-specific directories (e.g., `forms/`, future: `html/`, `xbrl/`)
+   - Responsible for detailed content extraction and structuring
+   - Convert raw content into structured dataclass objects
+
+This separation ensures:
+- Clear responsibility boundaries between document extraction and content parsing
 - Reusable format-specific logic across pipelines
-- Avoids duplication of SGML, HTML, or XML logic
-- Matches the behavior of FilingParserManager.route() and orchestrators
+- Clean separation of concerns
+- Specialized handling for different document types
 
-### Parser Usage Convention
-- Parsers do not know about pipelines (e.g., crawler_idx, forms)
-- They operate on input from orchestrators and return structured dataclass outputs such as ParsedDocument and ParsedChunk.
+## Directory Structure
 
-🚫 Do Not
-- Do not add pipeline-specific folders here (crawler_idx/, forms/)
-- Do not couple parsing logic to Postgres writers or orchestrators
-
-## Modules
-
-- **base_parser.py**  
-  Abstract parser interface (`parse()` method).
-
-- **sgml_parser.py**  
-    - Extracts headers, company info, and initial chunks from `.txt`.
-    - `SGMLParser` → produces `ParsedDocument` + `ParsedChunk` list
-
-- **html_parser.py**  
-    - Splits HTML pages into meaningful sections.
-    - `HTMLParser` → splits into chunks by <SECTION>
-
-- **xbrl_parser.py**  
-    - Pulls financial statement line items from XBRL tags.
-    - `XBRLParser` → structured financials via tag names
-
-- **form4_parser.py**  
-    - Specialized parser for Form 4 XML filings.
-    - form-specific (e.g. `Form4Parser`)
-
-All inherit `BaseParser`:
-
-```python
-class BaseParser:
-    def parse(self, raw: DownloadedDocument) -> Union[ParsedDocument, List[ParsedChunk]]:
-        raise NotImplementedError
+```
+parsers/
+├── __init__.py
+├── base_parser.py                 # Abstract parser interface
+├── filing_parser_manager.py       # Router that dispatches to correct parser
+├── embedded_doc_parser.py         # (Submissions API) Processes embedded documents
+├── exhibit_parser.py              # (Submissions API) Cleans and processes HTML exhibits
+├── index_page_parser.py           # (Submissions API) Extracts links from index.html pages
+│
+├── forms/                         # Form-specific parsers
+│   ├── README.md
+│   ├── form4_parser.py            # XML Form 4 parser
+│   ├── form8k_parser.py           # 8-K current event parser
+│   ├── form10k_parser.py          # Annual report parser
+│   └── ...
+│
+├── sgml/                          # SGML document processing
+│   └── indexers/                  # SGML document extraction & indexing
+│       ├── README.md
+│       ├── sgml_document_indexer.py
+│       ├── sgml_indexer_factory.py
+│       └── forms/                 # Form-specific SGML indexers
+│           ├── README.md
+│           └── ...
+│
+├── idx/                           # IDX file processing
+│   ├── README.md
+│   └── idx_parser.py              # Crawler.idx indexer
+│
+├── html/                          # HTML-specific parsers (placeholder)
+│   └── README.md
+│
+├── utils/                         # Shared parsing utilities
+│   ├── README.md               # Utils documentation
+│   └── parser_utils.py         # Standardized output creation
+│
+└── xbrl/                          # XBRL document processing (placeholder)
 ```
 
-## Parsing Architecture Goals
-- Separation of Concerns: Each parser focuses on a specific type of document or transformation.
-- Pluggability: New parsers can be registered or invoked dynamically.
-- Maintainability: Each parser is testable and loosely coupled.
-- Compatibility: Works well with both raw SGML and post-processed HTML/XML.
+## Core Components
 
-This folder contains logic for parsing SGML and HTML content from EDGAR filings.
+### Base Parser
 
----
-
-## 🔧 Fixture Loading for Parser Development
-
-To support testing and development with real sample XML or HTML inputs, fixture files are stored outside the repo under: `/data/raw/fixtures/` (may have changed)
-This folder may be symlinked to an external SSD and is ignored by Git.
-
-Use this utility to load fixtures:
-```python
-from utils.devtools.fixture_loader import load_fixture
-xml_text = load_fixture("form4_sample.xml")
-```
-
-### OLD INFO BELOW TO INTEGRATE! ###
-
-
-## 🛠️ Usage
+All parsers inherit from the [`BaseParser`](./base_parser.py) abstract base class:
 
 ```python
-from parsers.router.filing_router import FilingRouter
-
-router = FilingRouter()
-parsed = router.route("4", xml_content)
-```
-
-### 💡 About Parser Registry
-The registry is just a dictionary behind the scenes. The optional `@register_parser` decorator approach is more dynamic and avoids hardcoding, but for now, **your current router pattern is fine** and avoids bloat.
-
-
-## Notes
-- Uses strict extension filters and known noise terms.
-- Diagnostics are gated behind `log_debug()` only.
-
-| Layer | Parser Type                          | Responsibility                                                                                                           |
-| ----- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| L1    | `SgmlFilingParser`                   | Parse `<DOCUMENT>` blocks from SGML `.txt` filings. Extract exhibit metadata, flag accessibility, guess primary document |
-| L2    | `IndexPageParser`                    | Parse `index.html` to get embedded doc URLs or check anchor structure                                                    |
-| L2    | `ExhibitParser`                      | Clean and annotate exhibit HTML                                                                                          |
-| L3    | `Form4Parser`, `Form10KParser`, etc. | Custom logic for specific form types (XML Form 4, XBRL 10-K, etc.)                                                       |
-| L4    | `FilingRouter` (new)                 | Route to appropriate parser(s) based on form type and extension (e.g., XML → Form 4 XML parser)                          |
-
-## Sample Form 4 Pipeline
-L1 – SGML Layer
-| Stage | Component               | Role                                                  |
-| ----- | ----------------------- | ----------------------------------------------------- |
-| 1.1   | `SgmlFilingParser`      | Parses raw `.txt` SGML to extract `<DOCUMENT>` blocks |
-| 1.2   | `parsed_sgml_writer.py` | Persists parsed metadata and exhibit structure        |
-| 1.3   | `ExhibitMetadata`       | Flags `.xml` exhibit of interest (e.g. Form 4 XML)    |
-
-L2 – Exhibit Resolution Layer
-| Stage | Component                      | Role                                           |
-| ----- | ------------------------------ | ---------------------------------------------- |
-| 2.1   | `IndexPageParser` *(optional)* | Parses `index.html` for anchor link resolution |
-| 2.2   | `ExhibitParser` *(optional)*   | Cleans HTML tables, flags accessibility issues |
-| 2.3   | Exhibit Handler (logic)        | Downloads `.xml` Form 4 document to disk       |
-
-L3 – Form-Specific Parser
-| Stage | Component         | Role                                                             |
-| ----- | ----------------- | ---------------------------------------------------------------- |
-| 3.1   | `Form4Parser`     | Parses key issuer, owner, and transaction fields from Form 4 XML |
-| 3.2   | `form4_writer.py` | Persists parsed results to Postgres (via ORM)                    |
-
-L4 – Filing Router + Orchestrator
-| Stage | Component              | Role                                                                |
-| ----- | ---------------------- | ------------------------------------------------------------------- |
-| 4.1   | `FilingParserManager`  | Routes content to correct parser (`Form4Parser`) based on form type |
-| 4.2   | `Form4XmlOrchestrator` | Coordinates: ingest XML → route → write → log                       |
-
-### Thoughts on two-layer Parser interface:
-
-```python
-class FilingParser:
-    def parse(self, filing_text: str) -> ParsedFiling:
-        pass
-
-class HTMLFilingParser(FilingParser):
-    def parse(self, filing_text: str) -> ParsedFiling:
-        # HTML parsing logic
-        pass
-
-class SGMLFilingParser(FilingParser):
-    def parse(self, filing_text: str) -> ParsedFiling:
-        # SGML parsing logic (later or stub for now)
+class BaseParser(ABC):
+    @abstractmethod
+    def parse(self, *args, **kwargs):
+        """Parse raw filings into structured clean outputs."""
         pass
 ```
 
-#### pipeline integration
-```rust
-Raw Filing -> ParserSelector (HTML or SGML) -> FilingParser -> ParsedFiling (text blocks, exhibits, metadata) -> Storage
+### Indexers vs. Parsers
+
+#### Indexers
+- **SGML Indexers** ([`sgml/indexers/`](./sgml/indexers/)): Extract `<DOCUMENT>` blocks from SGML filings
+- **IDX Parser** ([`idx/idx_parser.py`](./idx/idx_parser.py)): Parses filing metadata from daily IDX files
+
+#### Parsers
+- **Form Parsers** ([`forms/`](./forms/)): Extract data from specific SEC form types
+- **HTML Parsers** (future, [`html/`](./html/)): Process HTML documents
+
+### Submissions API Components
+
+The following components are primarily used in the Submissions API pipeline:
+- [`ExhibitParser`](./exhibit_parser.py): Cleans HTML exhibits
+- [`IndexPageParser`](./index_page_parser.py): Extracts links from index pages
+- [`EmbeddedDocParser`](./embedded_doc_parser.py): Handles embedded documents
+
+### Filing Parser Manager
+
+The [`FilingParserManager`](./filing_parser_manager.py) routes filing content to the appropriate parser:
+
+```python
+parser_manager = FilingParserManager()
+parsed_data = parser_manager.route(
+    form_type="4", 
+    content=xml_content,
+    metadata={
+        "accession_number": "0001234567-25-000123",
+        "cik": "0001234567",
+        "filing_date": "2025-01-15"
+    }
+)
 ```
+
+## Document Processing Flow
+
+The document processing follows this general flow:
+
+```
+Raw Container File (SGML/IDX)
+      ↓
+Indexer → Extract document blocks/pointers
+      ↓
+Document Selector → Select primary document
+      ↓
+Format-Specific Parser → Process specific document format
+      ↓
+Form-Specific Parser → Extract form-specific data
+      ↓
+Structured Data Output → Ready for database writers
+```
+
+## Sample Processing Flows
+
+### Crawler IDX Processing Flow
+
+1. **IDX Indexing Layer**
+   - `CrawlerIdxParser` extracts filing metadata from the daily IDX file
+   - Returns a list of `FilingMetadata` objects
+
+2. **Pipeline Processing**
+   - Records are processed by the `FilingMetadataOrchestrator`
+   - Metadata is written to the database by `FilingMetadataWriter`
+
+### Form 4 Processing Flow
+
+1. **SGML Indexing Layer**
+   - `SgmlDocumentIndexer` extracts document blocks from SGML `.txt` files
+   - Form-specific indexer may extract embedded XML content
+
+2. **Form Parsing Layer**
+   - `Form4Parser` processes the extracted XML content
+   - Extracts issuer, owner, and transaction data
+
+3. **Output Creation**
+   - Parser creates structured output with standardized fields
+   - Includes entity data objects ready for database insertion
+
+## Parser Module Organization
+
+For complex format-specific parsers (like HTML or XBRL), breaking functionality into dedicated modules improves maintainability. A typical format-specific parser directory should be organized as:
+
+```
+parsers/
+└── html/
+    ├── __init__.py
+    ├── html_parser.py          # Main parsing entrypoint/class
+    ├── html_utils.py           # DOM-traversal helpers, text normalization, safe extraction
+    ├── html_selectors.py       # Centralized CSS/XPath selector definitions for common elements
+    ├── html_models.py          # Dataclasses for HTML-specific constructs (e.g. Section, Table, Link)
+    ├── html_exceptions.py      # Custom exceptions (e.g. MissingElementError, ValidationError)
+    ├── html_chunker.py         # Logic to split HTML into semantic chunks (e.g. by header tags)
+    └── html_schema.py          # Mapping rules for converting raw DOM → your dataclasses
+```
+
+### Module Responsibilities
+
+- **html_parser.py**: Main class that orchestrates the parsing process, staying focused on high-level flow rather than details
+  
+- **html_utils.py**: Contains low-level routines for DOM manipulation and text processing
+  ```python
+  # Example functions:
+  def extract_node_text(node, selector): ...  # Get all text under a specific node
+  def strip_inline_styles(html_content): ...  # Remove CSS styles
+  def normalize_whitespace(text): ...        # Standardize spacing and line breaks
+  ```
+
+- **html_selectors.py**: Keeps all CSS/XPath strings in one place, making it easier to update when the SEC tweaks their templates
+  ```python
+  # Example selectors:
+  SECTION_TITLE = "//h2"
+  SECTION_BODY = "//div[@class='body']"
+  TABLE_FINANCIALS = "//table[contains(@class, 'financials')]"
+  ```
+
+- **html_models.py**: Defines small dataclasses specific to the format
+  ```python
+  @dataclass
+  class HtmlSection:
+      title: str
+      body: str
+      
+  @dataclass
+  class HtmlTable:
+      headers: Sequence[str]
+      rows: Sequence[Sequence[str]]
+  ```
+
+- **html_exceptions.py**: Lets you raise meaningful errors and catch them up the chain
+  ```python
+  class MissingElementError(Exception):
+      """Raised when a required HTML element isn't found"""
+      
+  class ValidationError(Exception):
+      """Raised when extracted content fails validation"""
+  ```
+
+- **html_chunker.py**: Handles breaking a large document into semantic units for processing
+  ```python
+  def chunk_sections(dom):
+      """Split document into sections based on headers"""
+      
+  def chunk_paragraphs(section):
+      """Split a section into paragraphs"""
+  ```
+
+- **html_schema.py**: Defines "rules" or mappings for transforming raw DOM to structured data
+  ```python
+  MAPPING_RULES = {
+      "document_title": {"selector": "//h1", "target_field": "title"},
+      "financial_tables": {"selector": "//table[@class='financials']", "processor": "process_table"}
+  }
+  ```
+
+### Implementation Pattern
+
+With these helpers in place, the main parser can stay lean and focused on orchestration:
+
+```python
+from .html_utils import extract_node_text
+from .html_selectors import SECTION_TITLE, SECTION_BODY
+from .html_models import HtmlSection
+from .html_exceptions import MissingElementError
+from .html_chunker import chunk_sections
+
+class HtmlParser(BaseParser):
+    def parse(self, cleaned_doc: CleanedDocument) -> ParsedDocument:
+        dom = self._to_dom(cleaned_doc.content)
+        
+        # Extract key components using specialized modules
+        title = extract_node_text(dom, SECTION_TITLE) or raise MissingElementError(...)
+        body = extract_node_text(dom, SECTION_BODY)
+        sections = chunk_sections(dom)
+        
+        return ParsedDocument(sections=sections, title=title, ...)
+```
+
+### Applying to Other Format Types
+
+The same module organization pattern should be followed in other format-specific directories like `parsers/sgml/`, `parsers/xbrl/`, or any other specialized parser. This approach ensures:
+
+1. The main parser stays focused on orchestration
+2. Helper modules handle specialized concerns
+3. Code remains testable and maintainable
+4. Related functionality is grouped together
+5. Updates to format patterns (like SEC template changes) only affect one file
+
+## Development Guidelines
+
+1. **Indexer vs. Parser Responsibilities**
+   - **Indexers**: Focus on document extraction and metadata
+   - **Parsers**: Focus on content analysis and structured data extraction
+   - Place indexers in `indexers/` subfolders within format directories
+
+2. **Standardized Output**
+   - Use consistent output structure across all components
+   - Include metadata, content type, and parsed data fields
+   - Handle errors gracefully with informative error messages
+
+3. **Testing with Fixtures**
+   - Use real sample data for development and testing
+   - Store fixtures in appropriate locations:
+     - Test fixtures: `/tests/fixtures/`
+     - Development fixtures: `/data/raw/fixtures/`
+   - Use fixture loader utilities when available
+
+4. **Modular Design**
+   - Keep parser classes focused on orchestration
+   - Delegate specific concerns to dedicated helper modules
+   - Centralize selectors and extraction logic for easier maintenance
+   - Create reusable utilities that can be shared across parsers
+
+5. **Shared Utilities**
+   - Use the [`parser_utils.py`](./utils/parser_utils.py) module for common functionality
+   - Create standardized outputs with `build_standard_output()`
+   - Refer to [utils/README.md](./utils/README.md) for documentation on available utilities
+
+## Related Components
+
+- [Orchestrators](../orchestrators/): Coordinate parsing, downloading, and writing
+- [Writers](../writers/): Persist parsed data to database
+- [Models](../models/): Data structures used by parsers

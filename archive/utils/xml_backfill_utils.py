@@ -6,7 +6,7 @@ from models.parsed_sgml_metadata import ParsedSgmlMetadata
 from models.exhibit_metadata import ExhibitMetadata
 from models.daily_index_metadata import DailyIndexMetadata
 from models.xml_metadata import XmlMetadata
-from writers.forms.xml_metadata_writer import log_xml_metadata
+from archive.writers.xml_metadata_writer import log_xml_metadata
 from utils.url_builder import construct_primary_document_url
 
 TARGET_FORMS = {"3", "4", "5", "10-K", "10-Q", "8-K"}

@@ -1,112 +1,86 @@
 # models/dataclasses
 
-# Dataclass Architecture
-
-This module defines the core dataclass models used across the Safe Harbor EDGAR AI Platform. These classes serve as transportable, lightweight data models that flow between stages of each pipeline.
-
----
+This module defines the core dataclass models used across the Edgar App platform. These classes serve as transportable, lightweight data models that flow between stages of each pipeline.
 
 ## Naming Conventions
 
 Each dataclass adheres to a standardized naming system based on its role in the pipeline:
 
-| Category                   | Suffix/Pattern         | Description                                                                 |
-|----------------------------|------------------------|-----------------------------------------------------------------------------|
-| **Data Container**         | `*Document`            | Full transport units, often containing raw or cleaned content              |
-| **Pointer/Metadata**       | `*Metadata`, `*Ref`    | Lightweight identifiers, filenames, URLs, or basic structured metadata     |
-| **Chunked Unit**           | `*Chunk`               | Content split into embedding- or RAG-ready segments                        |
-| **Composite/Wrapper**      | `*Filing`              | Groups documents, chunks, and extracted metrics for full filing context    |
-| **Form-Specific Subclass** | `Form10K*`, etc.       | Specialized versions of base classes for parsing or interpretation         |
+| Category                   | Suffix/Pattern              | Description                                                                 | Example                         |
+|----------------------------|----------------------------|-----------------------------------------------------------------------------|--------------------------------|
+| **Data Container**         | `*Document`                | Full transport units, often containing raw or cleaned content              | `RawDocument`, `SgmlTextDocument` |
+| **Pointer/Metadata**       | `*Metadata`, `*Record`     | Lightweight identifiers, filenames, URLs, or basic structured metadata     | `FilingMetadata`, `FilingDocumentRecord` |
+| **Entity Data**            | `*Data`                    | Specific entity information, often with relationships to other entities     | `EntityData`, `Form4FilingData` |
+| **Form-Specific Classes**  | `Form*`                    | Specialized dataclasses for specific SEC form types                        | `Form4FilingData`, `Form4TransactionData` |
 
----
+## Core Dataclasses
 
-## Examples
+### Base Metadata Classes
 
-### Pointer Example – `FilingMetadata`
+- **FilingMetadata** (`filing_metadata.py`)  
+  Basic metadata about a filing (accession number, CIK, form type, dates)
 
-```python
-@dataclass
-class FilingMetadata:
-    accession_number: str
-    cik: str
-    form_type: str
-    filing_date: date
-    filing_url: Optional[str] = None
+- **FilingDocumentMetadata** (`filing_document_metadata.py`)  
+  Pointer to a document within a filing, used during parsing phase
+
+- **FilingDocumentRecord** (`filing_document_record.py`)  
+  ORM-ready format of document metadata, ready for database storage
+
+### Data Container Classes
+
+- **RawDocument** (`raw_document.py`)  
+  Complete filing document with content and metadata
+
+- **SgmlTextDocument** (`sgml_text_document.py`)  
+  Specialized container for raw SGML text content and basic metadata
+
+### Entity and Relationship Classes
+
+- **EntityData** (`entity.py`)  
+  Represents companies, persons, or other entities in SEC filings
+
+### Form-Specific Classes
+
+Located in the `forms/` subdirectory:
+
+- **Form4FilingData** (`forms/form4_filing.py`)  
+  Container for Form 4 filing data, including relationships and transactions
+
+- **Form4RelationshipData** (`forms/form4_relationship.py`)  
+  Represents relationships between issuers and reporting owners in Form 4 filings
+
+- **Form4TransactionData** (`forms/form4_transaction.py`)  
+  Individual transactions reported in Form 4 filings
+
+## Data Flow
+
+```
+FilingMetadata ──────────┐
+                         ▼
+RawDocument ───────► Processing ───► FilingDocumentMetadata
+                                          │
+SgmlTextDocument ──────────────────┘     │
+                                          ▼
+                               FilingDocumentRecord ───► Database
 ```
 
-- Used as an identifier and metadata reference
-- Returned from `CrawlerIdxParser.parse_lines()`
-- Written to the `filing_metadata` database table
-- Not intended to carry full filing content
+## Form-Specific Processing
 
-### Container Example – `RawDocument`, `ParsedDocument`
-
-```python
-@dataclass
-class RawDocument:
-    accession_number: str
-    cik: str
-    content_bytes: bytes
-    filetype: str
+Form 4 example:
 ```
-- Used to carry full document payloads (e.g., SGML, HTML, or XML)
-- Passed to parsing or cleaning stages
-
-## Folder Structure Guidance
-
-| Folder                | What it Should Contain                                                  |
-| --------------------- | ----------------------------------------------------------------------- |
-| `models/dataclasses/` | All pipeline-agnostic dataclass models (raw, parsed, metadata, chunked) |
-| `models/orm_models/`  | SQLAlchemy ORM mappings (Postgres schema alignment)                     |
-| `models/adapters/`    | Conversion logic between dataclass ↔ ORM                                |
-| `models/schemas/`     | Pydantic or API-facing schemas (if added)                               |
+RawDocument ───► Form4Parser ───► Form4FilingData
+                                     │
+                                     ├─► Form4RelationshipData
+                                     │
+                                     └─► Form4TransactionData
+```
 
 ## Best Practices
-- Pointer classes should remain lightweight and immutable during pipeline runs.
-- Transport containers (`*Document`) may be large; avoid passing them unless required.
-- Dataclasses should only contain `str`, `int`, `date`, `Optional`, or other dataclasses—not ORM instances.
-- Use `UUID` or `accession_number` consistently for linking between stages.
 
-
-
---- Old documentation below ---
-
-Pure Python `@dataclass` definitions for in-memory pipeline objects:
-
-- **RawDocument**  
-  Metadata + raw text before cleaning.
-- **CleanedDocument** *(optional)*  
-  Tag-stripped text ready for parsing.
-- **ParsedDocument**  
-  Structured representation of each document.
-- **ParsedChunk**  
-  Granular text segments for embedding/vectorization.
-- **FilingHeader**  
-  Core metadata (accession, dates, form type).
-- **CompanyInfo**  
-  Company identifier data (CIK, ticker, SIC).
-- **ParsedFiling**  
-  Aggregate dataclass tying header, company, all docs, chunks, and extracted metrics.
-
-## What goes into raw_documents:
-Each `RawDocument` in that list represents one of the files you pulled from SEC:
-
-| doc\_type             | Example URL                            | RawDocument.doc\_type |
-| --------------------- | -------------------------------------- | --------------------- |
-| **Index page**        | `…/0000320193-22-000108-index.html`    | `"index_html"`        |
-| **Primary SGML/Text** | `…/0000320193-22-000108.txt`           | `"sgml"` or `"text"`  |
-| **Exhibit**           | `…/EX-99.1.html` or other exhibit file | `"exhibit_html"`      |
-| **XBRL**              | `…/FilingXML.xml`                      | `"xbrl"`              |
-
-You’ll feed all of these into your parsers:
-- The SGML parser will look at `.txt` and pull header + metadata + initial chunks.
-- The HTML parser can split the index page or exhibit HTML into sections.
-- The XBRL parser will pick up structured line‐items out of the XML.
-
-### Mapping to parsed_documents
-For each `RawDocument`, your parsers emit one or more `ParsedDocument` objects:
-- `ParsedDocument` preserves the key metadata (filename, type, flags) and captures the cleaned text you actually want to work with.
-- Your ParsedDocument list will therefore include entries like:
-    - One for the SGML/text blob (with `is_primary=True`)
-    - One per exhibit (with `is_exhibit=True`)
-    - Optional ones from index HTML if you parse MD&A blocks directly off it
+- Dataclasses should only contain primitive types (`str`, `int`, `date`, etc.) or other dataclasses—not ORM instances
+- Use `UUID` or `accession_number` consistently for linking between stages
+- Include helpful `__repr__` methods to aid in debugging
+- Document each class's purpose and position in the data flow
+- Add validation in `__post_init__` methods for complex fields
+- For form-specific models, include helper properties and methods for common use cases
+- Keep relationships between related dataclasses explicit through IDs rather than nested objects

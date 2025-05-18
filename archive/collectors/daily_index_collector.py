@@ -3,7 +3,7 @@
 from datetime import datetime, date as dt_date
 import requests
 from collectors.base_collector import BaseCollector
-from models.schemas.index_record_model import IndexRecordModel
+from archive.models.index_record_model import IndexRecordModel
 from utils.report_logger import log_warn, log_debug
 
 class DailyIndexCollector(BaseCollector):

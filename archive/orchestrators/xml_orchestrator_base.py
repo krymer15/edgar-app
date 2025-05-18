@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from utils.path_manager import build_raw_filepath
 from utils.url_builder import construct_primary_document_url
-from writers.forms.xml_metadata_writer import log_xml_metadata
+from archive.writers.xml_metadata_writer import log_xml_metadata
 from datetime import datetime
 import os
 
@@ -39,7 +39,7 @@ class XmlOrchestratorBase(ABC):
         )
 
         try:
-            from downloaders.form4_xml_downloader import Form4XmlDownloader
+            from archive.form4_xml_downloader import Form4XmlDownloader
             downloader = Form4XmlDownloader(cik, accession_number, form_type, filing_date)
             downloader.downloader.download_to_file(url, xml_path)
         except Exception as e:

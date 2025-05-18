@@ -1,90 +1,136 @@
 # models/
 
-Contains all data definitions for the EDGAR pipeline.
+This directory contains all data definitions for the EDGAR App project, implementing a clear separation between in-memory data structures and database persistence.
+
+## Directory Structure
+
+- **base.py**  
+  Defines the SQLAlchemy declarative base used by all ORM models.
+
+- **database.py**  
+  Database connection configuration and session management.
 
 - **dataclasses/**  
-  Pure `@dataclass` objects used internally by downloaders, parsers, and extractors.
+  Pure `@dataclass` objects used for in-memory data manipulation.
+  
 - **orm_models/**  
-  SQLAlchemy ORM models mapping to your Postgres schema.
+  SQLAlchemy ORM models mapping to the database schema.
+  
 - **adapters/**  
-  Conversion utilities between dataclasses and ORM models (both directions).
+  Conversion utilities between dataclasses and ORM models.
+  
+- **schemas/**  
+  Reserved for future API schema definitions (e.g., Pydantic models).
 
-## Data Flows among Models:
+## Core Models
 
-### `sgml`:
+### Crawler IDX Pipeline Models
 
-```markdown
-SGML content (`.txt`)
-   ↓
-`SgmlDocumentIndexer` → [FilingDocumentMetadata]
-   ↓ adapter
-`convert_parsed_doc_to_filing_doc()`
-   ↓
-`FilingDocumentRecord` (cleaned dataclass)
-   ↓ writer
-`convert_filing_doc_to_orm()`
-   ↓
-`FilingDocument` (SQLAlchemy ORM model)
-   ↓
-Postgres
+- **FilingMetadata** (orm_models/filing_metadata.py)  
+  Maps to `filing_metadata` table, storing core filing information.
+
+- **FilingDocumentORM** (orm_models/filing_document_orm.py)  
+  Maps to `filing_documents` table, tracking individual documents within filings.
+
+### Form-Specific Models
+
+- **Form4Filing** (orm_models/forms/form4_filing_orm.py)  
+  Maps to `form4_filings` table, containing Form 4 filing data.
+
+- **Form4Relationship** (orm_models/forms/form4_relationship_orm.py)  
+  Maps to `form4_relationships` table, representing issuer-owner relationships.
+
+- **Form4Transaction** (orm_models/forms/form4_transaction_orm.py)  
+  Maps to `form4_transactions` table, containing individual transactions.
+
+- **Entity** (orm_models/entity_orm.py)  
+  Maps to `entities` table, representing companies, persons, and other entities.
+
+### Submissions API Pipeline Models
+
+- **CompaniesMetadata** (companies.py)  
+  Maps to `companies_metadata` table, storing company information from the SEC Submissions API.
+
+- **SubmissionsMetadata** (submissions.py)  
+  Maps to `submissions_metadata` table, storing filing metadata from the SEC Submissions API.
+
+## Data Flow Architecture
+
+Edgar App implements a layered architecture for data handling:
+
+```
+┌───────────────────┐    ┌───────────────────┐    ┌───────────────────┐
+│   Data Sources    │    │   In-Memory Data  │    │  Persistence Layer│
+├───────────────────┤    ├───────────────────┤    ├───────────────────┤
+│                   │    │                   │    │                   │
+│  - SEC API        │    │  - Dataclasses    │    │  - ORM Models     │
+│  - EDGAR Website  │--->│  - Raw Documents  │--->│  - Database       │
+│  - IDX Files      │    │  - Parsed Results │    │  - SQL Tables     │
+│                   │    │                   │    │                   │
+└───────────────────┘    └───────────────────┘    └───────────────────┘
+                                  ▲                        │
+                                  │                        │
+                                  └────────────────────────┘
+                                   Query/Load via Adapters
 ```
 
-## Reverse Mapping: `orm_to_dataclass()`
-Your orchestrators shouldn’t import SQLAlchemy models directly. Instead, provide adapter functions:
+### Example Data Flow: Filing Documents
 
-```python
-# models/adapters/orm_to_dataclass.py
-
-def metadata_to_header(meta: FilingMetadata) -> FilingHeader:
-    return FilingHeader(
-        accession_number=meta.accession_number,
-        form_type=meta.form_type,
-        filing_date=meta.filing_date,
-        report_date getattr(meta, "report_date", None),
-    )
-
-def document_model_to_raw(doc_model: FilingDocument) -> RawDocument:
-    return RawDocument(
-        accession_number=doc_model.accession_number,
-        cik=doc_model.cik,
-        form_type=doc_model.filing.form_type,
-        filename=doc_model.filename,
-        source_url=doc_model.source_url,
-        doc_type=doc_model.source_type,
-        source_type=doc_model.source_type,
-        is_primary=doc_model.is_primary,
-        is_exhibit=doc_model.is_exhibit,
-        accessible=doc_model.accessible,
-    )
+```
+1. Raw SGML content (.txt file)
+   ↓
+2. SgmlDocumentIndexer parses → [FilingDocumentMetadata]
+   ↓
+3. convert_parsed_doc_to_filing_doc() adapter → FilingDocumentRecord
+   ↓
+4. convert_filing_doc_to_orm() adapter → FilingDocumentORM
+   ↓
+5. Database (filing_documents table)
 ```
 
-- Use these in your downloaders or parsers when bootstrapping from existing DB rows.
-- Keeps SQLAlchemy out of your business logic.
+### Example Data Flow: Form 4
 
-## Philosophy
-
-We enforce a normalized, low-redundancy schema:
-- Foreign keys link tables via accession_number
-- No duplication of cik, form_type, or URL
-- Derived fields (like full URLs) are rebuilt dynamically when needed
-
-## xml_metadata
-
-Tracks XML files discovered during ingestion (Forms 3, 4, 5, 10-K).
-
-| Column             | Type    | Notes                            |
-|--------------------|---------|----------------------------------|
-| id                 | UUID    | Primary key                      |
-| accession_number   | TEXT    | FK to daily_index_metadata       |
-| filename           | TEXT    | Just the filename (e.g. `doc4.xml`) |
-| downloaded         | BOOL    | Was the XML downloaded?          |
-| parsed_successfully| BOOL    | Was the file parsed?             |
-| created_at         | TIMESTAMP | Auto-generated on insert        |
-| updated_at         | TIMESTAMP | Auto-updated on modification    |
-
-Use `utils/url_builder.py` to dynamically generate download URLs:
-
-```python
-from utils.url_builder import construct_primary_document_url
-url = construct_primary_document_url(cik, accession_number, filename)
 ```
+1. Raw Form 4 XML content
+   ↓
+2. Form4Parser parses → Form4FilingData, Form4RelationshipData, Form4TransactionData
+   ↓
+3. Adapter functions (to be implemented) → ORM models
+   ↓
+4. Database (form4_filings, form4_relationships, form4_transactions tables)
+```
+
+## Schemas Directory (Future Use)
+
+The `schemas/` directory is reserved for future API-facing schema definitions, likely using Pydantic models. Potential use cases include:
+
+- Input validation for public APIs
+- Response serialization formats
+- OpenAPI/Swagger documentation
+- JSON schema definitions
+
+## Design Philosophy
+
+This module architecture follows these design principles:
+
+1. **Clean Separation of Concerns**
+   - Dataclasses for business logic
+   - ORM models for database persistence 
+   - Adapters for conversion between the two
+
+2. **Type Safety and Documentation**
+   - All models explicitly define their fields and types
+   - Relationships between models are clearly documented
+
+3. **Database Normalization**
+   - Foreign keys connect related tables
+   - Minimal data duplication
+   - Consistent primary key strategy
+
+4. **Testability**
+   - In-memory dataclasses can be tested without database dependencies
+   - ORM models can be validated independently
+
+5. **Explicit Conversions**
+   - No implicit conversions between layers
+   - All transformations happen through adapter functions

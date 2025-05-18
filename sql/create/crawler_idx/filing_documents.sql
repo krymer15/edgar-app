@@ -1,4 +1,10 @@
-CREATE TABLE filing_documents (
+-- public.filing_documents definition
+
+-- Drop table
+
+-- DROP TABLE public.filing_documents;
+
+CREATE TABLE public.filing_documents (
 	id uuid DEFAULT gen_random_uuid() NOT NULL,
 	accession_number text NOT NULL,
 	cik text NOT NULL,
@@ -13,10 +19,12 @@ CREATE TABLE filing_documents (
 	accessible bool DEFAULT true NULL,
 	created_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
 	updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	issuer_cik text NULL,
 	CONSTRAINT filing_documents_pkey PRIMARY KEY (id)
 );
+CREATE INDEX idx_filing_documents_issuer_cik ON public.filing_documents USING btree (issuer_cik);
 
 
--- filing_documents foreign keys
+-- public.filing_documents foreign keys
 
-ALTER TABLE filing_documents ADD CONSTRAINT filing_documents_accession_number_fkey FOREIGN KEY (accession_number) REFERENCES filing_metadata(accession_number);
+ALTER TABLE public.filing_documents ADD CONSTRAINT filing_documents_accession_number_fkey FOREIGN KEY (accession_number) REFERENCES public.filing_metadata(accession_number);
