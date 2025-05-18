@@ -8,6 +8,7 @@ from typing import Dict, Optional
 from utils.report_logger import log_info, log_warn, log_error
 from utils.url_builder import normalize_cik
 from utils.cache_manager import get_cache_root  # Just for reference
+from uuid import uuid4, UUID
 
 class EntityWriter:
     def __init__(self, db_session: Session = None):
@@ -110,6 +111,33 @@ class EntityWriter:
 
         except SQLAlchemyError as e:
             log_error(f"Error in get_entity_by_cik: {e}")
+            return None
+            
+    def get_entity_by_id(self, entity_id: UUID) -> Optional[Entity]:
+        """
+        Get entity by its UUID.
+        
+        Args:
+            entity_id: Entity UUID
+            
+        Returns:
+            Entity ORM instance or None if not found
+        """
+        try:
+            # We can't use the CIK-based cache here, so query directly
+            entity = self.db_session.query(Entity).filter(
+                Entity.id == entity_id
+            ).first()
+            
+            if entity:
+                # Add to CIK cache in case we need it later
+                normalized_cik = entity.cik.lstrip("0")
+                self._entity_cache[normalized_cik] = entity
+                
+            return entity
+            
+        except SQLAlchemyError as e:
+            log_error(f"Error in get_entity_by_id: {e}")
             return None
 
     def clear_cache(self) -> None:

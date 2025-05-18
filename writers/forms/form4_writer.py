@@ -42,6 +42,9 @@ class Form4Writer:
         Returns:
             Form4Filing ORM instance if successful, None otherwise
         """
+        # Start with a clean transaction state
+        self.db_session.rollback()
+        
         try:
             # Format the accession number for database (with dashes)
             db_accession_number = format_for_db(form4_data.accession_number)
@@ -69,13 +72,67 @@ class Form4Writer:
                 )
 
                 self.db_session.add(form4_filing)
-                self.db_session.flush()  # Get ID without committing
+                # Use flush to get the ID and make sure it's available in the session
+                self.db_session.flush()  
                 log_info(f"Created new Form 4 filing record for {db_accession_number}")
-
-            # Process relationships and transactions
+            
+            # Check if we have entity objects attached directly
+            # This would be the case when using the enhanced XML parser
+            if hasattr(form4_data, 'issuer_entity') and form4_data.issuer_entity:
+                log_info(f"Using entity objects attached directly to Form4FilingData for {db_accession_number}")
+                # Create or get the issuer entity
+                issuer_entity_orm = self.entity_writer.get_or_create_entity(form4_data.issuer_entity)
+                
+                # Create or get the owner entities
+                if hasattr(form4_data, 'owner_entities') and form4_data.owner_entities:
+                    for owner_entity in form4_data.owner_entities:
+                        self.entity_writer.get_or_create_entity(owner_entity)
+                    
+                    # Commit entities to ensure they exist before proceeding
+                    self.db_session.commit()
+                    log_info(f"Committed issuer and {len(form4_data.owner_entities)} owner entities")
+            else:
+                # Fallback to the old approach of extracting entity info from relationship IDs
+                # Collect all entity IDs from this Form 4 data to pre-create them
+                entity_ids = set()
+                for rel in form4_data.relationships:
+                    entity_ids.add(rel.issuer_entity_id)
+                    entity_ids.add(rel.owner_entity_id)
+                
+                # Pre-create all entities in a single transaction to ensure they exist
+                log_info(f"Pre-creating {len(entity_ids)} entities for {db_accession_number}")
+                for entity_id in entity_ids:
+                    # Create a basic entity
+                    is_issuer = any(rel.issuer_entity_id == entity_id for rel in form4_data.relationships)
+                    
+                    if is_issuer:
+                        # For issuers, try to extract a reasonable CIK
+                        cik = self._extract_cik_from_accession(form4_data.accession_number)
+                        name = f"Issuer CIK {cik}"
+                        entity_type = "company"
+                    else:
+                        # For owners, use a derived identifier
+                        cik = f"owner_{str(entity_id)[-6:]}"
+                        name = f"Owner ID {str(entity_id)[-6:]}"
+                        entity_type = "person"
+                    
+                    entity_data = EntityData(
+                        cik=cik,
+                        name=name,
+                        entity_type=entity_type,
+                        id=entity_id
+                    )
+                    
+                    self.entity_writer.get_or_create_entity(entity_data)
+                
+                # Commit entities first to ensure they exist
+                self.db_session.commit()
+                log_info(f"Committed all entities before creating relationships for {db_accession_number}")
+            
+            # Now process relationships and transactions
             self._write_relationships_and_transactions(form4_data, form4_filing)
 
-            # Commit all changes
+            # Commit all remaining changes
             self.db_session.commit()
             log_info(f"Successfully wrote Form 4 data for {db_accession_number}")
 
@@ -112,50 +169,97 @@ class Form4Writer:
         # Process relationships
         for idx, rel_data in enumerate(form4_data.relationships):
             # Get entity objects from form4_data if available, or fetch from DB
-            if hasattr(form4_data, 'issuer_entity') and hasattr(form4_data, 'owner_entity'):
-                # Use the entity objects from form4_data if available (mainly for tests)
-                issuer_entity = self.entity_writer.get_or_create_entity(form4_data.issuer_entity)
-                owner_entity = self.entity_writer.get_or_create_entity(form4_data.owner_entity)
+            if hasattr(form4_data, 'issuer_entity') and form4_data.issuer_entity:
+                # Use the issuer entity from form4_data directly
+                issuer_entity = self.entity_writer.get_entity_by_id(form4_data.issuer_entity.id)
+                if not issuer_entity:
+                    # If not found by ID, try by CIK
+                    issuer_entity = self.entity_writer.get_entity_by_cik(form4_data.issuer_entity.cik)
+                    if not issuer_entity:
+                        # Last resort: create it
+                        issuer_entity = self.entity_writer.get_or_create_entity(form4_data.issuer_entity)
+                    
+                # Get owner entity - match by relationship index if owner_entities is available
+                owner_entity = None
+                if hasattr(form4_data, 'owner_entities') and form4_data.owner_entities and idx < len(form4_data.owner_entities):
+                    owner_data = form4_data.owner_entities[idx]
+                    owner_entity = self.entity_writer.get_entity_by_id(owner_data.id)
+                    if not owner_entity:
+                        # If not found by ID, try by CIK
+                        owner_entity = self.entity_writer.get_entity_by_cik(owner_data.cik)
+                        if not owner_entity:
+                            # Last resort: create it
+                            owner_entity = self.entity_writer.get_or_create_entity(owner_data)
+                
+                # If we still don't have an owner, fallback to getting by ID from the relationship
+                if not owner_entity:
+                    owner_entity = self.entity_writer.get_entity_by_id(rel_data.owner_entity_id)
             else:
-                # Need to get or create entity records first from Form4SgmlIndexer data
-                # Parse CIK out of the accession number (first 10 digits)
+                # Need to get entity records by ID from the database
                 issuer_id = rel_data.issuer_entity_id
                 owner_id = rel_data.owner_entity_id
                 
                 log_info(f"Retrieving entity information by ID for relationship")
                 log_info(f"Using issuer_entity_id: {issuer_id}, owner_entity_id: {owner_id}")
                 
-                # Create dummy EntityData objects since we need to save them to the DB
-                issuer_cik = self._extract_cik_from_accession(form4_data.accession_number)
-                issuer_entity_data = EntityData(
-                    cik=issuer_cik,
-                    name=f"Issuer CIK {issuer_cik}",
-                    entity_type="company",
-                    id=issuer_id  # Use the same ID from the relationship
-                )
+                # Get entities from the database - they should already exist
+                # from our pre-creation step in write_form4_data
+                issuer_entity = self.entity_writer.get_entity_by_id(issuer_id)
+                owner_entity = self.entity_writer.get_entity_by_id(owner_id)
                 
-                # Reporting owner CIK will just be a generated ID for now
-                owner_entity_data = EntityData(
-                    cik=f"owner_{str(owner_id)[-6:]}",  # Use last 6 chars of ID as a unique identifier
-                    name=f"Owner ID {str(owner_id)[-6:]}",
-                    entity_type="person",
-                    id=owner_id  # Use the same ID from the relationship
-                )
+                if not issuer_entity or not owner_entity:
+                    log_warn(f"Entity not found despite pre-creation: issuer={issuer_id}, owner={owner_id}")
+                    # Fall back to creating them if they don't exist for some reason
+                    if not issuer_entity:
+                        # Create dummy EntityData object for issuer
+                        issuer_cik = self._extract_cik_from_accession(form4_data.accession_number)
+                        issuer_entity_data = EntityData(
+                            cik=issuer_cik,
+                            name=f"Issuer CIK {issuer_cik}",
+                            entity_type="company",
+                            id=issuer_id  # Use the same ID from the relationship
+                        )
+                        issuer_entity = self.entity_writer.get_or_create_entity(issuer_entity_data)
+                        
+                    if not owner_entity:
+                        # Create dummy EntityData object for owner
+                        owner_entity_data = EntityData(
+                            cik=f"owner_{str(owner_id)[-6:]}",  # Use last 6 chars of ID as a unique identifier
+                            name=f"Owner ID {str(owner_id)[-6:]}",
+                            entity_type="person",
+                            id=owner_id  # Use the same ID from the relationship
+                        )
+                        owner_entity = self.entity_writer.get_or_create_entity(owner_entity_data)
                 
-                # Create entities in the database
-                issuer_entity = self.entity_writer.get_or_create_entity(issuer_entity_data)
-                owner_entity = self.entity_writer.get_or_create_entity(owner_entity_data)
+            # Important: Use the actual database entity IDs, not the IDs from rel_data
+            # This ensures we use the correct entity IDs that exist in the database
+            if not issuer_entity or not owner_entity:
+                log_error(f"Cannot create relationship - missing entities")
+                log_error(f"  Missing: {'issuer' if not issuer_entity else ''} {'owner' if not owner_entity else ''}")
+                log_error(f"  Issuer ID in relationship: {rel_data.issuer_entity_id}")
+                log_error(f"  Owner ID in relationship: {rel_data.owner_entity_id}")
+                continue
                 
-                # Commit the entities explicitly to ensure they're in the database
-                # before creating relationships that reference them
+            # Debug info to track ID differences that may cause foreign key issues
+            if str(issuer_entity.id) != str(rel_data.issuer_entity_id) or str(owner_entity.id) != str(rel_data.owner_entity_id):
+                log_info(f"Entity ID difference detected:")
+                log_info(f"  Issuer: DB ID {issuer_entity.id} vs relationship ID {rel_data.issuer_entity_id}")
+                log_info(f"  Owner: DB ID {owner_entity.id} vs relationship ID {rel_data.owner_entity_id}")
+                
+            # Force a commit here to ensure entities are actually in the database before creating relationships
+            # This resolves the foreign key constraint violation we've been seeing
+            try:
                 self.db_session.commit()
                 log_info(f"Committed entities to database before creating relationships")
+            except Exception as e:
+                log_error(f"Error committing entities before relationships: {e}")
+                raise
                 
-            # Create relationship
+            # Create relationship with the actual database entity IDs
             relationship = Form4Relationship(
                 form4_filing_id=form4_filing.id,
-                issuer_entity_id=rel_data.issuer_entity_id,
-                owner_entity_id=rel_data.owner_entity_id,
+                issuer_entity_id=issuer_entity.id,  # Use the actual entity ID from the database
+                owner_entity_id=owner_entity.id,    # Use the actual entity ID from the database
                 relationship_type=rel_data.relationship_type,
                 is_director=rel_data.is_director,
                 is_officer=rel_data.is_officer,
@@ -176,13 +280,27 @@ class Form4Writer:
             if rel_data.id:
                 relationship_map[str(rel_data.id)] = relationship
 
-            # Log the relationship creation
-            if 'issuer_entity' in locals() and 'owner_entity' in locals():
-                log_info(f"Created relationship between {issuer_entity.name} and {owner_entity.name}")
-            else:
-                log_info(f"Created relationship with issuer ID {rel_data.issuer_entity_id} and owner ID {rel_data.owner_entity_id}")
+            # Log the relationship creation with detailed information
+            log_info(f"Created relationship between:")
+            log_info(f"  Issuer: {issuer_entity.name} (ID: {issuer_entity.id}, CIK: {issuer_entity.cik})")
+            log_info(f"  Owner: {owner_entity.name} (ID: {owner_entity.id}, CIK: {owner_entity.cik})")
+            
+            # Debug information - compare with original relationship data
+            if str(issuer_entity.id) != str(rel_data.issuer_entity_id):
+                log_info(f"  Note: Issuer ID from relationship data ({rel_data.issuer_entity_id}) differs from database entity ID ({issuer_entity.id})")
+            if str(owner_entity.id) != str(rel_data.owner_entity_id):
+                log_info(f"  Note: Owner ID from relationship data ({rel_data.owner_entity_id}) differs from database entity ID ({owner_entity.id})")
 
+        # Commit relationships to ensure they're in the database before adding transactions
+        try:
+            self.db_session.commit()
+            log_info(f"Committed relationships to database before creating transactions")
+        except Exception as e:
+            log_error(f"Error committing relationships before transactions: {e}")
+            raise
+            
         # Process transactions
+        log_info(f"Processing {len(form4_data.transactions)} transactions")
         for txn_data in form4_data.transactions:
             # Determine which relationship to associate with
             relationship = None
@@ -190,33 +308,56 @@ class Form4Writer:
             # First try to match by relationship_id if provided
             if txn_data.relationship_id and str(txn_data.relationship_id) in relationship_map:
                 relationship = relationship_map[str(txn_data.relationship_id)]
+                log_info(f"Found relationship by ID {txn_data.relationship_id}")
             else:
                 # Fallback to first relationship
                 if relationship_map:
                     relationship = relationship_map[0]
+                    log_info(f"Using first relationship (ID: {relationship.id}) for transaction")
 
             if relationship:
-                transaction = Form4Transaction(
-                    form4_filing_id=form4_filing.id,
-                    relationship_id=relationship.id,
-                    transaction_code=txn_data.transaction_code,
-                    transaction_date=txn_data.transaction_date,
-                    security_title=txn_data.security_title,
-                    transaction_form_type=txn_data.transaction_form_type,
-                    shares_amount=txn_data.shares_amount,
-                    price_per_share=txn_data.price_per_share,
-                    ownership_nature=txn_data.ownership_nature,
-                    indirect_ownership_explanation=txn_data.indirect_ownership_explanation,
-                    is_derivative=txn_data.is_derivative,
-                    equity_swap_involved=txn_data.equity_swap_involved,
-                    transaction_timeliness=txn_data.transaction_timeliness,
-                    footnote_ids=txn_data.footnote_ids,
-                    conversion_price=txn_data.conversion_price,
-                    exercise_date=txn_data.exercise_date,
-                    expiration_date=txn_data.expiration_date
-                )
+                try:
+                    log_info(f"Creating transaction: {txn_data.security_title} on {txn_data.transaction_date}")
+                    log_info(f"  Transaction code: {txn_data.transaction_code}")
+                    log_info(f"  Shares: {txn_data.shares_amount}, Price: {txn_data.price_per_share}")
+                    log_info(f"  Using relationship ID: {relationship.id}")
+                    log_info(f"  Using form4_filing_id: {form4_filing.id}")
+                    
+                    transaction = Form4Transaction(
+                        form4_filing_id=form4_filing.id,
+                        relationship_id=relationship.id,
+                        transaction_code=txn_data.transaction_code,
+                        transaction_date=txn_data.transaction_date,
+                        security_title=txn_data.security_title,
+                        transaction_form_type=txn_data.transaction_form_type,
+                        shares_amount=txn_data.shares_amount,
+                        price_per_share=txn_data.price_per_share,
+                        ownership_nature=txn_data.ownership_nature,
+                        indirect_ownership_explanation=txn_data.indirect_ownership_explanation,
+                        is_derivative=txn_data.is_derivative,
+                        equity_swap_involved=txn_data.equity_swap_involved,
+                        transaction_timeliness=txn_data.transaction_timeliness,
+                        footnote_ids=txn_data.footnote_ids,
+                        conversion_price=txn_data.conversion_price,
+                        exercise_date=txn_data.exercise_date,
+                        expiration_date=txn_data.expiration_date
+                    )
 
-                self.db_session.add(transaction)
-                log_info(f"Added transaction: {txn_data.security_title} on {txn_data.transaction_date}")
+                    self.db_session.add(transaction)
+                    # Flush to detect any immediate database issues
+                    self.db_session.flush()
+                    log_info(f"Added transaction: {txn_data.security_title} on {txn_data.transaction_date} (ID: {transaction.id})")
+                except Exception as e:
+                    log_error(f"Error creating transaction: {e}")
+                    # Continue processing other transactions
+                    continue
             else:
-                log_warn(f"No relationship found for transaction: {txn_data.security_title}")
+                log_warn(f"No relationship found for transaction: {txn_data.security_title}. Transaction will be skipped.")
+                
+        # After all transactions are processed, do an explicit commit to ensure they're saved
+        try:
+            self.db_session.commit()
+            log_info(f"Committed all transactions to database")
+        except Exception as e:
+            log_error(f"Error committing transactions: {e}")
+            raise

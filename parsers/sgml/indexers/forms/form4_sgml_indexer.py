@@ -6,6 +6,7 @@ from models.dataclasses.forms.form4_transaction import Form4TransactionData
 from models.dataclasses.forms.form4_filing import Form4FilingData
 from models.dataclasses.forms.form4_relationship import Form4RelationshipData
 from models.dataclasses.entity import EntityData
+from parsers.forms.form4_parser import Form4Parser
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Any
 import xml.etree.ElementTree as ET
@@ -36,12 +37,40 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
         # Extract Form 4 specific data
         form4_data = self.extract_form4_data(txt_contents)
         
-        # Extract XML content for transaction details
+        # Extract XML content for entity and transaction details
         xml_content = self.extract_xml_content(txt_contents)
         
         if xml_content:
-            # Parse transaction details from XML
-            self.parse_xml_transactions(xml_content, form4_data)
+            # Use the enhanced Form4Parser to extract entity information from XML
+            form4_parser = Form4Parser(self.accession_number, self.cik, 
+                                      form4_data.period_of_report.isoformat() if form4_data.period_of_report else None)
+            parsed_xml = form4_parser.parse(xml_content)
+            
+            if parsed_xml and "parsed_data" in parsed_xml and "entity_data" in parsed_xml["parsed_data"]:
+                # Extract entity information
+                entity_data = parsed_xml["parsed_data"]["entity_data"]
+                
+                # Replace the entities and relationships with more accurate XML-based data
+                self._update_form4_data_from_xml(form4_data, entity_data)
+                
+                # Extract transaction information from parsed XML
+                non_derivative_transactions = parsed_xml["parsed_data"].get("non_derivative_transactions", [])
+                derivative_transactions = parsed_xml["parsed_data"].get("derivative_transactions", [])
+                
+                log_info(f"Found {len(non_derivative_transactions)} non-derivative and {len(derivative_transactions)} derivative transactions in XML")
+                
+                # Convert extracted transaction dictionaries to Form4TransactionData objects
+                self._add_transactions_from_parsed_xml(form4_data, non_derivative_transactions, derivative_transactions)
+                
+                # Associate transactions with relationships
+                self._link_transactions_to_relationships(form4_data)
+            else:
+                # Fall back to the old method if the enhanced parser fails
+                log_warn(f"Enhanced Form4Parser failed, falling back to legacy parser for {self.accession_number}")
+                self.parse_xml_transactions(xml_content, form4_data)
+                
+                # Associate transactions with relationships (legacy path)
+                self._link_transactions_to_relationships(form4_data)
         
         return {
             "documents": documents,
@@ -121,6 +150,9 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
         1. <ISSUER> tag with COMPANY DATA subsection
         2. ISSUER: marker with COMPANY DATA subsection
         3. Fallback to parsing the full SEC-HEADER for issuer info
+        
+        Note: The XML-based extraction is now preferred and handled separately
+        by the Form4Parser. This method is kept for backward compatibility.
         """
         # Try with <ISSUER> tag first
         issuer_section = None
@@ -216,6 +248,9 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
         This method handles Form 4 SGML which has a specific structure for REPORTING-OWNER.
         The method searches for REPORTING-OWNER sections in the SGML content and extracts
         the CIK and name information for each owner.
+        
+        Note: The XML-based extraction is now preferred and handled separately
+        by the Form4Parser. This method is kept for backward compatibility.
         """
         owners = []
         
@@ -692,4 +727,231 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
         explanation_el = txn_element.find(".//ownershipNature/natureOfOwnership/value")
         if explanation_el is not None and explanation_el.text:
             return explanation_el.text.strip()
-        return None    
+        return None
+        
+    def _add_transactions_from_parsed_xml(self, form4_data: Form4FilingData, 
+                                    non_derivative_transactions: List[Dict], 
+                                    derivative_transactions: List[Dict]) -> None:
+        """
+        Convert transaction dictionaries from Form4Parser to Form4TransactionData objects
+        and add them to Form4FilingData.
+        
+        Args:
+            form4_data: The Form4FilingData to update
+            non_derivative_transactions: List of non-derivative transaction dictionaries
+            derivative_transactions: List of derivative transaction dictionaries
+        """
+        from models.dataclasses.forms.form4_transaction import Form4TransactionData
+        from datetime import datetime
+        
+        # Process non-derivative transactions
+        for txn_dict in non_derivative_transactions:
+            try:
+                # Convert date string to date object
+                transaction_date = None
+                if txn_dict.get('transactionDate'):
+                    try:
+                        transaction_date = datetime.strptime(txn_dict['transactionDate'], '%Y-%m-%d').date()
+                    except ValueError:
+                        log_warn(f"Invalid transaction date format: {txn_dict['transactionDate']}")
+                        continue
+                
+                # Convert numeric values
+                shares_amount = None
+                if txn_dict.get('shares'):
+                    try:
+                        shares_amount = float(txn_dict['shares'])
+                    except ValueError:
+                        pass
+                
+                price_per_share = None
+                if txn_dict.get('pricePerShare'):
+                    try:
+                        price_per_share = float(txn_dict['pricePerShare'])
+                    except ValueError:
+                        pass
+                
+                # Create transaction object
+                transaction = Form4TransactionData(
+                    security_title=txn_dict.get('securityTitle', 'Unknown Security'),
+                    transaction_date=transaction_date or form4_data.period_of_report,
+                    transaction_code=txn_dict.get('transactionCode', 'P'),  # Default to Purchase
+                    transaction_form_type=txn_dict.get('formType'),
+                    shares_amount=shares_amount,
+                    price_per_share=price_per_share,
+                    ownership_nature=txn_dict.get('ownership'),
+                    indirect_ownership_explanation=txn_dict.get('indirectOwnershipNature'),
+                    is_derivative=False
+                )
+                
+                # Add to form4_data
+                form4_data.transactions.append(transaction)
+                log_info(f"Added non-derivative transaction: {transaction.security_title} on {transaction.transaction_date}")
+                
+            except Exception as e:
+                log_error(f"Error creating non-derivative transaction: {e}")
+                continue
+        
+        # Process derivative transactions
+        for txn_dict in derivative_transactions:
+            try:
+                # Convert date string to date object
+                transaction_date = None
+                if txn_dict.get('transactionDate'):
+                    try:
+                        transaction_date = datetime.strptime(txn_dict['transactionDate'], '%Y-%m-%d').date()
+                    except ValueError:
+                        log_warn(f"Invalid transaction date format: {txn_dict['transactionDate']}")
+                        continue
+                
+                # Convert numeric values
+                shares_amount = None
+                if txn_dict.get('shares'):
+                    try:
+                        shares_amount = float(txn_dict['shares'])
+                    except ValueError:
+                        pass
+                
+                price_per_share = None
+                if txn_dict.get('pricePerShare'):
+                    try:
+                        price_per_share = float(txn_dict['pricePerShare'])
+                    except ValueError:
+                        pass
+                
+                conversion_price = None
+                if txn_dict.get('conversionOrExercisePrice'):
+                    try:
+                        conversion_price = float(txn_dict['conversionOrExercisePrice'])
+                    except ValueError:
+                        pass
+                
+                # Handle dates
+                exercise_date = None
+                if txn_dict.get('exerciseDate'):
+                    try:
+                        exercise_date = datetime.strptime(txn_dict['exerciseDate'], '%Y-%m-%d').date()
+                    except ValueError:
+                        pass
+                
+                expiration_date = None
+                if txn_dict.get('expirationDate'):
+                    try:
+                        expiration_date = datetime.strptime(txn_dict['expirationDate'], '%Y-%m-%d').date()
+                    except ValueError:
+                        pass
+                
+                # Create transaction object
+                transaction = Form4TransactionData(
+                    security_title=txn_dict.get('securityTitle', 'Unknown Security'),
+                    transaction_date=transaction_date or form4_data.period_of_report,
+                    transaction_code=txn_dict.get('transactionCode', 'P'),  # Default to Purchase
+                    transaction_form_type=txn_dict.get('formType'),
+                    shares_amount=shares_amount,
+                    price_per_share=price_per_share,
+                    ownership_nature=txn_dict.get('ownership'),
+                    indirect_ownership_explanation=txn_dict.get('indirectOwnershipNature'),
+                    is_derivative=True,
+                    conversion_price=conversion_price,
+                    exercise_date=exercise_date,
+                    expiration_date=expiration_date
+                )
+                
+                # Add to form4_data
+                form4_data.transactions.append(transaction)
+                log_info(f"Added derivative transaction: {transaction.security_title} on {transaction.transaction_date}")
+                
+            except Exception as e:
+                log_error(f"Error creating derivative transaction: {e}")
+                continue
+        
+        log_info(f"Added {len(non_derivative_transactions) + len(derivative_transactions)} transactions from parsed XML")
+    
+    def _link_transactions_to_relationships(self, form4_data: Form4FilingData) -> None:
+        """
+        Ensure all transactions have a relationship_id set.
+        This is crucial for proper database foreign key references between
+        form4_transactions and form4_relationships tables.
+        
+        Args:
+            form4_data: The Form4FilingData to update
+        """
+        if not form4_data.relationships:
+            log_warn(f"No relationships found for filing {self.accession_number}, transactions will not be linked")
+            return
+            
+        # Get the first relationship's ID as the default
+        default_relationship_id = form4_data.relationships[0].id
+        log_info(f"Using default relationship ID {default_relationship_id} for transactions in {self.accession_number}")
+        
+        # Update all transactions
+        for transaction in form4_data.transactions:
+            if not transaction.relationship_id:
+                transaction.relationship_id = default_relationship_id
+                
+        log_info(f"Linked {len(form4_data.transactions)} transactions to relationships for {self.accession_number}")
+        
+    def _update_form4_data_from_xml(self, form4_data: Form4FilingData, entity_data: Dict[str, Any], parsed_xml: Dict = None) -> None:
+        """
+        Update Form4FilingData with more accurate entity information from XML.
+        
+        Args:
+            form4_data: The Form4FilingData object to update
+            entity_data: Dictionary containing entity information from XML
+            parsed_xml: Full parsed XML data if available (contains transactions)
+        """
+        try:
+            # Clear existing relationships that were created from SGML
+            form4_data.relationships = []
+            
+            # Also clear transactions to avoid duplicates
+            form4_data.transactions = []
+            
+            # Get the issuer entity from XML
+            issuer_entity = entity_data.get("issuer_entity")
+            if not issuer_entity:
+                log_warn(f"No issuer entity found in XML for {self.accession_number}")
+                return
+                
+            # Get owner entities from XML
+            owner_entities = entity_data.get("owner_entities", [])
+            if not owner_entities:
+                log_warn(f"No owner entities found in XML for {self.accession_number}")
+                return
+                
+            # Get relationship information from XML
+            relationships = entity_data.get("relationships", [])
+            if not relationships:
+                log_warn(f"No relationships found in XML for {self.accession_number}")
+                return
+            
+            # Attach entities directly to form4_data for use by Form4Writer
+            form4_data.issuer_entity = issuer_entity
+            form4_data.owner_entities = owner_entities
+                
+            # Create relationships using the accurate entity information
+            filing_date = form4_data.period_of_report or datetime.now().date()
+            
+            for owner_entity, rel_data in zip(owner_entities, relationships):
+                # Create relationship with proper entity IDs
+                relationship = Form4RelationshipData(
+                    issuer_entity_id=issuer_entity.id,
+                    owner_entity_id=owner_entity.id,
+                    filing_date=filing_date,
+                    is_director=rel_data.get("is_director", False),
+                    is_officer=rel_data.get("is_officer", False),
+                    is_ten_percent_owner=rel_data.get("is_ten_percent_owner", False),
+                    is_other=rel_data.get("is_other", False),
+                    officer_title=rel_data.get("officer_title"),
+                    other_text=rel_data.get("other_text"),
+                )
+                
+                # Add to form4_data
+                form4_data.add_relationship(relationship)
+                
+            log_info(f"Updated Form4FilingData with {len(form4_data.relationships)} relationships from XML")
+            log_info(f"Attached issuer_entity and {len(owner_entities)} owner_entities directly to Form4FilingData")
+            
+        except Exception as e:
+            log_error(f"Error updating Form4FilingData from XML: {e}")
+            # If an error occurs, we'll keep the original SGML-based entities    

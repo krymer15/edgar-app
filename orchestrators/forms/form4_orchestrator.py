@@ -6,11 +6,13 @@ from writers.forms.form4_writer import Form4Writer
 from writers.shared.raw_file_writer import RawFileWriter
 from downloaders.sgml_downloader import SgmlDownloader
 from models.database import get_db_session
+from models.dataclasses.raw_document import RawDocument
 from models.orm_models.filing_metadata import FilingMetadata
 from models.orm_models.forms.form4_filing_orm import Form4Filing
 from utils.report_logger import log_info, log_warn, log_error
 from utils.url_builder import construct_sgml_txt_url
 from utils.accession_formatter import format_for_url, format_for_filename, format_for_db
+from utils.path_manager import build_raw_filepath_by_type
 from config.config_loader import ConfigLoader
 from datetime import datetime
 import os
@@ -104,7 +106,8 @@ class Form4Orchestrator(BaseOrchestrator):
 
             # Create writer instances
             form4_writer = Form4Writer(db_session)
-            raw_writer = RawFileWriter() if write_raw_xml else None
+            # Initialize RawFileWriter specifically for XML
+            raw_writer = RawFileWriter(file_type="xml") if write_raw_xml else None
 
             # Process each filing
             for filing in filings_to_process:
@@ -142,14 +145,30 @@ class Form4Orchestrator(BaseOrchestrator):
 
                     # Write raw XML if requested
                     if write_raw_xml and xml_content:
-                        xml_path = os.path.join(
-                            self.base_data_path,
-                            "raw_xml",
-                            filing.cik,
-                            f"{format_for_filename(filing.accession_number)}_form4.xml"
+                        # Extract year from filing date
+                        filing_year = filing.filing_date.strftime("%Y") if filing.filing_date else datetime.now().strftime("%Y")
+                        
+                        # Create a RawDocument with the XML content for RawFileWriter
+                        xml_filename = f"{format_for_filename(filing.accession_number)}_form4.xml"
+                        
+                        # Construct source URL (even if we don't use it for local files)
+                        source_url = construct_sgml_txt_url(filing.cik, format_for_url(filing.accession_number))
+                        
+                        xml_doc = RawDocument(
+                            cik=filing.cik,
+                            accession_number=filing.accession_number,  # Keep dashes for path construction
+                            form_type=filing.form_type,
+                            filing_date=filing.filing_date,
+                            content=xml_content,
+                            filename=xml_filename,
+                            document_type="xml",
+                            source_url=source_url,
+                            source_type="form4_xml",
+                            description=f"Form 4 XML for {filing.accession_number}"
                         )
-                        os.makedirs(os.path.dirname(xml_path), exist_ok=True)
-                        raw_writer.write_to_file(xml_content, xml_path)
+                        
+                        # Use RawFileWriter.write method with RawDocument
+                        xml_path = raw_writer.write(xml_doc)
                         log_info(f"[FORM4] Wrote raw XML to {xml_path}")
 
                     # Write to database

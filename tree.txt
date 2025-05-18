@@ -84,6 +84,7 @@
 │   ├── data_symlink_handling.md
 │   ├── dataclass_architecture.md
 │   ├── folder_structure.md
+│   ├── form4_extraction_issues.md
 │   ├── form4_processing_documentation.md
 │   ├── mapping_filings_to_fiscal_periods.md
 │   ├── parsers_subclass_specialization.md
@@ -167,6 +168,7 @@
 │   │   ├── filing_metadata_orchestrator.py
 │   │   └── sgml_disk_orchestrator.py
 │   ├── forms/
+│   │   ├── __init__.py
 │   │   └── form4_orchestrator.py
 │   ├── legacy/
 │   │   ├── batch_sgml_ingestion_orchestrator.py
@@ -223,6 +225,7 @@
 │   │   ├── process_company_filings.py
 │   │   └── test_postgres_connection.py
 │   ├── forms/
+│   │   ├── __init__.py
 │   │   └── run_form4_ingest.py
 │   ├── submissions_api/
 │   │   └── ingest_submissions.py
@@ -255,6 +258,39 @@
 │   │   └── rollback_issuer_columns.sql
 ├── summarizers/
 │   └── README.md
+├── test_data/
+│   ├── raw/
+│   │   ├── sgml/
+│   │   │   ├── 1083786/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 4/
+│   │   │   │   │   │   ├── 0000003570-23-000067/
+│   │   │   │   │   │   │   └── 0000003570-23-000067.txt
+│   │   │   ├── 1243652/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 4/
+│   │   │   │   │   │   ├── 0000003570-23-000066/
+│   │   │   │   │   │   │   └── 0000003570-23-000066.txt
+│   │   │   ├── 1540531/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 13F-HR/
+│   │   │   │   │   │   ├── 0001540531-23-000004/
+│   │   │   │   │   │   │   └── 0001540531-23-000004.txt
+│   │   │   ├── 1770787/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 4/
+│   │   │   │   │   │   ├── 0001610717-23-000035/
+│   │   │   │   │   │   │   └── 0001610717-23-000035.txt
+│   │   │   ├── 1848898/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 10-Q/
+│   │   │   │   │   │   ├── 0001213900-23-039971/
+│   │   │   │   │   │   │   └── 0001213900-23-039971.txt
+│   │   │   ├── 1848948/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 10-Q/
+│   │   │   │   │   │   ├── 0001213900-23-039984/
+│   │   │   │   │   │   │   └── 0001213900-23-039984.txt
 ├── tests/
 │   ├── README.md
 │   └── __init__.py
@@ -303,6 +339,7 @@
 │   │   └── test_filing_raw.html
 │   ├── shared/
 │   │   ├── README.md
+│   │   ├── test_accession_formatter.py
 │   │   ├── test_cache_manager.py
 │   │   ├── test_config_loader.py
 │   │   ├── test_form_type_validator.py
@@ -319,6 +356,7 @@
 ├── utils/
 │   ├── README.md
 │   ├── __init__.py
+│   ├── accession_formatter.py
 │   ├── cache_manager.py
 │   ├── filing_calendar.py
 │   ├── form_type_validator.py

@@ -156,12 +156,28 @@ def test_form4_sgml_indexer_extract_xml_content(sample_sgml_content):
     assert "<ownershipDocument>" in xml_content
 
 @patch('parsers.sgml.indexers.sgml_document_indexer.SgmlDocumentIndexer.index_documents')
-def test_form4_sgml_indexer_index_documents(mock_super_index, sample_sgml_content):
+@patch('parsers.sgml.indexers.forms.form4_sgml_indexer.Form4SgmlIndexer._link_transactions_to_relationships')
+@patch('parsers.sgml.indexers.forms.form4_sgml_indexer.Form4SgmlIndexer._add_transactions_from_parsed_xml')
+def test_form4_sgml_indexer_index_documents(mock_add_transactions, mock_link_transactions, mock_super_index, sample_sgml_content):
     # Mock the parent class's index_documents method
     mock_super_index.return_value = [MagicMock()]
 
-    indexer = Form4SgmlIndexer(cik="0001084869", accession_number="0000921895-25-001190")
-    result = indexer.index_documents(sample_sgml_content)
+    # Set up Form4Parser to return appropriate structure
+    with patch('parsers.forms.form4_parser.Form4Parser.parse') as mock_parser:
+        mock_parser.return_value = {
+            "parsed_data": {
+                "entity_data": {},
+                "non_derivative_transactions": [{"securityTitle": "Common Stock"}],
+                "derivative_transactions": [{"securityTitle": "Stock Option"}]
+            }
+        }
+        
+        indexer = Form4SgmlIndexer(cik="0001084869", accession_number="0000921895-25-001190")
+        result = indexer.index_documents(sample_sgml_content)
+        
+        # Verify our transaction methods were called
+        assert mock_add_transactions.call_count > 0, "Transaction addition method not called"
+        assert mock_link_transactions.call_count > 0, "Transaction linking method not called"
 
     # Verify basic return structure
     assert "documents" in result, "Missing documents in result"
@@ -220,3 +236,130 @@ def test_extract_value_debug():
 
     cik = indexer._extract_value(sample, "CENTRAL INDEX KEY:")
     assert cik == "0001234567"
+    
+def test_link_transactions_to_relationships():
+    """Test the _link_transactions_to_relationships method that ensures transactions are linked to relationships"""
+    from models.dataclasses.forms.form4_filing import Form4FilingData
+    from models.dataclasses.forms.form4_relationship import Form4RelationshipData
+    from models.dataclasses.forms.form4_transaction import Form4TransactionData
+    from datetime import date
+    from uuid import uuid4
+    
+    # Create a test Form4FilingData with relationships and transactions
+    filing = Form4FilingData(
+        accession_number="0001234567-25-000001",
+        period_of_report=date(2025, 5, 14)
+    )
+    
+    # Create a relationship
+    relationship_id = uuid4()
+    relationship = Form4RelationshipData(
+        issuer_entity_id=uuid4(),
+        owner_entity_id=uuid4(),
+        filing_date=date(2025, 5, 15),
+        id=relationship_id  # Use a known ID
+    )
+    filing.relationships = [relationship]
+    
+    # Create transactions without relationship_id
+    transaction1 = Form4TransactionData(
+        security_title="Common Stock",
+        transaction_date=date(2025, 5, 14),
+        transaction_code="P"
+    )
+    transaction2 = Form4TransactionData(
+        security_title="Preferred Stock",
+        transaction_date=date(2025, 5, 14),
+        transaction_code="S"
+    )
+    filing.transactions = [transaction1, transaction2]
+    
+    # Call the method
+    indexer = Form4SgmlIndexer(cik="0001234567", accession_number="0001234567-25-000001")
+    indexer._link_transactions_to_relationships(filing)
+    
+    # Check that transactions now have relationship_id set
+    assert transaction1.relationship_id == relationship_id
+    assert transaction2.relationship_id == relationship_id
+    
+def test_add_transactions_from_parsed_xml():
+    """Test the _add_transactions_from_parsed_xml method for converting raw transaction data to Form4TransactionData"""
+    from models.dataclasses.forms.form4_filing import Form4FilingData
+    from datetime import date
+    
+    # Sample transaction dictionaries, similar to what Form4Parser would return
+    non_derivative_transactions = [
+        {
+            "securityTitle": "Common Stock",
+            "transactionDate": "2025-05-14",
+            "transactionCode": "P",
+            "formType": "4",
+            "shares": "1000",
+            "pricePerShare": "15.50",
+            "ownership": "D"
+        },
+        {
+            "securityTitle": "Class A Common Stock",
+            "transactionDate": "2025-05-14", 
+            "transactionCode": "S",
+            "formType": "4",
+            "shares": "500",
+            "pricePerShare": "20.25",
+            "ownership": "I",
+            "indirectOwnershipNature": "By Trust"
+        }
+    ]
+    
+    derivative_transactions = [
+        {
+            "securityTitle": "Stock Option (Right to Buy)",
+            "transactionDate": "2025-05-14",
+            "transactionCode": "A",
+            "formType": "4",
+            "shares": "2000",
+            "pricePerShare": "0.00",
+            "ownership": "D",
+            "conversionOrExercisePrice": "15.00",
+            "expirationDate": "2035-05-14"
+        }
+    ]
+    
+    # Create a test Form4FilingData
+    filing = Form4FilingData(
+        accession_number="0001234567-25-000001",
+        period_of_report=date(2025, 5, 14)
+    )
+    
+    # Call the method
+    indexer = Form4SgmlIndexer(cik="0001234567", accession_number="0001234567-25-000001")
+    indexer._add_transactions_from_parsed_xml(filing, non_derivative_transactions, derivative_transactions)
+    
+    # Check that transactions were added correctly
+    assert len(filing.transactions) == 3
+    
+    # Check non-derivative transactions
+    non_derivative_count = sum(1 for t in filing.transactions if not t.is_derivative)
+    assert non_derivative_count == 2
+    
+    # Check derivative transactions
+    derivative_count = sum(1 for t in filing.transactions if t.is_derivative)
+    assert derivative_count == 1
+    
+    # Check specific transaction properties
+    purchase_transaction = next((t for t in filing.transactions if t.transaction_code == "P"), None)
+    assert purchase_transaction is not None
+    assert purchase_transaction.security_title == "Common Stock"
+    assert purchase_transaction.shares_amount == 1000.0
+    assert purchase_transaction.price_per_share == 15.50
+    
+    # Check indirect ownership transaction
+    indirect_transaction = next((t for t in filing.transactions if t.ownership_nature == "I"), None)
+    assert indirect_transaction is not None
+    assert indirect_transaction.indirect_ownership_explanation == "By Trust"
+    
+    # Check derivative transaction
+    option_transaction = next((t for t in filing.transactions if t.is_derivative), None)
+    assert option_transaction is not None
+    assert option_transaction.security_title == "Stock Option (Right to Buy)"
+    assert option_transaction.conversion_price == 15.00
+    assert option_transaction.expiration_date.year == 2035

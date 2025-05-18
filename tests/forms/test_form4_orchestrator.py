@@ -9,7 +9,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.pa
 
 from orchestrators.forms.form4_orchestrator import Form4Orchestrator
 from models.dataclasses.forms.form4_filing import Form4FilingData
+from models.dataclasses.raw_document import RawDocument
 from models.orm_models.filing_metadata import FilingMetadata
+from writers.shared.raw_file_writer import RawFileWriter
 
 # Create a custom mock class that tracks attribute settings
 class AttributeTrackingMock(MagicMock):
@@ -230,3 +232,73 @@ def test_form4_orchestrator_with_empty_results():
         
         # Verify no downloader or indexer operations happened
         mock_downloader.download_sgml.assert_not_called()
+
+def test_form4_orchestrator_xml_file_path():
+    """Test that the orchestrator builds the correct XML file path using path_manager"""
+    # Mock filing
+    filing_mock = MagicMock()
+    filing_mock.cik = "0001234567"
+    filing_mock.accession_number = "0001234567-25-000001"
+    filing_mock.form_type = "4"
+    filing_mock.filing_date = datetime.strptime("2025-05-15", "%Y-%m-%d").date()
+    
+    # Mock XML content
+    xml_content = "<XML>Sample XML</XML>"
+    
+    # Mock database session
+    mock_db_session = MagicMock()
+    
+    # Mock downloader that returns SGML with XML
+    mock_downloader = MagicMock()
+    mock_downloader.has_in_memory_cache.return_value = False
+    mock_downloader.download_sgml.return_value = f"<SEC-HEADER></SEC-HEADER>\n{xml_content}"
+    
+    # Mock Form4SgmlIndexer to return the XML content
+    mock_form4_indexer = MagicMock()
+    mock_form4_indexer.index_documents.return_value = {
+        "form4_data": Form4FilingData(
+            accession_number="0001234567-25-000001",
+            period_of_report=date(2025, 5, 14)
+        ),
+        "xml_content": xml_content
+    }
+    
+    # Mock Form4Writer
+    mock_form4_writer = MagicMock()
+    mock_form4_writer.write_form4_data.return_value = True
+    
+    # Mock RawFileWriter class and instance to capture the file path
+    mock_raw_writer_instance = MagicMock()
+    expected_path = "/mnt/data/raw/xml/0001234567/2025/4/0001234567-25-000001/000123456725000001_form4.xml"
+    mock_raw_writer_instance.write.return_value = expected_path
+    
+    # Create a mock class that returns our instance when instantiated
+    mock_raw_writer_class = MagicMock(return_value=mock_raw_writer_instance)
+    
+    with patch('orchestrators.forms.form4_orchestrator.Form4SgmlIndexer', return_value=mock_form4_indexer), \
+         patch('orchestrators.forms.form4_orchestrator.Form4Writer', return_value=mock_form4_writer), \
+         patch('orchestrators.forms.form4_orchestrator.RawFileWriter', mock_raw_writer_class), \
+         patch('orchestrators.forms.form4_orchestrator.get_db_session') as mock_get_session, \
+         patch.object(Form4Orchestrator, '_get_filings_to_process') as mock_get_filings:
+        
+        # Set up the mock returns
+        mock_get_filings.return_value = [filing_mock]
+        mock_get_session.return_value.__enter__.return_value = mock_db_session
+        
+        # Create and run the orchestrator with write_raw_xml=True
+        orchestrator = Form4Orchestrator(downloader=mock_downloader)
+        orchestrator.run(target_date="2025-05-15", write_raw_xml=True)
+        
+        # Verify that the RawFileWriter class was instantiated with the correct file_type
+        mock_raw_writer_class.assert_called_once_with(file_type="xml")
+        
+        # Verify that the raw writer instance's write method was called with a RawDocument
+        mock_raw_writer_instance.write.assert_called_once()
+        raw_doc_arg = mock_raw_writer_instance.write.call_args[0][0]
+        assert isinstance(raw_doc_arg, RawDocument)
+        assert raw_doc_arg.cik == "0001234567"
+        assert raw_doc_arg.accession_number == "0001234567-25-000001"
+        assert raw_doc_arg.form_type == "4"
+        assert raw_doc_arg.content == xml_content
+        assert raw_doc_arg.document_type == "xml"
+        assert raw_doc_arg.source_type == "form4_xml"
