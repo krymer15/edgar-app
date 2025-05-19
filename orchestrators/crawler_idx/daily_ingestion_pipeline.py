@@ -102,7 +102,8 @@ class DailyIngestionPipeline:
         # === Pipeline 1: FilingMetadata - Always run this to ensure we have all metadata ===
         if not process_only:  # Skip metadata collection if specific accessions provided
             log_info(f"[META] Starting filing metadata ingestion for {target_date}")
-            self.meta_orchestrator.run(date_str=target_date, limit=None, include_forms=include_forms)  # No limit for metadata collection
+            # Apply limit to metadata collection if provided
+            self.meta_orchestrator.run(date_str=target_date, limit=limit, include_forms=include_forms)
 
         # === Find records to process ===
         with get_db_session() as session:

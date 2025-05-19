@@ -230,10 +230,11 @@ Each script supports a consistent set of arguments:
 
 The `--limit` parameter has a standardized behavior across orchestrators:
 
-- In `run_daily_pipeline_ingest.py` - Limits the number of accession numbers processed
+- In `run_daily_pipeline_ingest.py` - Limits both metadata collection and the number of accession numbers processed
 - In `run_daily_metadata_ingest.py` - Limits the number of filing records to collect
 - **Important**: When specific accessions are provided via `--accessions`, the limit is ignored
 - This ensures all documents within a selected filing are processed completely
+- The limit is applied as early as possible in the process for better performance
 
 For the meta-orchestrator (`run_daily_pipeline_ingest.py`), additional arguments include:
 

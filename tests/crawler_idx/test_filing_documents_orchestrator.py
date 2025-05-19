@@ -49,7 +49,10 @@ def test_run_calls_orchestrate_and_writer(mock_config_loader, mock_get_db_sessio
     orchestrator.run(target_date="2025-05-01", limit=None)
 
     # Assertions
-    mock_collector_instance.collect.assert_called_once_with("2025-05-01", limit=None)
+    mock_collector_instance.collect.assert_called_once()
+    args, kwargs = mock_collector_instance.collect.call_args
+    assert kwargs["target_date"] == "2025-05-01"
+    assert kwargs["limit"] is None
     mock_writer_instance.write_documents.assert_called_once_with([mock_doc])
 
 @patch("orchestrators.crawler_idx.filing_documents_orchestrator.FilingDocumentsCollector")

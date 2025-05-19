@@ -73,7 +73,8 @@ def test_url_construction_handles_dashes_consistently(monkeypatch):
         url_inputs.append((cik, accession_number))
         return original_construct_url(cik, accession_number)
     
-    monkeypatch.setattr("utils.url_builder.construct_sgml_txt_url", mock_construct_url)
+    # The monkeypatch needs to be applied to the module where it's used in SgmlDownloader
+    monkeypatch.setattr("downloaders.sgml_downloader.construct_sgml_txt_url", mock_construct_url)
     
     # Create test downloader
     class TestDownloader(SgmlDownloader):
