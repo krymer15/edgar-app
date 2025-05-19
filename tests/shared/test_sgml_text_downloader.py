@@ -60,3 +60,45 @@ def test_download_sgml_uses_cache(monkeypatch):
     assert result.accession_number == expected_doc.accession_number
     assert result.content == expected_doc.content
     print(repr(result))
+    
+def test_url_construction_handles_dashes_consistently(monkeypatch):
+    """Test that URL construction correctly handles accession numbers with and without dashes."""
+    from utils.url_builder import construct_sgml_txt_url
+    
+    # Mock the construct_sgml_txt_url function to capture its inputs
+    url_inputs = []
+    original_construct_url = construct_sgml_txt_url
+    
+    def mock_construct_url(cik, accession_number):
+        url_inputs.append((cik, accession_number))
+        return original_construct_url(cik, accession_number)
+    
+    monkeypatch.setattr("utils.url_builder.construct_sgml_txt_url", mock_construct_url)
+    
+    # Create test downloader
+    class TestDownloader(SgmlDownloader):
+        def __init__(self):
+            super().__init__(user_agent="test", use_cache=True)
+        def download_html(self, url):
+            return "MOCK CONTENT"
+    
+    downloader = TestDownloader()
+    
+    # Test with dashes in accession number
+    cik = "0001234567"
+    accession_with_dashes = "0001234567-25-012345"
+    
+    # This should pass the accession number with dashes to construct_sgml_txt_url
+    downloader.download_sgml(cik, accession_with_dashes, year="2025")
+    
+    # The url_builder function should receive the accession number with dashes
+    assert url_inputs[0][0] == cik
+    assert url_inputs[0][1] == accession_with_dashes
+    
+    # Test with no dashes
+    accession_no_dashes = "000123456725012345"
+    downloader.download_sgml(cik, accession_no_dashes, year="2025")
+    
+    # The function should still receive the exact input (no dashes)
+    assert url_inputs[1][0] == cik
+    assert url_inputs[1][1] == accession_no_dashes

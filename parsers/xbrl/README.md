@@ -2,14 +2,30 @@
 
 This directory is intended to house XBRL-specific parsers for processing financial data in SEC filings. XBRL (eXtensible Business Reporting Language) is an XML-based markup language used for electronic communication of business and financial data.
 
-## Parsers vs. Indexers
+## Inherent Ambiguities: XML, XBRL, and Parser Roles
 
-In this codebase, there is a critical distinction between **Parsers** and **Indexers**:
+In this codebase, we maintain a conceptual distinction between **Parsers** and **Indexers**:
 
 - **Parsers**: Process specific document types and extract structured data. They transform raw content into rich structured objects with meaningful fields.
 - **Indexers**: Extract document blocks, metadata, and pointers from container files. They **locate and identify** content without processing its full semantics.
 
-The XBRL components in this directory will be parsers that interpret the content of XBRL documents after they have been identified and extracted by indexers.
+However, XBRL processing naturally crosses several boundaries:
+
+1. **Format Boundary**: XBRL is simultaneously:
+   - An XML format (technically XBRL is XML with specialized tags/structure)
+   - A financial reporting standard (semantically distinct from general XML) 
+
+2. **Processing Boundary**: XBRL processing involves:
+   - Basic XML parsing (shared with other XML formats)
+   - Specialized financial taxonomy understanding (unique to XBRL)
+   - Integration with other filing components (footnotes, exhibits, etc.)
+
+3. **Organizational Boundary**: This creates a challenge in code organization:
+   - Should XBRL parsers be treated as specialized XML parsers? (technical perspective)
+   - Should they be treated as a completely separate format? (semantic perspective)
+   - Should they be organized by form type? (filing-oriented perspective)
+
+The XBRL components in this directory acknowledge these inherent ambiguities while focusing on the financial reporting aspects that make XBRL distinct from general XML processing.
 
 ## Future Implementation
 
@@ -41,31 +57,49 @@ xbrl/
     └── xbrl_10q_parser.py        # 10-Q specific parsing
 ```
 
-## Document Processing Flow
+## Document Processing Flow with Format Crossovers
 
-The XBRL parsing components will fit into the document processing flow after SGML indexing:
+The actual XBRL processing flow will likely involve multiple components with overlapping responsibilities:
 
 ```
-SgmlTextDocument (.txt file from EDGAR)
+SgmlTextDocument (.txt file from EDGAR containing XBRL)
        │
        ▼
-┌──────────────────┐     
-│SgmlDocumentIndexer│     
-└──────┬───────────┘     
-       │ (extracts XBRL documents)              
-       │                               
-       ▼                              
-┌──────────────────┐    
-│XBRL Parser       │ <- Future components in this directory
-│                  │    
-└──────┬───────────┘    
-       │
-       ▼
-┌──────────────────┐
-│Financial Data    │
-│                  │
-└──────────────────┘
+┌──────────────────────┐     
+│ Form-Specific SGML   │     
+│ Indexer (e.g. 10-K)  │     
+└──────────┬───────────┘     
+           │              
+           ├─── Extract Document Metadata              
+           │                               
+           ├─── Extract Embedded XBRL Content
+           │     │              
+           │     └───────────────────►
+           │                  │
+           │            ┌─────────────────┐
+           │            │ XBRL Parser     │
+           │            └────────┬────────┘
+           │                    │
+           │                    │ returns parsed financial data
+           │                    │
+           │◄───────────────────┘ 
+           │
+           ├─── Extract Non-XBRL Content
+           │     (e.g., textual disclosures)
+           │
+           ├─── Integrate Financial & Textual Data
+           │
+           ▼
+┌──────────────────────┐
+│ Complete Financial   │
+│ Report with Context  │
+└──────────────────────┘
 ```
+
+This flow acknowledges that processing financial reports requires:
+1. XBRL data extraction for structured financial tables
+2. HTML/text extraction for footnotes and management discussion
+3. Integration of both for a complete representation
 
 ## Implementation Example
 
@@ -129,8 +163,19 @@ class XbrlFinancialStatementParser(BaseParser):
         return income_statement
 ```
 
+## XML/XBRL Overlap Considerations
+
+When implementing XBRL parsers, carefully consider the overlap with XML processing:
+
+1. **Reuse XML Utilities**: For basic XML parsing functions (Node selection, attribute access)
+2. **Create XBRL-Specific Logic**: For financial taxonomy interpretation 
+3. **Document Boundary Decisions**: Clarify in comments where XML parsing ends and XBRL-specific logic begins
+
+This documented clarity will help maintain the codebase, even as the technical distinction between XML and XBRL may be blurry.
+
 ## Related Components
 
 - [Form-Specific Parsers](../forms/) - Similar implementation pattern
 - [SGML Indexers](../sgml/indexers/) - Extract documents before parsing
+- [XML Parsers](../xml/) - Handle general XML processing
 - [Form 10-K Parser](../forms/form10k_parser.py) - Will use XBRL parser for financial data

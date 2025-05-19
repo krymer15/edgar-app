@@ -71,8 +71,8 @@ These pipelines can be run independently or coordinated through the `DailyIngest
 
 The project is structured around several architectural principles:
 
-#### 1. Separation of Concerns
-Each component type has a specific responsibility in the data flow:
+#### 1. Pragmatic Separation of Concerns
+Each component type has a specific responsibility in the data flow, while acknowledging the inherent ambiguities in SEC filing formats:
 - **Collectors**: Fetch metadata and raw files from external sources
 - **Downloaders**: Handle HTTP requests and file downloading
 - **Parsers**: Transform raw data into structured formats
@@ -82,8 +82,15 @@ Each component type has a specific responsibility in the data flow:
 - **Writers**: Persist structured data to the database
 - **Orchestrators**: Coordinate the end-to-end processing flow
 
-#### 2. Data Flow Architecture
-The data flows through the system in a clear direction:
+#### 2. SEC Filing Format Realities
+The architecture recognizes the inherent complexities in SEC filings:
+- **Multi-format Documents**: Many SEC filings contain embedded formats (XML inside SGML, HTML inside SGML)
+- **Cross-boundary Processing**: Some components necessarily bridge multiple responsibilities due to how information is distributed across formats
+- **Form-specific Adaptations**: Each form type may require specialized processing due to its unique structure and regulatory purpose
+- **Flexibility Over Rigidity**: The system prioritizes practical solutions over rigid architectural purity when necessary
+
+#### 3. Data Flow Architecture
+The data generally flows through the system in this direction, with some necessary flexibility for complex form types:
 ```
                            ┌── Indexers ─┐
                            │             │
@@ -92,7 +99,7 @@ Raw Data → Collectors → Downloaders → Parsers → Writers → Database
                            └── Orchestrators
 ```
 
-A more detailed document processing flow:
+Document processing flows vary by form type, but a typical flow might look like this:
 ```
 Raw Container File (SGML/IDX)
       ↓
@@ -107,16 +114,20 @@ Form-Specific Parser → Extract form-specific data
 Structured Data Output → Ready for database writers
 ```
 
-#### 3. Data Model Separation
+However, some form types (like Form 4) require more complex flows where entity data from SGML headers and embedded XML must be integrated. The system is designed to accommodate these form-specific requirements.
+
+#### 4. Data Model Separation
 - **Dataclasses**: Pure Python dataclasses for in-memory processing
 - **ORM Models**: SQLAlchemy models for database operations
 - **Adapters**: Convert between dataclasses and ORM models
 
-#### 4. Form Type Specialization
-Form-specific logic is isolated in dedicated modules:
+#### 5. Form Type Specialization
+Form-specific logic is isolated in dedicated modules, reflecting the unique requirements of each SEC form type:
 - Form-specific parsers in `parsers/forms/`
 - Form-specific writers in `writers/forms/`
 - Form-specific orchestrators in `orchestrators/forms/`
+
+This specialization acknowledges that different SEC forms have fundamentally different structures and processing requirements that cannot always be forced into a one-size-fits-all approach.
 
 ## Running the Application
 

@@ -4,12 +4,29 @@ This folder contains logic for *indexing* SGML `.txt` submission files retrieved
 
 ## Indexers vs. Parsers
 
-In this codebase, there is a critical distinction between **Indexers** and **Parsers**:
+In this codebase, there is a conceptual distinction between **Indexers** and **Parsers**:
 
 - **Indexers**: Extract document blocks, metadata, and pointers from container files. They **locate and identify** content without processing its full semantics.
 - **Parsers**: Process specific document types and extract structured data. They transform raw content into rich structured objects.
 
-SGML Indexers are specifically responsible for breaking apart SGML container files and identifying the documents within them, not for interpreting the full content of those documents.
+SGML Indexers are primarily responsible for breaking apart SGML container files and identifying the documents within them. However, in practice, they often perform preliminary semantic extraction, especially for form-specific data.
+
+### Boundary Blurring in SGML Processing
+
+The SGML indexing system inherently has some overlap with parsing functions due to the nature of SEC filings:
+
+1. **Embedded XML in SGML**: Many SEC forms (especially Form 4) embed structured XML inside SGML containers. The SGML indexer must:
+   - Extract the XML content from the SGML wrapper
+   - Sometimes perform preliminary parsing of SGML headers to extract metadata
+   - Identify relationships between SGML header data and embedded XML content
+
+2. **Form-Specific Indexers**: Components like `Form4SgmlIndexer` operate in a hybrid role:
+   - They extract embedded XML (an indexer function)
+   - They extract some entity data from SGML headers (a parsing function) 
+   - They delegate detailed XML processing to dedicated parsers (e.g., `Form4Parser`)
+   - They combine results from both SGML header extraction and XML parsing
+
+This hybrid role is a practical necessity due to the format of SEC filings. While we maintain the conceptual separation between indexers and parsers, some indexers include basic parsing functionality to bridge the gap between document extraction and dedicated parsing.
 
 ## Architecture Overview
 

@@ -4,8 +4,9 @@
 Run SGML filing document ingestion from crawler.idx-derived metadata.
 
 Usage:
-    python scripts/crawler_idx/run_daily_documents_ingest.py --date 2024-12-20 --limit 50
+    python scripts/crawler_idx/run_daily_documents_ingest.py --date 2024-12-20
     python scripts/crawler_idx/run_daily_documents_ingest.py --date 2024-12-20 --include_forms 10-K 8-K
+    python scripts/crawler_idx/run_daily_documents_ingest.py --accessions 0001633703-23-000020
 """
 
 # 
@@ -44,8 +45,12 @@ def validate_date(date_str):
 
 def main():
     parser = argparse.ArgumentParser(description="Run SGML filing document ingestion.")
-    parser.add_argument("--date", type=validate_date, required=True, help="Target date (YYYY-MM-DD)")
-    parser.add_argument("--limit", type=int, help="Max number of documents to process")
+    
+    # Create mutually exclusive group for date vs accessions
+    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group.add_argument("--date", type=validate_date, help="Target date (YYYY-MM-DD)")
+    input_group.add_argument("--accessions", nargs="+", help="Specific accession numbers to process")
+    
     parser.add_argument("--include_forms", nargs="*", help="Only include specific form types (e.g. 10-K 8-K)")
     
     # Optional placeholder for --skip_forms, not yet implemented
@@ -55,8 +60,12 @@ def main():
 
     orchestrator = FilingDocumentsOrchestrator(use_cache=False)
     try:
-        log_info(f"[CLI] Starting filing document ingestion for {args.date} (limit={args.limit})")
-        orchestrator.run(target_date=args.date, limit=args.limit, include_forms=args.include_forms)
+        if args.date:
+            log_info(f"[CLI] Starting filing document ingestion for {args.date}")
+            orchestrator.run(target_date=args.date, include_forms=args.include_forms)
+        else:
+            log_info(f"[CLI] Processing specific accessions: {args.accessions}")
+            orchestrator.run(accession_filters=args.accessions)
     except Exception as e:
         log_error(f"[CLI] Filing document ingestion failed: {e}")
         sys.exit(1)

@@ -119,7 +119,8 @@ class SgmlDownloader(SECDownloader):
             year = f"20{year_short}"  # Assuming all years are 2000+
             
         key = (cik, accession_number, year)
-        url = construct_sgml_txt_url(cik, accession_number.replace('-', ''))
+        # Let construct_sgml_txt_url handle dash formatting consistently
+        url = construct_sgml_txt_url(cik, accession_number)
         
         # Update url_cache with this URL for future lookups
         if key in self.memory_cache:
@@ -148,7 +149,7 @@ class SgmlDownloader(SECDownloader):
             else:
                 log_info(f"♻️ Cache stale for SGML: {accession_number} — re-downloading.")
 
-        url = construct_sgml_txt_url(cik, accession_number)
+        # URL already constructed at line 123, reusing the same approach
         log_info(f"📥 Downloading SGML from SEC for {accession_number}")
         content = self.download_html(url)
 

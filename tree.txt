@@ -1,11 +1,13 @@
 ./
 ├── CLAUDE.md
 ├── README.md
+├── Todos.md
 ├── __init__,py
 ├── docker-compose.yml
 ├── requirements.txt
 └── tree.txt
 ├── archive/
+│   ├── form4_xml_downloader.py
 │   ├── html_extractors.py
 │   ├── test_cli_ingestion.py
 │   └── test_daily_ingestion_orchestrator.py
@@ -20,16 +22,23 @@
 │   ├── models/
 │   │   ├── daily_index_metadata.py
 │   │   ├── exhibit_metadata.py
+│   │   ├── index_record_model.py
 │   │   ├── parsed_result_model.py
 │   │   ├── parsed_sgml_metadata.py
 │   │   └── xml_metadata.py
 │   ├── orchestrators/
 │   │   └── xml_orchestrator_base.py
+│   │   ├── legacy/
+│   │   │   ├── batch_sgml_ingestion_orchestrator.py
+│   │   │   ├── daily_index_orchestrator.py
+│   │   │   ├── embedded_doc_orchestrator.py
+│   │   │   └── sgml_doc_orchestrator.py
 │   ├── parsers/
 │   │   ├── daily_index_parser.py
 │   │   ├── form4_indexer.py
 │   │   └── sgml_document_processor.py
 │   ├── scripts/
+│   │   ├── backfill_xml_exhibits.py
 │   │   ├── debug_inspect_joined_sgml.py
 │   │   ├── ingest_daily_index.py
 │   │   ├── ingest_from_source.py
@@ -46,15 +55,18 @@
 │   │   ├── daily_index_writer.py
 │   │   ├── filing_writer.py
 │   │   ├── parsed_sgml_writer.py
-│   │   └── sgml_doc_writer.py
+│   │   ├── sgml_doc_writer.py
+│   │   └── xml_metadata_writer.py
 ├── collectors/
 │   ├── README.md
 │   └── base_collector.py
 │   ├── crawler_idx/
+│   │   ├── README.md
 │   │   ├── filing_documents_collector.py
 │   │   ├── filing_metadata_collector.py
 │   │   └── sgml_disk_collector.py
 │   ├── submissions_api/
+│   │   ├── README.md
 │   │   └── submissions_collector.py
 ├── config/
 │   ├── README.md
@@ -72,34 +84,22 @@
 │   ├── stop_postgres.bat
 │   └── tree_view.py
 ├── docs/
-│   ├── 8k_item_codes.txt
-│   ├── CLAUDE_db_architecture_pipeline_reco.md
-│   ├── CLAUDE_filing_issuer_reporter_relationship_handling.md
-│   ├── CLAUDE_form_cik_summary.md
-│   ├── CLAUDE_multi_cik_relationship_model.md
-│   ├── CLAUDE_sgml_tag_analysis.md
-│   ├── CLAUDE_to_do.md
-│   ├── SEC_Form_Analysis_Priority.csv
-│   ├── claude_code_relationship_implementation_prompt.md
-│   ├── cleaning_and_parsing.md
-│   ├── data_symlink_handling.md
-│   ├── dataclass_architecture.md
-│   ├── folder_structure.md
-│   ├── form4_entity_and_transaction_extraction.md
-│   ├── form4_entity_extraction.md
-│   ├── form4_extraction_issues.md
-│   ├── form4_processing_documentation.md
-│   ├── mapping_filings_to_fiscal_periods.md
-│   ├── parsers_subclass_specialization.md
-│   ├── pipeline_overview.md
-│   ├── project_naming_and_git_update.md
-│   ├── readme-form-filtering.md
-│   ├── sec_forms.md
-│   └── universal_script_header.md
+│   ├── to_sort/
+│   │   ├── 8k_item_codes.txt
+│   │   ├── CLAUDE_form_cik_summary.md
+│   │   ├── CLAUDE_multi_cik_relationship_model.md
+│   │   ├── CLAUDE_sgml_tag_analysis.md
+│   │   ├── CLAUDE_to_do.md
+│   │   ├── dataclass_architecture.md
+│   │   ├── form4_entity_and_transaction_extraction.md
+│   │   ├── form4_entity_extraction.md
+│   │   ├── form4_extraction_issues.md
+│   │   ├── form4_processing_documentation.md
+│   │   ├── readme-form-filtering.md
+│   │   └── sec_forms.md
 ├── downloaders/
 │   ├── README.md
 │   ├── base_downloader.py
-│   ├── form4_xml_downloader.py
 │   ├── sec_downloader.py
 │   └── sgml_downloader.py
 ├── external_data/
@@ -142,7 +142,6 @@
 │   │   │   ├── form4_relationship_orm.py
 │   │   │   └── form4_transaction_orm.py
 │   ├── schemas/
-│   │   └── index_record_model.py
 ├── monitors/
 │   └── README.md
 ├── notebooks/
@@ -171,14 +170,11 @@
 │   │   ├── filing_metadata_orchestrator.py
 │   │   └── sgml_disk_orchestrator.py
 │   ├── forms/
+│   │   ├── README.md
 │   │   ├── __init__.py
 │   │   └── form4_orchestrator.py
-│   ├── legacy/
-│   │   ├── batch_sgml_ingestion_orchestrator.py
-│   │   ├── daily_index_orchestrator.py
-│   │   ├── embedded_doc_orchestrator.py
-│   │   └── sgml_doc_orchestrator.py
 │   ├── submissions_api/
+│   │   ├── README.md
 │   │   └── submissions_ingestion_orchestrator.py
 ├── output/
 │   ├── 0001835632_metadata.json
@@ -193,12 +189,14 @@
 │   ├── filing_parser_manager.py
 │   └── index_page_parser.py
 │   ├── forms/
+│   │   ├── README.md
 │   │   ├── form10k_parser.py
 │   │   ├── form3_parser.py
 │   │   ├── form4_parser.py
 │   │   ├── form8k_parser.py
 │   │   └── forms1_parser.py
 │   ├── html/
+│   │   └── README.md
 │   ├── idx/
 │   │   ├── README.md
 │   │   └── idx_parser.py
@@ -208,16 +206,22 @@
 │   │   │   ├── sgml_document_indexer.py
 │   │   │   └── sgml_indexer_factory.py
 │   │   │   ├── forms/
+│   │   │   │   ├── README.md
 │   │   │   │   ├── form4-sgml-analysis.md
 │   │   │   │   ├── form4_sgml_indexer.py
 │   │   │   │   └── specialized_form_db_schema_proposal.md
 │   ├── utils/
+│   │   ├── README.md
 │   │   └── parser_utils.py
 │   ├── xbrl/
+│   │   └── README.md
+│   ├── xml/
+│   │   └── README.md
 ├── scripts/
 │   ├── README.md
 │   └── __init__.py
 │   ├── crawler_idx/
+│   │   ├── README.md
 │   │   ├── run_daily_documents_ingest.py
 │   │   ├── run_daily_metadata_ingest.py
 │   │   ├── run_daily_pipeline_ingest.py
@@ -228,12 +232,14 @@
 │   │   ├── process_company_filings.py
 │   │   └── test_postgres_connection.py
 │   ├── forms/
+│   │   ├── README.md
 │   │   ├── __init__.py
 │   │   └── run_form4_ingest.py
 │   ├── submissions_api/
+│   │   ├── README.md
 │   │   └── ingest_submissions.py
 │   ├── tools/
-│   │   ├── backfill_xml_exhibits.py
+│   │   ├── README.md
 │   │   ├── debug_form_filtering.py
 │   │   ├── debug_form_validation.py
 │   │   └── test_form_validation.py
@@ -241,6 +247,7 @@
 │   ├── cleanup/
 │   │   └── clear_test_records.sql
 │   ├── create/
+│   │   └── README.md
 │   │   ├── crawler_idx/
 │   │   │   ├── filing_documents.sql
 │   │   │   └── filing_metadata.sql
@@ -248,8 +255,7 @@
 │   │   │   ├── entities.sql
 │   │   │   ├── form4_filings.sql
 │   │   │   ├── form4_relationships.sql
-│   │   │   ├── form4_transactions.sql
-│   │   │   └── xml_metadata.sql
+│   │   │   └── form4_transactions.sql
 │   │   ├── submissions_api/
 │   │   │   ├── companies_metadata.sql
 │   │   │   └── submissions_metadata.sql
@@ -427,9 +433,10 @@
 │   │   ├── filing_documents_writer.py
 │   │   └── filing_metadata_writer.py
 │   ├── forms/
-│   │   ├── form4_writer.py
-│   │   └── xml_metadata_writer.py
+│   │   ├── README.md
+│   │   └── form4_writer.py
 │   ├── shared/
+│   │   ├── README.md
 │   │   ├── entity_writer.py
 │   │   └── raw_file_writer.py
 │   ├── submissions_api/

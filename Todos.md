@@ -4,39 +4,16 @@ This document lists high-priority architectural and feature improvements for the
 
 ## Architectural Improvements
 
-### 1. Refactor Form 4 SGML/XML Processing
+### 1. ~~Refactor Form 4 SGML/XML Processing~~ (Resolved through documentation)
 
-**Issue**: Currently, XML parsing responsibilities are mixed into SGML indexing code, specifically in `parsers/sgml/indexers/forms/form4_sgml_indexer.py`. This creates architectural confusion and makes the code harder to maintain.
+- [x] Updated README.md files in parsers directories to document the intentional hybrid approach to SGML/XML processing
 
-**Solution**: Separate SGML indexing and XML parsing responsibilities:
+### 2. ~~Implement Consistent Filing Processing Architecture~~ (Resolved through documentation)
 
-- [ ] Create a dedicated `parsers/xml/forms/form4_xml_parser.py` component
-- [ ] Extract XML parsing logic from `Form4SgmlIndexer` into this new component
-- [ ] Update `Form4SgmlIndexer` to focus solely on SGML indexing and XML extraction
-- [ ] Modify the processing pipeline to connect these components appropriately
-- [ ] Update tests to reflect the new architecture
-
-**Benefits**:
-- Clearer separation of concerns
-- Better alignment with directory structure
-- Improved maintainability and testability
-- Easier extension to other form types
-
-### 2. Implement Consistent Filing Processing Architecture
-
-**Issue**: Different form types are processed in inconsistent ways, making the system harder to understand and extend.
-
-**Solution**: Standardize the filing processing architecture:
-
-- [ ] Define clear interfaces for each stage of processing (indexing, parsing, writing)
-- [ ] Ensure consistent dataflow between components
-- [ ] Implement consistent error handling and validation across all form types
-- [ ] Document the standard processing flow for future form type implementations
-
-**Benefits**:
-- More predictable codebase
-- Easier onboarding for new developers
-- Faster implementation of new form types
+- [x] Updated README.md files to document the inherent diversity of SEC filing formats
+- [x] Documented the necessary flexibility in processing different form types
+- [x] Provided clear patterns for implementing new form processors while acknowledging natural variations
+- [x] Focused on documentation consistency rather than enforcing rigid architecture
 
 ## Feature Improvements
 

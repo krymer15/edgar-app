@@ -225,9 +225,15 @@ Each orchestrator has a dedicated CLI script for standalone operation:
 Each script supports a consistent set of arguments:
 
 - `--date YYYY-MM-DD` - Target date for processing
-- `--limit N` - Limit the number of records processed
 - `--include-forms FORM1 FORM2...` - Filter by form types
 - `--accessions ACC1 ACC2...` - Process specific accession numbers
+
+The `--limit` parameter has a standardized behavior across orchestrators:
+
+- In `run_daily_pipeline_ingest.py` - Limits the number of accession numbers processed
+- In `run_daily_metadata_ingest.py` - Limits the number of filing records to collect
+- **Important**: When specific accessions are provided via `--accessions`, the limit is ignored
+- This ensures all documents within a selected filing are processed completely
 
 For the meta-orchestrator (`run_daily_pipeline_ingest.py`), additional arguments include:
 

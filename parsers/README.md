@@ -4,7 +4,7 @@ Parsers transform raw or cleaned text into structured objects. This directory co
 
 ## Architecture Overview
 
-The parsing system follows a layered approach with a clear distinction between **Indexers** and **Parsers**:
+The parsing system follows a layered approach with a conceptual distinction between **Indexers** and **Parsers**:
 
 1. **Indexers**: Extract document blocks, metadata, and pointers from container files
    - Located in `indexers/` subfolders (e.g., `sgml/indexers/`, `idx/`, etc.)
@@ -21,6 +21,24 @@ This separation ensures:
 - Reusable format-specific logic across pipelines
 - Clean separation of concerns
 - Specialized handling for different document types
+
+### Natural Ambiguities in SEC Filing Processing
+
+SEC filings have inherent format complexities that can blur the distinction between indexing and parsing:
+
+1. **Embedded Formats**: SGML container files (.txt) often contain embedded XML, HTML, or other formats.
+   - Example: Form 4 filings embed structured XML inside SGML containers
+   - This requires a multi-stage approach with both SGML indexing and XML parsing
+
+2. **Format Overlap**: Format classifications aren't always distinct.
+   - XBRL is a specialized subset of XML, making category distinction challenging
+   - Some indexers (like Form4SgmlIndexer) must do preliminary parsing to extract entity information before deep parsing
+
+3. **Dual-Role Components**: Some components perform both indexing and preliminary parsing.
+   - Form-specific SGML indexers extract basic metadata from SGML headers AND extract XML for full parsing
+   - The boundary between indexing and parsing blurs when extraction requires content understanding
+
+For this reason, the codebase structure represents the ideal separation, while some components might perform both duties. The code documentation in each module clarifies its specific responsibilities.
 
 ## Directory Structure
 

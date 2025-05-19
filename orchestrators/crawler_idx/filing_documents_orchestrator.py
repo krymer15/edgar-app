@@ -35,16 +35,18 @@ class FilingDocumentsOrchestrator(BaseOrchestrator):
                 log_info(f"[DOCS] Including forms: {include_forms}")
         
         try:
+            # If specific accessions are provided, ignore the limit parameter
+            # This ensures we process ALL documents for specified accessions
+            collector_limit = None if accession_filters else limit
+            
+            log_info(f"[DOCS] {'Processing specific accessions' if accession_filters else 'Using limit'}: {accession_filters or collector_limit}")
+            
             documents = self.collector.collect(
                 target_date=target_date,
-                limit=limit,
+                limit=collector_limit,  # Only apply limit when not using accession filters
                 accession_filters=accession_filters,
                 include_forms=include_forms
             )
-
-            # Optional safeguard if limit was only passed but not enforced inside collector
-            if limit and not accession_filters:
-                documents = documents[:limit]
 
             if accession_filters:
                 log_info(f"[DOCS] Indexed {len(documents)} documents filtered by {len(accession_filters)} accession(s)")

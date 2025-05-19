@@ -91,8 +91,8 @@ This script runs only Pipeline 2, which uses the metadata from Pipeline 1 to dow
 # Process documents for a specific date
 python -m scripts.crawler_idx.run_daily_documents_ingest --date 2025-05-12
 
-# Limit records
-python -m scripts.crawler_idx.run_daily_documents_ingest --date 2025-05-12 --limit 50
+# Process specific accession numbers
+python -m scripts.crawler_idx.run_daily_documents_ingest --accessions 0001234567-25-000001 0001234567-25-000002
 
 # Filter by form types
 python -m scripts.crawler_idx.run_daily_documents_ingest --date 2025-05-12 --include_forms 8-K 10-Q

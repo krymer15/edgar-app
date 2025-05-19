@@ -54,8 +54,12 @@ class FilingDocumentsCollector:
                 log_info(f"[DOCS] Filtering documents by form types: {include_forms}")
                 query = query.filter(FilingMetadata.form_type.in_(include_forms))
 
+        # Only apply limit when doing date-based queries without specific accessions
         if limit and not accession_filters:
+            log_info(f"[DOCS] Applying limit of {limit} to date-based query")
             query = query.limit(limit)
+        elif accession_filters:
+            log_info(f"[DOCS] Processing specific accessions: {accession_filters} (ignoring limit)")
 
         records = query.all()
 

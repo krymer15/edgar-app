@@ -79,6 +79,7 @@ Key features:
 - Integration with path_manager for standardized file paths
 - Returns strongly-typed dataclass objects
 - Shared instance can be used across pipeline stages for efficiency
+- Consistent URL construction for accession numbers with or without dashes
 
 ## Extension for Additional Form Types
 
