@@ -77,6 +77,13 @@ class Form4Parser(BaseParser):
         """
         Extract detailed issuer and reporting owner information from Form 4 XML.
         
+        Handles relationship flags (is_director, is_officer, etc.) with support
+        for both "1" and "true" values to accommodate different XML formats.
+        
+        Relationship flags are extracted from the XML elements like <isDirector>, <isOfficer>,
+        etc. and are expected to be either "1" or "true" for a True value. These flags
+        are used to determine the relationship between the issuer and reporting owner.
+        
         Args:
             root: XML root element
             
@@ -131,10 +138,18 @@ class Form4Parser(BaseParser):
             
             # Then get relationship information
             rel_el = owner_el.find("./reportingOwnerRelationship")
-            is_director = rel_el is not None and get_text(rel_el, "isDirector") == "1"
-            is_officer = rel_el is not None and get_text(rel_el, "isOfficer") == "1"
-            is_ten_percent_owner = rel_el is not None and get_text(rel_el, "isTenPercentOwner") == "1"
-            is_other = rel_el is not None and get_text(rel_el, "isOther") == "1"
+            
+            # More robust boolean flag handling
+            # Accept both "1" and "true" as True values
+            is_director_text = get_text(rel_el, "isDirector") if rel_el is not None else None
+            is_officer_text = get_text(rel_el, "isOfficer") if rel_el is not None else None
+            is_ten_percent_owner_text = get_text(rel_el, "isTenPercentOwner") if rel_el is not None else None
+            is_other_text = get_text(rel_el, "isOther") if rel_el is not None else None
+            
+            is_director = is_director_text == "1" or is_director_text == "true" if is_director_text else False
+            is_officer = is_officer_text == "1" or is_officer_text == "true" if is_officer_text else False
+            is_ten_percent_owner = is_ten_percent_owner_text == "1" or is_ten_percent_owner_text == "true" if is_ten_percent_owner_text else False
+            is_other = is_other_text == "1" or is_other_text == "true" if is_other_text else False
             
             officer_title = get_text(rel_el, "officerTitle") if is_officer else None
             other_text = get_text(rel_el, "otherText") if is_other else None
@@ -198,13 +213,19 @@ class Form4Parser(BaseParser):
     
     def extract_non_derivative_transactions(self, root) -> List[Dict[str, Any]]:
         """
-        Extract non-derivative transaction information from Form 4 XML.
+        Extract non-derivative transaction information from Form 4 XML,
+        including footnote references.
+        
+        This implementation includes full support for footnote extraction (Bug 3 fix).
+        The method uses multiple strategies to find footnote references in various
+        locations within the transaction XML structure, including direct footnoteId
+        elements and nested footnote references.
         
         Args:
             root: XML root element
             
         Returns:
-            List of non-derivative transaction dictionaries.
+            List of non-derivative transaction dictionaries with footnote IDs included.
         """
         def get_text(el, path):
             node = el.find(path)
@@ -212,6 +233,22 @@ class Form4Parser(BaseParser):
             
         transactions = []
         for txn in root.findall(".//nonDerivativeTransaction"):
+            # Extract footnote IDs - Bug 3 fix implementation
+            footnote_ids = []
+            
+            # Method 1: Direct footnoteId elements
+            for el in txn.findall(".//footnoteId"):
+                footnote_id = el.get("id")
+                if footnote_id and footnote_id not in footnote_ids:
+                    footnote_ids.append(footnote_id)
+            
+            # Method 2: Elements with footnoteId children
+            for element_with_footnote in txn.findall(".//*[footnoteId]"):
+                for footnote_el in element_with_footnote.findall("./footnoteId"):
+                    footnote_id = footnote_el.get("id")
+                    if footnote_id and footnote_id not in footnote_ids:
+                        footnote_ids.append(footnote_id)
+            
             transactions.append({
                 "securityTitle": get_text(txn, ".//securityTitle/value"),
                 "transactionDate": get_text(txn, ".//transactionDate/value"),
@@ -220,19 +257,26 @@ class Form4Parser(BaseParser):
                 "shares": get_text(txn, ".//transactionAmounts/transactionShares/value"),
                 "pricePerShare": get_text(txn, ".//transactionAmounts/transactionPricePerShare/value"),
                 "ownership": get_text(txn, ".//ownershipNature/directOrIndirectOwnership/value"),
-                "indirectOwnershipNature": get_text(txn, ".//ownershipNature/natureOfOwnership/value")
+                "indirectOwnershipNature": get_text(txn, ".//ownershipNature/natureOfOwnership/value"),
+                "footnoteIds": footnote_ids if footnote_ids else None  # Bug 3 fix: Include footnote IDs
             })
         return transactions
     
     def extract_derivative_transactions(self, root) -> List[Dict[str, Any]]:
         """
-        Extract derivative transaction information from Form 4 XML.
+        Extract derivative transaction information from Form 4 XML,
+        including footnote references.
+        
+        This implementation includes full support for footnote extraction (Bug 3 fix).
+        Derivative transactions often contain footnotes for exercise dates, expiration dates,
+        or conversion prices. This method extracts those footnote references using multiple
+        strategies to ensure all footnotes are captured correctly.
         
         Args:
             root: XML root element
             
         Returns:
-            List of derivative transaction dictionaries.
+            List of derivative transaction dictionaries with footnote IDs included.
         """
         def get_text(el, path):
             node = el.find(path)
@@ -240,6 +284,22 @@ class Form4Parser(BaseParser):
             
         transactions = []
         for txn in root.findall(".//derivativeTransaction"):
+            # Extract footnote IDs - Bug 3 fix implementation
+            footnote_ids = []
+            
+            # Method 1: Direct footnoteId elements
+            for el in txn.findall(".//footnoteId"):
+                footnote_id = el.get("id")
+                if footnote_id and footnote_id not in footnote_ids:
+                    footnote_ids.append(footnote_id)
+            
+            # Method 2: Elements with footnoteId children
+            for element_with_footnote in txn.findall(".//*[footnoteId]"):
+                for footnote_el in element_with_footnote.findall("./footnoteId"):
+                    footnote_id = footnote_el.get("id")
+                    if footnote_id and footnote_id not in footnote_ids:
+                        footnote_ids.append(footnote_id)
+                        
             transactions.append({
                 "securityTitle": get_text(txn, ".//securityTitle/value"),
                 "transactionDate": get_text(txn, ".//transactionDate/value"),
@@ -251,6 +311,7 @@ class Form4Parser(BaseParser):
                 "exerciseDate": get_text(txn, ".//exerciseDate/value"),
                 "expirationDate": get_text(txn, ".//expirationDate/value"),
                 "ownership": get_text(txn, ".//ownershipNature/directOrIndirectOwnership/value"),
-                "indirectOwnershipNature": get_text(txn, ".//ownershipNature/natureOfOwnership/value")
+                "indirectOwnershipNature": get_text(txn, ".//ownershipNature/natureOfOwnership/value"),
+                "footnoteIds": footnote_ids if footnote_ids else None  # Bug 3 fix: Include footnote IDs
             })
         return transactions

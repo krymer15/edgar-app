@@ -1,0 +1,68 @@
+(edgar-env) C:\Users\Kris\Dropbox\Safe Harbor\AI Projects\edgar-app>python -m scripts.forms.run_form4_ingest --accessions 0001610717-23-000035
+Loaded DATABASE_URL: postgresql://myuser:mypassword@localhost:5432/myagentdb
+[INFO] [FORM4] Initialized with shared downloader: False
+[INFO] [FORM4-CLI] Starting Form 4 processing for accessions: ['0001610717-23-000035']
+[INFO] [FORM4] Starting Form 4 processing run
+[INFO] [FORM4] Starting Form 4 processing for [accession list]
+[INFO] [FORM4] Found 1 Form 4 filings to process
+[INFO] [FORM4] Processing filing 0001610717-23-000035 (1/1)
+[INFO] [FORM4] Getting SGML content for 0001610717-23-000035
+[INFO] [FORM4] Downloading SGML for 0001610717-23-000035
+[INFO] [DEBUG] Checking SGML cache for: 0001610717-23-000035, year=2023
+[INFO] [DEBUG] Cache path resolved: ./test_data/cache_sgml\2023\1770787\0001610717-23-000035.txt
+[INFO] 📥 Downloading SGML from SEC for 0001610717-23-000035
+[DEBUG] [SELECTED PRIMARY] form4.xml
+[INFO] Extracted 2 reporting owners
+[INFO] Updated Form4FilingData with 1 relationships from XML
+[INFO] Attached issuer_entity and 1 owner_entities directly to Form4FilingData
+[INFO] Found 2 non-derivative and 1 derivative transactions in XML
+[INFO] Added non-derivative transaction: Class A Common Stock on 2023-05-11
+[INFO] Added non-derivative transaction: Class A Common Stock on 2023-05-11
+[INFO] Added derivative transaction: Stock Option (right to buy) on 2023-05-11
+[INFO] Added 3 transactions from parsed XML
+[INFO] Using default relationship ID 75aebbc0-b688-4c0e-aebb-d6df0b76d3d6 for transactions in 0001610717-23-000035
+[INFO] Linked 3 transactions to relationships for 0001610717-23-000035
+[INFO] Created new Form 4 filing record for 0001610717-23-000035
+[INFO] Using entity objects attached directly to Form4FilingData for 0001610717-23-000035
+[INFO] Committed issuer and 1 owner entities
+[INFO] Entity ID difference detected:
+[INFO]   Issuer: DB ID 511ef346-7001-47e1-b5ce-348a7d022fa4 vs relationship ID 4bae5b85-556f-4b72-8cd3-0bf7da20f009
+[INFO]   Owner: DB ID 06f7a629-73fc-425a-8176-38ce6510ce55 vs relationship ID 4036e350-ec0a-4b09-a427-b8ed1523dc9c
+[INFO] Committed entities to database before creating relationships
+[INFO] Created relationship between:
+[INFO]   Issuer: 10x Genomics, Inc. (ID: 511ef346-7001-47e1-b5ce-348a7d022fa4, CIK: 1770787)
+[INFO]   Owner: Mammen Mathai (ID: 06f7a629-73fc-425a-8176-38ce6510ce55, CIK: 1421050)
+[INFO]   Note: Issuer ID from relationship data (4bae5b85-556f-4b72-8cd3-0bf7da20f009) differs from database entity ID (511ef346-7001-47e1-b5ce-348a7d022fa4)
+[INFO]   Note: Owner ID from relationship data (4036e350-ec0a-4b09-a427-b8ed1523dc9c) differs from database entity ID (06f7a629-73fc-425a-8176-38ce6510ce55)
+[INFO] Committed relationships to database before creating transactions
+[INFO] Processing 3 transactions
+[INFO] Found relationship by ID 75aebbc0-b688-4c0e-aebb-d6df0b76d3d6
+[INFO] Creating transaction: Class A Common Stock on 2023-05-11
+[INFO]   Transaction code: M
+[INFO]   Shares: 200000.0, Price: 1.16
+[INFO]   Using relationship ID: f86a6e6c-0170-476a-b728-c9fde85476c8
+[INFO]   Using form4_filing_id: bacce95d-0063-4c1c-bab3-04d5676cbad0
+[INFO] Added transaction: Class A Common Stock on 2023-05-11 (ID: 45a5642b-8058-41c0-9a44-fad601a56a56)
+[INFO] Found relationship by ID 75aebbc0-b688-4c0e-aebb-d6df0b76d3d6
+[INFO] Creating transaction: Class A Common Stock on 2023-05-11
+[INFO]   Transaction code: S
+[INFO]   Shares: 33000.0, Price: 52.8208
+[INFO]   Using relationship ID: f86a6e6c-0170-476a-b728-c9fde85476c8
+[INFO]   Using form4_filing_id: bacce95d-0063-4c1c-bab3-04d5676cbad0
+[INFO] Added transaction: Class A Common Stock on 2023-05-11 (ID: e804eea3-9324-45d2-91fd-efd2de61d90f)
+[INFO] Found relationship by ID 75aebbc0-b688-4c0e-aebb-d6df0b76d3d6
+[INFO] Creating transaction: Stock Option (right to buy) on 2023-05-11
+[INFO]   Transaction code: M
+[INFO]   Shares: 200000.0, Price: 0.0
+[INFO]   Using relationship ID: f86a6e6c-0170-476a-b728-c9fde85476c8
+[INFO]   Using form4_filing_id: bacce95d-0063-4c1c-bab3-04d5676cbad0
+[INFO] Added transaction: Stock Option (right to buy) on 2023-05-11 (ID: 00243068-1889-4e18-97f6-96605a3fcf2f)
+[INFO] Committed all transactions to database
+[INFO] Successfully wrote Form 4 data for 0001610717-23-000035
+[INFO] [FORM4] Successfully processed 0001610717-23-000035
+[INFO] [FORM4] Completed Form 4 processing: 1 succeeded, 0 failed, 0 skipped
+[INFO] [FORM4] Completed Form 4 processing run
+[INFO] 🎯 Form 4 processing complete in 0.48 seconds
+[INFO]    - Processed: 1
+[INFO]    - Succeeded: 1
+[INFO]    - Failed: 0

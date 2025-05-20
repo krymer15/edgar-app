@@ -10,6 +10,7 @@
 - Run scripts in python using thr `-m` tag. For example, `python -m scripts.crawler_idx.run_daily_metadata_ingest`.
 - Do not yet ask to run tet scripts or execute any code until further notice. In the meantime, I will execute all scripts on a separate platform running Windows 10 using `cmd` terminal in VS Code. 
 - Update `README.md` files in each folder or subfolder after implementations have been completed.
+- Add brief but useful comments to your code edits where applicable while edting. Also follow up with updating documentation in the README.md file(s) of any associated folders including on the parent or child folder levels.
 
 # Code style
 - Maintain the proper separation of concerns when patching code. Do not patch individual files without thinking about the impact on the rest of the codebase.

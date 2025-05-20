@@ -61,6 +61,25 @@ The implementation reflects the practical realities of SEC filing formats rather
    - The indexer must extract from both and reconcile potentially conflicting information
    - It uses Form4Parser for the XML portion but must integrate those results with SGML-derived data
 
+3. **Entity Deduplication and Flag Setting**:
+   - Owner entities are deduplicated by CIK to ensure accurate relationship counts
+   - The has_multiple_owners flag is explicitly set based on actual relationship count
+   - This ensures consistency between extracted entities and form flags
+
+4. **Footnote Reference Handling**:
+   - Extracts footnote references from various XML structures using multiple extraction strategies
+   - Properly transfers footnote IDs from parsed XML to Form4TransactionData objects
+   - Uses comprehensive logging to track footnote detection and transfer
+   - Manages relationship between transactions and their footnote references
+   - Ensures that database records contain the correct footnote_ids for reporting
+
+5. **Relationship Metadata Population**:
+   - Populates the relationship_details field with structured JSON metadata
+   - Includes comprehensive information about issuers, owners, and their relationships
+   - Preserves entity types, role information, and specialized role attributes
+   - Creates a hierarchical structure that facilitates analytics and reporting
+   - Maintains consistent formatting of CIK values and dates for database consistency
+
 This hybrid approach acknowledges the reality that Form 4 filings require both SGML indexing and XML parsing to extract complete information. While conceptually we separate indexers and parsers, form-specific indexers like Form4SgmlIndexer necessarily bridge these responsibilities.
 
 ## Actual Document Processing Flow

@@ -243,16 +243,17 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
     
     def _extract_reporting_owners(self, txt_contents: str) -> List[Dict]:
         """
-        Extract all reporting owners from SGML content.
+        Extract all reporting owners from SGML content with deduplication.
         
         This method handles Form 4 SGML which has a specific structure for REPORTING-OWNER.
         The method searches for REPORTING-OWNER sections in the SGML content and extracts
-        the CIK and name information for each owner.
+        the CIK and name information for each owner, ensuring uniqueness by CIK.
         
         Note: The XML-based extraction is now preferred and handled separately
         by the Form4Parser. This method is kept for backward compatibility.
         """
         owners = []
+        owner_ciks = set()  # Track unique CIKs to avoid duplication
         
         # First try with explicit REPORTING-OWNER tags
         start_pos = 0
@@ -290,30 +291,36 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                 # Extract name
                 name = self._extract_value(owner_data_section, "COMPANY CONFORMED NAME:")
                 
-                # If we found valid owner data, create an entity
+                # If we found valid owner data, create an entity if not already seen
                 if cik:
-                    # Determine if individual or company
-                    entity_type = "person"
-                    if name and any(business_term in name.lower() for business_term in ["corp", "inc", "llc", "lp", "trust", "partners", "fund"]):
-                        entity_type = "company"
-                    
-                    # Create owner data dictionary
-                    owner_data = {
-                        "entity": EntityData(
-                            cik=cik,
-                            name=name or f"Unknown Owner ({cik})",
-                            entity_type=entity_type
-                        )
-                    }
-                    
-                    # Initialize relationship fields (will be populated from XML later)
-                    owner_data["is_director"] = False
-                    owner_data["is_officer"] = False
-                    owner_data["is_ten_percent_owner"] = False
-                    owner_data["is_other"] = False
-                    owner_data["officer_title"] = None
-                    
-                    owners.append(owner_data)
+                    # Check if this CIK already exists - DEDUPLICATION HERE
+                    if cik in owner_ciks:
+                        log_info(f"Skipping duplicate owner CIK: {cik}")
+                    else:
+                        owner_ciks.add(cik)
+                        
+                        # Determine if individual or company
+                        entity_type = "person"
+                        if name and any(business_term in name.lower() for business_term in ["corp", "inc", "llc", "lp", "trust", "partners", "fund"]):
+                            entity_type = "company"
+                        
+                        # Create owner data dictionary
+                        owner_data = {
+                            "entity": EntityData(
+                                cik=cik,
+                                name=name or f"Unknown Owner ({cik})",
+                                entity_type=entity_type
+                            )
+                        }
+                        
+                        # Initialize relationship fields (will be populated from XML later)
+                        owner_data["is_director"] = False
+                        owner_data["is_officer"] = False
+                        owner_data["is_ten_percent_owner"] = False
+                        owner_data["is_other"] = False
+                        owner_data["officer_title"] = None
+                        
+                        owners.append(owner_data)
             
             # Move to the next section
             start_pos = owner_end + 1
@@ -330,11 +337,10 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                 cik_matches = re.finditer(r"CENTRAL INDEX KEY:\s+(\d+)", header_section)
                 
                 # Create an owner for each unique CIK found
-                unique_ciks = set()
                 for match in cik_matches:
                     cik = match.group(1)
-                    if cik != self.cik and cik not in unique_ciks:  # Skip issuer CIK
-                        unique_ciks.add(cik)
+                    if cik != self.cik and cik not in owner_ciks:  # Skip issuer CIK and already seen owners
+                        owner_ciks.add(cik)
                         
                         # Try to find name near this CIK mention
                         surrounding_text = header_section[max(0, match.start() - 100):min(len(header_section), match.start() + 100)]
@@ -361,9 +367,9 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
         
         # Log the results
         if owners:
-            log_info(f"Extracted {len(owners)} reporting owners")
+            log_info(f"Extracted {len(owners)} unique entities")
         else:
-            log_warn(f"No reporting owners found in filing {self.accession_number}")
+            log_warn(f"No reporting owner entities found in filing {self.accession_number}")
         
         return owners
     
@@ -482,10 +488,13 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                             is_ten_percent_el = rel_element.find("isTenPercentOwner") 
                             is_other_el = rel_element.find("isOther")
                             
-                            is_director = is_director_el is not None and is_director_el.text == "1"
-                            is_officer = is_officer_el is not None and is_officer_el.text == "1"
-                            is_ten_percent_owner = is_ten_percent_el is not None and is_ten_percent_el.text == "1"
-                            is_other = is_other_el is not None and is_other_el.text == "1"
+                            # More robust boolean flag handling - accept both "1" and "true" values
+                            # This handles different formats found in SEC XML files where boolean flags
+                            # may be represented as either numeric ("1"/"0") or string ("true"/"false") values
+                            is_director = is_director_el is not None and (is_director_el.text == "1" or is_director_el.text == "true")
+                            is_officer = is_officer_el is not None and (is_officer_el.text == "1" or is_officer_el.text == "true")
+                            is_ten_percent_owner = is_ten_percent_el is not None and (is_ten_percent_el.text == "1" or is_ten_percent_el.text == "true")
+                            is_other = is_other_el is not None and (is_other_el.text == "1" or is_other_el.text == "true")
                             
                             officer_title = None
                             if is_officer:
@@ -558,7 +567,24 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
             log_error(f"Error parsing Form 4 XML: {e}")
     
     def _parse_transaction(self, txn_element: ET.Element, is_derivative: bool) -> Optional[Form4TransactionData]:
-        """Parse a transaction element from Form 4 XML."""
+        """
+        Parse a transaction element from Form 4 XML with improved footnote handling.
+        
+        Bug 3 Fix Implementation:
+        This method has been enhanced to comprehensively extract footnote references
+        from Form 4 XML transaction elements. It uses multiple strategies to find
+        footnote IDs in various XML structures, as footnotes can appear in different
+        locations depending on which field they reference. The method handles
+        both direct footnoteId elements and footnoteId attributes on various elements.
+        
+        Args:
+            txn_element: The XML Element representing a transaction
+            is_derivative: Whether this is a derivative transaction
+            
+        Returns:
+            Form4TransactionData object with all transaction details including footnote IDs,
+            or None if the transaction couldn't be parsed
+        """
         try:
             # Extract security title
             security_title_el = txn_element.find(".//securityTitle/value")
@@ -632,12 +658,45 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                 exercise_date = None
                 expiration_date = None            
             
-            # Extract footnote references
+            # Bug 3 Fix: Comprehensive footnote extraction using multiple strategies
             footnote_ids = []
+            
+            # Method 1: Direct footnoteId elements within the transaction
+            # These are standalone <footnoteId id="F1"/> elements
+            for el in txn_element.findall(".//footnoteId"):
+                footnote_id = el.get("id")
+                if footnote_id and footnote_id not in footnote_ids:
+                    footnote_ids.append(footnote_id)
+                    log_info(f"Found footnote ID (direct): {footnote_id} in {security_title}")
+            
+            # Method 2: Elements with footnoteId attribute
+            # Some elements have a footnoteId attribute directly: <element footnoteId="F1">
             for el in txn_element.findall(".//*[@footnoteId]"):
                 footnote_id = el.get("footnoteId")
                 if footnote_id and footnote_id not in footnote_ids:
                     footnote_ids.append(footnote_id)
+                    log_info(f"Found footnote ID (attribute): {footnote_id} in {security_title}")
+            
+            # Method 3: Elements with footnoteId children
+            # Some elements contain child footnoteId elements: <element><footnoteId id="F1"/></element>
+            for element_with_footnote in txn_element.findall(".//*[footnoteId]"):
+                for footnote_el in element_with_footnote.findall("./footnoteId"):
+                    footnote_id = footnote_el.get("id")
+                    if footnote_id and footnote_id not in footnote_ids:
+                        footnote_ids.append(footnote_id)
+                        log_info(f"Found footnote ID (child element): {footnote_id} in {security_title}")
+            
+            # Method 4: Check specific elements where footnotes are commonly found
+            # Based on SEC form structure analysis, certain elements frequently contain footnotes
+            for specific_path in [".//exerciseDate", ".//transactionPricePerShare", ".//securityTitle"]:
+                specific_el = txn_element.find(specific_path)
+                if specific_el is not None:
+                    for child in specific_el:
+                        if child.tag == 'footnoteId' and 'id' in child.attrib:
+                            footnote_id = child.attrib['id']
+                            if footnote_id not in footnote_ids:
+                                footnote_ids.append(footnote_id)
+                                log_info(f"Found footnote ID (specific path): {footnote_id} in {specific_path}")
             
             return Form4TransactionData(
                 security_title=security_title,
@@ -649,7 +708,7 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                 ownership_nature=ownership_nature,
                 is_derivative=is_derivative,
                 equity_swap_involved=equity_swap_involved,
-                footnote_ids=footnote_ids,
+                footnote_ids=footnote_ids,  # Bug 3 Fix: Set the extracted footnote IDs
                 # Add the new fields:
                 conversion_price=conversion_price,
                 exercise_date=exercise_date,
@@ -736,6 +795,14 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
         Convert transaction dictionaries from Form4Parser to Form4TransactionData objects
         and add them to Form4FilingData.
         
+        Bug 5 Fix Implementation:
+        This method properly transfers footnote IDs extracted by Form4Parser
+        to the Form4TransactionData objects that will be persisted to the database.
+        The problem previously was that even when Form4Parser correctly extracted
+        footnote references, they were not being transferred to the transaction objects
+        created in this method. This implementation fixes that issue by properly
+        extracting and setting footnote_ids on all transaction objects.
+        
         Args:
             form4_data: The Form4FilingData to update
             non_derivative_transactions: List of non-derivative transaction dictionaries
@@ -771,6 +838,13 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                     except ValueError:
                         pass
                 
+                # Bug 5 Fix: Extract footnote_ids from the transaction dictionary
+                # This is the critical part that ensures footnotes are transferred from
+                # the parser output to the transaction objects
+                footnote_ids = txn_dict.get('footnoteIds', [])
+                if footnote_ids:
+                    log_info(f"Non-derivative transaction has footnoteIds: {footnote_ids}")
+                
                 # Create transaction object
                 transaction = Form4TransactionData(
                     security_title=txn_dict.get('securityTitle', 'Unknown Security'),
@@ -781,7 +855,8 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                     price_per_share=price_per_share,
                     ownership_nature=txn_dict.get('ownership'),
                     indirect_ownership_explanation=txn_dict.get('indirectOwnershipNature'),
-                    is_derivative=False
+                    is_derivative=False,
+                    footnote_ids=footnote_ids if footnote_ids else []  # Bug 5 Fix: Set footnote_ids
                 )
                 
                 # Add to form4_data
@@ -841,6 +916,13 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                     except ValueError:
                         pass
                 
+                # Bug 5 Fix: Extract footnote_ids from the transaction dictionary
+                # Derivative transactions commonly have footnotes for exercise dates, 
+                # expiration dates, or conversion/exercise prices
+                footnote_ids = txn_dict.get('footnoteIds', [])
+                if footnote_ids:
+                    log_info(f"Derivative transaction has footnoteIds: {footnote_ids}")
+                
                 # Create transaction object
                 transaction = Form4TransactionData(
                     security_title=txn_dict.get('securityTitle', 'Unknown Security'),
@@ -854,7 +936,8 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                     is_derivative=True,
                     conversion_price=conversion_price,
                     exercise_date=exercise_date,
-                    expiration_date=expiration_date
+                    expiration_date=expiration_date,
+                    footnote_ids=footnote_ids if footnote_ids else []  # Bug 5 Fix: Set footnote_ids
                 )
                 
                 # Add to form4_data
@@ -865,7 +948,7 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                 log_error(f"Error creating derivative transaction: {e}")
                 continue
         
-        log_info(f"Added {len(non_derivative_transactions) + len(derivative_transactions)} transactions from parsed XML")
+        log_info(f"Added {len(non_derivative_transactions) + len(derivative_transactions)} transactions from parsed XML with footnote IDs")
     
     def _link_transactions_to_relationships(self, form4_data: Form4FilingData) -> None:
         """
@@ -894,6 +977,8 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
     def _update_form4_data_from_xml(self, form4_data: Form4FilingData, entity_data: Dict[str, Any], parsed_xml: Dict = None) -> None:
         """
         Update Form4FilingData with more accurate entity information from XML.
+        
+        Bug 6 Fix: Populates the relationship_details field with structured JSON metadata.
         
         Args:
             form4_data: The Form4FilingData object to update
@@ -933,7 +1018,44 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
             filing_date = form4_data.period_of_report or datetime.now().date()
             
             for owner_entity, rel_data in zip(owner_entities, relationships):
-                # Create relationship with proper entity IDs
+                # Bug 6 Fix: Create relationship_details dictionary with structured metadata
+                relationship_details = {
+                    "filing_date": filing_date.isoformat(),
+                    "accession_number": self.accession_number,
+                    "form_type": "4",
+                    "issuer": {
+                        "name": issuer_entity.name,
+                        "cik": issuer_entity.cik
+                    },
+                    "owner": {
+                        "name": owner_entity.name,
+                        "cik": owner_entity.cik,
+                        "type": owner_entity.entity_type
+                    },
+                    "roles": []
+                }
+                
+                # Add role information
+                if rel_data.get("is_director", False):
+                    relationship_details["roles"].append("director")
+                if rel_data.get("is_officer", False):
+                    officer_role = {
+                        "type": "officer"
+                    }
+                    if rel_data.get("officer_title"):
+                        officer_role["title"] = rel_data.get("officer_title")
+                    relationship_details["roles"].append(officer_role)
+                if rel_data.get("is_ten_percent_owner", False):
+                    relationship_details["roles"].append("10_percent_owner")
+                if rel_data.get("is_other", False):
+                    other_role = {
+                        "type": "other"
+                    }
+                    if rel_data.get("other_text"):
+                        other_role["description"] = rel_data.get("other_text")
+                    relationship_details["roles"].append(other_role)
+                
+                # Create relationship with proper entity IDs and details
                 relationship = Form4RelationshipData(
                     issuer_entity_id=issuer_entity.id,
                     owner_entity_id=owner_entity.id,
@@ -944,6 +1066,7 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                     is_other=rel_data.get("is_other", False),
                     officer_title=rel_data.get("officer_title"),
                     other_text=rel_data.get("other_text"),
+                    relationship_details=relationship_details  # Bug 6 Fix: Add relationship_details
                 )
                 
                 # Add to form4_data
@@ -951,6 +1074,11 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                 
             log_info(f"Updated Form4FilingData with {len(form4_data.relationships)} relationships from XML")
             log_info(f"Attached issuer_entity and {len(owner_entities)} owner_entities directly to Form4FilingData")
+            
+            # Fix for Bug 4: Explicitly update the has_multiple_owners flag based on the 
+            # actual number of relationships rather than the initial owner count
+            form4_data.has_multiple_owners = len(form4_data.relationships) > 1
+            log_info(f"Set has_multiple_owners to {form4_data.has_multiple_owners} based on {len(form4_data.relationships)} relationships")
             
         except Exception as e:
             log_error(f"Error updating Form4FilingData from XML: {e}")

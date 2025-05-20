@@ -163,13 +163,22 @@ Structured Data Output → Ready for database writers
 
 1. **SGML Indexing Layer**
    - `SgmlDocumentIndexer` extracts document blocks from SGML `.txt` files
-   - Form-specific indexer may extract embedded XML content
+   - `Form4SgmlIndexer` extracts entity information and embedded XML content
+   - Deduplicates owners by CIK to ensure accurate entity counts
+   - Extracts footnote references from XML using multiple strategies
 
 2. **Form Parsing Layer**
    - `Form4Parser` processes the extracted XML content
+   - Handles both "1" and "true" values for relationship flags
    - Extracts issuer, owner, and transaction data
+   - Captures footnote IDs for all transaction types
 
-3. **Output Creation**
+3. **Relationship and Metadata Enhancement**
+   - Populates relationship_details field with structured JSON metadata
+   - Updates has_multiple_owners flag based on actual relationship count
+   - Transfers footnote IDs to transaction objects for database storage
+
+4. **Output Creation**
    - Parser creates structured output with standardized fields
    - Includes entity data objects ready for database insertion
 

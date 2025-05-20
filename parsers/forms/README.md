@@ -51,12 +51,17 @@ Processes ownership transaction XML content from Form 4 filings, extracting:
 - Non-derivative transaction data (direct stock transactions)
 - Derivative transaction data (options, warrants, etc.)
 - Relationship information between issuers and owners
+- Footnotes and additional references
 
 Key features:
 - Creates entity data objects for direct use in writers
 - Handles both direct and indirect ownership
 - Classifies entity types (person vs. company)
 - Processes multiple reporting owners in a single filing
+- Supports both "1" and "true" string values for relationship flags (is_director, is_officer, etc.)
+- Extracts footnote references for both derivative and non-derivative transactions using multiple extraction strategies
+- Captures footnotes from various locations in the XML structure (direct elements, attributes, and nested elements)
+- Comprehensive footnote ID mapping for creating accurate reference links between transactions and their footnotes
 - Uses [`parser_utils.build_standard_output()`](../utils/parser_utils.py) for consistent output format
 
 ### Form 8-K Parser (`form8k_parser.py`)
