@@ -66,6 +66,11 @@ Processes ownership transaction XML content from Form 4 filings, extracting:
 - Properly flags group filings when multiple reporting owners exist in a single filing
 - Provides reliable issuer CIK extraction via a static method (`extract_issuer_cik_from_xml`) that can be used by other components (Bug 8 fix)
 - Uses [`parser_utils.build_standard_output()`](../utils/parser_utils.py) for consistent output format
+- Creates a rich relationship data model that enables:
+  - Tracking insider trading patterns across multiple companies
+  - Identifying group filings and joint reporting relationships
+  - Capturing detailed transaction information including footnotes
+  - Supporting various relationship types and their metadata
 
 #### Form 4 Entity Extraction Implementation
 
@@ -90,8 +95,30 @@ The `Form4Parser` implements detailed entity extraction from XML through these k
 4. **`extract_issuer_cik_from_xml(xml_content)`**:
    - Static utility method for extracting issuer CIK directly from XML content
    - Used by orchestrators and indexers when entity extraction isn't needed
+   - Critical component of the Bug 8 fix for standardizing URL construction
+   - Ensures consistent file paths and database organization by company
+   - Supports the proper handling of multiple CIKs in Form 4 filings
+   - Provides a reliable way to determine which company's securities are being traded
+   - Enables consistent URL construction via `utils.url_builder` functions
+   - Critical for URL construction as the issuer CIK is always required for reliable SGML file access
+   - Returns a normalized CIK with leading zeros (to 10 digits) for consistency
+   - Implementation provides fallback mechanisms if the primary XPath fails
+   - Ensures that URL construction in downstream components always uses the correct issuer CIK
+   - Called by Form4SgmlIndexer and Form4Orchestrator to ensure consistent CIK usage
 
 These methods provide a comprehensive approach to entity extraction, ensuring high accuracy and consistency in Form 4 processing.
+
+### Form 4 Multi-CIK Relationship Model
+
+The `Form4Parser` implements a comprehensive relationship model that handles the complex associations between entities in Form 4 filings:
+
+- **Multiple Reporting Owners**: Properly extracts and processes multiple owners in a single filing
+- **Relationship Types**: Identifies and classifies relationships as director, officer, 10% owner, or other
+- **Relationship Details**: Extracts additional metadata like officer titles and positions
+- **Group Filing Detection**: Determines when a filing represents a group of related owners
+- **Entity Type Classification**: Distinguishes between individuals and organizations
+- **Relationship Flags**: Extracts boolean flags for different relationship types
+- **Ownership Types**: Handles both direct and indirect ownership structures
 
 ### Form 8-K Parser (`form8k_parser.py`)
 
@@ -190,6 +217,15 @@ self.registry = {
 5. **Entity Creation**: When appropriate, create entity data objects ready for database writers
 6. **Clear Boundary**: Focus on content interpretation, not document extraction (which is handled by indexers)
 7. **Standard Output Format**: Use [`parser_utils.build_standard_output()`](../utils/parser_utils.py) to ensure consistent output structure
+
+## Future Extensions
+
+The Form 4 parser serves as a template for handling other form types with multi-entity relationships:
+
+- **Form 3 Parser**: Initial beneficial ownership filings with similar relationship structures
+- **Form 5 Parser**: Annual beneficial ownership reports with transaction aggregation
+- **Form 13D/G Parser**: Beneficial ownership reports for significant stakeholders
+- **Form 13F Parser**: Institutional investment manager holdings with multiple securities
 
 ## Related Components
 

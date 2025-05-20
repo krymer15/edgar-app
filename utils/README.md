@@ -133,12 +133,36 @@ Builds SEC EDGAR URLs for different data sources.
 **Important Note on CIK Selection (Bug 8 Fix):**
 The SEC EDGAR system creates multiple URL paths for the same filing, one for each involved entity. For example, a Form 4 filing can be accessed through the issuer's CIK path or any of the reporting owners' CIK paths. Despite these multiple URL paths, there's only one actual filing identified by a unique accession number.
 
+**SEC EDGAR URL Structure:**
+- **Many-to-One Mapping**: Each filing can be accessed through multiple URL paths (one for each entity involved)
+  - The issuer company has a path
+  - Each reporting owner has a path
+  - All these paths lead to exactly the same filing content
+- **URL Path Structure**: URLs follow the pattern `https://www.sec.gov/Archives/edgar/data/{normalized_cik}/{accession_clean}/{accession_dashed}.txt`
+- **SGML Text Files (.txt)**:
+  - They are **ALWAYS** accessible under the issuer's CIK path
+  - They MAY ALSO be accessible under reporting owner CIK paths
+  - The most reliable path is always using the issuer CIK
+- **Index and Document Files**:
+  - Can be accessed through either issuer or any reporting owner CIK
+  - Multiple valid paths exist for the same content
+- **Accession Number as Unique Identifier**:
+  - Despite multiple URL paths, there's only one actual filing
+  - The accession number (e.g., 0001234567-25-000123) uniquely identifies the filing
+  - This accession number remains constant across all URL paths
+
 **Standardization Guidelines:**
 - For Form 4 filings: Always use the issuer CIK for URL construction
   - Form4Orchestrator extracts this directly from the XML content
   - Form4SgmlIndexer provides the issuer CIK in its index_documents return value
   - This ensures consistent URL construction regardless of which CIK was initially used
+  - Using issuer CIK yields the most reliable URLs that work consistently
 - For most other filings: Use the primary filer's CIK (usually the company filing the form)
+- Always ensure CIKs are properly normalized (leading zeros added to 10 digits)
+- Maintain consistent CIK usage for:
+  - URL construction
+  - File path construction
+  - Database records
 
 ```python
 from utils.url_builder import construct_sgml_txt_url, construct_submission_json_url
@@ -155,6 +179,9 @@ submissions_url = construct_submission_json_url("0001234567")
 - `construct_submission_json_url`: For accessing a company's submissions metadata
 - `construct_filing_index_url`: For accessing a filing's index page
 - `construct_sgml_txt_url`: For accessing the raw SGML text of a filing
+
+**Implementation Note:**
+These functions currently take a generic `cik` parameter. Future refactoring may rename this parameter to `issuer_cik` for Form 4-related functions to make the expected parameter more explicit. Always pass the issuer CIK (not the reporting owner CIK) when calling these functions for Form 4 filings.
 
 ### SEC Calendar
 

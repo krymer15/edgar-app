@@ -16,6 +16,15 @@ This script drives the `Form4Orchestrator` to process SEC Form 4 filings (Statem
 - Optionally writes extracted XML to disk for inspection or backup
 - Supports reprocessing of previously processed filings
 - Detailed result reporting including success/failure counts
+- Implements advanced SGML/XML processing:
+  - Attempts multiple extraction strategies for embedded XML content
+  - Falls back to SGML parsing if XML is not available or cannot be parsed
+  - Handles both pure SGML format and XML format within SGML wrappers
+- Supports multi-CIK relationship model:
+  - Handles multiple reporting owners in a single filing
+  - Maintains proper relationship tracking between issuers and owners
+  - Supports different relationship types (director, officer, 10% owner, other)
+  - Tracks officer titles and other detailed relationship information
 
 #### Usage Examples
 

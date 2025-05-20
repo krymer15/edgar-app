@@ -26,10 +26,32 @@ The `Form4Orchestrator` is responsible for specialized processing of Form 4 fili
   - The same accession number is found under a single logical path
   - SEC EDGAR's multiple URL paths (one per involved entity) are reconciled to a single canonical path
 
+- **Pipeline Integration**: Seamlessly integrates with the DailyIngestionPipeline through:
+  - Shared downloader instances for efficient resource usage
+  - Compatible processing status tracking with the main pipeline
+  - Common configuration patterns for consistent setup
+  - Reuse of existing file caching mechanisms
+
 #### Internal Components
 
 - **Form4SgmlIndexer**: Specialized indexer that extracts XML content from Form 4 SGML files
-- **Form4Writer**: Database writer that handles the complex entity-relationship model
+- **Form4Writer**: Database writer that handles the complex entity-relationship model:
+  - Creates/updates entities in the universal registry
+  - Creates relationships between issuers and reporting owners
+  - Writes transaction data with proper references
+  - Updates filing processing status for tracking
+  - Supports both initial creation and updates to existing records
+
+#### Error Handling
+
+The Form4Orchestrator provides robust error handling throughout the processing pipeline:
+
+- Graceful handling of download failures with informative error messages
+- Parsing error detection and reporting for both SGML and XML content
+- Database error recovery with transaction management
+- Comprehensive status tracking through the filing_metadata table
+- Detailed error messages stored for debugging and troubleshooting
+- Ability to retry failed operations with appropriate backoff
 
 #### Database Tables
 
@@ -107,7 +129,7 @@ print(f"Failed: {results['failed']}")
 #### CLI Integration
 
 The Form 4 orchestrator has a dedicated CLI script:
-- `scripts/forms/run_form4_xml_ingest.py`
+- `scripts/forms/run_form4_ingest.py`
 
 This script supports the following arguments:
 - `--date YYYY-MM-DD` - Target date for processing

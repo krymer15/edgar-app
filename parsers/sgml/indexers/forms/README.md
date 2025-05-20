@@ -29,6 +29,15 @@ The `Form4SgmlIndexer` class ([form4_sgml_indexer.py](form4_sgml_indexer.py)) de
    - It creates cohesive dataclass representations combining both sources
    - It extracts and returns the issuer CIK from the XML content (Bug 8 fix) to ensure proper path construction
 
+3. **Issuer CIK Extraction for URL Construction** (critical reliability improvement):
+   - Implements a multi-layered approach to extract the reliable issuer CIK for URL construction
+   - **Priority 1**: Extract issuer CIK from XML content using Form4Parser.extract_issuer_cik_from_xml
+   - **Priority 2**: Fall back to issuer CIK from entity data if XML parsing is successful
+   - **Priority 3**: Use CIK from SGML headers if XML parsing fails
+   - **Priority 4**: Resort to CIK provided during indexer initialization as last resort
+   - Returns the extracted issuer CIK in the index_documents result dictionary
+   - Ensures that downstream components can reliably construct accurate URLs regardless of the original CIK
+
 This dual processing is not an architectural flaw but a necessary approach to handling the inherent format complexity of Form 4 filings, where critical information is split between SGML headers and embedded XML.
 
 ```python
@@ -239,6 +248,30 @@ The Form4SgmlIndexer implements a robust entity extraction approach that address
 1. **Primary Source**: Extract definitive entity information from the XML content when available
 2. **Secondary Source**: Fall back to SGML header data when XML parsing fails
 3. **Fallback Mechanism**: Use the CIK provided at initialization as a last resort
+
+### Issuer CIK Extraction for URL Construction (Bug 8 Fix)
+
+One of the critical functions of Form4SgmlIndexer is extracting the correct issuer CIK for URL construction:
+
+1. **Layered Extraction Approach**:
+   - First tries to extract the issuer CIK from parsed XML entity data (primary source)
+   - Falls back to direct XML extraction via `Form4Parser.extract_issuer_cik_from_xml()` if parsing fails
+   - Uses the original CIK only as a last resort
+
+2. **Return Structure**:
+   - The `index_documents()` method explicitly returns `issuer_cik` in its result dictionary
+   - This ensures that orchestrators can access the correct CIK for URL and path construction
+
+3. **URL Construction Standardization**:
+   - Always returns the CIK of the company whose securities are being traded
+   - Enables consistent URL construction with `utils.url_builder.construct_sgml_txt_url()`
+   - Creates a canonical organization structure where all Form 4 documents for a company are logically grouped
+   - Ensures that a single accession number maps to a single logical path
+
+4. **Multi-CIK Resolution**:
+   - Properly handles the complexity of Form 4 filings with multiple involved CIKs
+   - Reconciles the SEC EDGAR system's multiple URL paths into a single canonical structure
+   - Normalizes the CIK to ensure 10-digit format with leading zeros
 
 ### Entity Attachment
 
