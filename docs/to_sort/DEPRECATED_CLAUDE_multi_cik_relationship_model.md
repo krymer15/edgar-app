@@ -1,3 +1,5 @@
+See updated and latest doc here `tests/tmp/form4_relationship_model_analysis.md`.
+
 # Multi-CIK Relationship Models for SEC Filings
 
 Let's think more deeply about the relationship models for multi-CIK filing form types, focusing particularly on the owner-issuer relationships that are common in Form 4 filings.

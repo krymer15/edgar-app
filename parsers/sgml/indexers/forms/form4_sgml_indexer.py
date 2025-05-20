@@ -1017,8 +1017,11 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
             # Create relationships using the accurate entity information
             filing_date = form4_data.period_of_report or datetime.now().date()
             
+            # Determine if this is a group filing based on multiple reporting owners
+            is_group_filing = len(owner_entities) > 1
+            
             for owner_entity, rel_data in zip(owner_entities, relationships):
-                # Bug 6 Fix: Create relationship_details dictionary with structured metadata
+                # Create relationship_details dictionary with structured metadata
                 relationship_details = {
                     "filing_date": filing_date.isoformat(),
                     "accession_number": self.accession_number,
@@ -1034,6 +1037,10 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                     },
                     "roles": []
                 }
+                
+                # Add is_group_filing to relationship_details when multiple owners exist
+                if is_group_filing:
+                    relationship_details["is_group_filing"] = True
                 
                 # Add role information
                 if rel_data.get("is_director", False):
@@ -1066,7 +1073,8 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                     is_other=rel_data.get("is_other", False),
                     officer_title=rel_data.get("officer_title"),
                     other_text=rel_data.get("other_text"),
-                    relationship_details=relationship_details  # Bug 6 Fix: Add relationship_details
+                    is_group_filing=is_group_filing,
+                    relationship_details=relationship_details
                 )
                 
                 # Add to form4_data
@@ -1075,10 +1083,13 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
             log_info(f"Updated Form4FilingData with {len(form4_data.relationships)} relationships from XML")
             log_info(f"Attached issuer_entity and {len(owner_entities)} owner_entities directly to Form4FilingData")
             
-            # Fix for Bug 4: Explicitly update the has_multiple_owners flag based on the 
-            # actual number of relationships rather than the initial owner count
+            # Update the has_multiple_owners flag based on the actual number of relationships
             form4_data.has_multiple_owners = len(form4_data.relationships) > 1
             log_info(f"Set has_multiple_owners to {form4_data.has_multiple_owners} based on {len(form4_data.relationships)} relationships")
+            
+            # Log group filing status
+            if is_group_filing:
+                log_info(f"Set is_group_filing to True based on {len(owner_entities)} reporting owners")
             
         except Exception as e:
             log_error(f"Error updating Form4FilingData from XML: {e}")

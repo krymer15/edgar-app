@@ -62,6 +62,7 @@ Key features:
 - Extracts footnote references for both derivative and non-derivative transactions using multiple extraction strategies
 - Captures footnotes from various locations in the XML structure (direct elements, attributes, and nested elements)
 - Comprehensive footnote ID mapping for creating accurate reference links between transactions and their footnotes
+- Properly flags group filings when multiple reporting owners exist in a single filing
 - Uses [`parser_utils.build_standard_output()`](../utils/parser_utils.py) for consistent output format
 
 ### Form 8-K Parser (`form8k_parser.py`)

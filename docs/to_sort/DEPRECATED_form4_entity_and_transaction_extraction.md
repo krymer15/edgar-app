@@ -1,3 +1,5 @@
+Deprecated for eventual removal. Useful info has been updated into `tests/tmp/form4_extraction_doc_comparison.md`.
+
 # Form 4 Entity and Transaction Extraction Architecture
 
 ## Overview

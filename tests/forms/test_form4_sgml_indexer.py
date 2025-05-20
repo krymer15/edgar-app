@@ -478,3 +478,153 @@ def test_add_transactions_from_parsed_xml():
     assert option_transaction.security_title == "Stock Option (Right to Buy)"
     assert option_transaction.conversion_price == 15.00
     assert option_transaction.expiration_date.year == 2035
+    
+def test_group_filing_flag_multi_owner():
+    """Test that the is_group_filing flag is correctly set when multiple reporting owners exist."""
+    from models.dataclasses.forms.form4_filing import Form4FilingData
+    from models.dataclasses.entity import EntityData
+    from datetime import date
+    
+    # Create a Form4SgmlIndexer instance
+    indexer = Form4SgmlIndexer(cik="0001234567", accession_number="0001234567-25-000001")
+    
+    # Create a test Form4FilingData
+    form4_data = Form4FilingData(
+        accession_number="0001234567-25-000001",
+        period_of_report=date(2025, 5, 14)
+    )
+    
+    # Create multiple owner entities to simulate multiple reporting owners
+    issuer_entity = EntityData(
+        cik="1234567",
+        name="Test Issuer Inc",
+        entity_type="company"
+    )
+    
+    owner_entities = [
+        EntityData(
+            cik="9876543",
+            name="John Doe",
+            entity_type="person"
+        ),
+        EntityData(
+            cik="8765432",
+            name="Jane Smith",
+            entity_type="person"
+        ),
+        EntityData(
+            cik="7654321",
+            name="Acme Investment LLC",
+            entity_type="company"
+        )
+    ]
+    
+    # Create relationships data as it would come from the XML parser
+    relationships = [
+        {
+            "issuer_cik": "1234567",
+            "owner_cik": "9876543",
+            "is_director": True,
+            "is_officer": False,
+            "is_ten_percent_owner": False,
+            "is_other": False
+        },
+        {
+            "issuer_cik": "1234567",
+            "owner_cik": "8765432",
+            "is_director": False,
+            "is_officer": True,
+            "is_ten_percent_owner": False,
+            "is_other": False,
+            "officer_title": "CFO"
+        },
+        {
+            "issuer_cik": "1234567",
+            "owner_cik": "7654321",
+            "is_director": False,
+            "is_officer": False,
+            "is_ten_percent_owner": True,
+            "is_other": False
+        }
+    ]
+    
+    # Create entity_data dictionary similar to what would be returned by Form4Parser
+    entity_data = {
+        "issuer_entity": issuer_entity,
+        "owner_entities": owner_entities,
+        "relationships": relationships
+    }
+    
+    # Call the method that we updated with the Bug 7 fix
+    indexer._update_form4_data_from_xml(form4_data, entity_data)
+    
+    # Check that the has_multiple_owners flag is set correctly (Bug 4 fix)
+    assert form4_data.has_multiple_owners is True, "has_multiple_owners should be True with 3 owners"
+    assert len(form4_data.relationships) == 3, "Should have 3 relationships"
+    
+    # Check that is_group_filing is set on all relationships (Bug 7 fix)
+    for relationship in form4_data.relationships:
+        assert relationship.is_group_filing is True, "is_group_filing should be True on all relationships"
+        assert relationship.relationship_details.get("is_group_filing") is True, "is_group_filing should be in relationship_details"
+        
+def test_group_filing_flag_single_owner():
+    """Test that the is_group_filing flag is correctly NOT set when only one reporting owner exists."""
+    from models.dataclasses.forms.form4_filing import Form4FilingData
+    from models.dataclasses.entity import EntityData
+    from datetime import date
+    
+    # Create a Form4SgmlIndexer instance
+    indexer = Form4SgmlIndexer(cik="0001234567", accession_number="0001234567-25-000001")
+    
+    # Create a test Form4FilingData
+    form4_data = Form4FilingData(
+        accession_number="0001234567-25-000001",
+        period_of_report=date(2025, 5, 14)
+    )
+    
+    # Create a single owner entity
+    issuer_entity = EntityData(
+        cik="1234567",
+        name="Test Issuer Inc",
+        entity_type="company"
+    )
+    
+    owner_entities = [
+        EntityData(
+            cik="9876543",
+            name="John Doe",
+            entity_type="person"
+        )
+    ]
+    
+    # Create a single relationship
+    relationships = [
+        {
+            "issuer_cik": "1234567",
+            "owner_cik": "9876543",
+            "is_director": True,
+            "is_officer": True,
+            "is_ten_percent_owner": False,
+            "is_other": False,
+            "officer_title": "CEO"
+        }
+    ]
+    
+    # Create entity_data dictionary similar to what would be returned by Form4Parser
+    entity_data = {
+        "issuer_entity": issuer_entity,
+        "owner_entities": owner_entities,
+        "relationships": relationships
+    }
+    
+    # Call the method that we updated with the Bug 7 fix
+    indexer._update_form4_data_from_xml(form4_data, entity_data)
+    
+    # Check that the has_multiple_owners flag is set correctly (Bug 4 fix)
+    assert form4_data.has_multiple_owners is False, "has_multiple_owners should be False with 1 owner"
+    assert len(form4_data.relationships) == 1, "Should have 1 relationship"
+    
+    # Check that is_group_filing is NOT set on the relationship (Bug 7 fix)
+    relationship = form4_data.relationships[0]
+    assert relationship.is_group_filing is False, "is_group_filing should be False for single owner"
+    assert "is_group_filing" not in relationship.relationship_details, "is_group_filing should not be in relationship_details"

@@ -26,6 +26,11 @@ This document lists high-priority architectural and feature improvements for the
 - [x] Fix Bug 5: Fix footnote ID transfer to Form4TransactionData objects
 - [x] Fix Bug 6: Populate relationship_details field in form4_relationships table
 - [x] Add comprehensive tests for all Form 4 processing fixes
+- [x] Fix Bug 7: Set is_group_filing flag properly for multi-owner Form 4 filings
+- [ ] Fix Bug 8: Standardize URL construction to always use issuer CIK (rename parameters from `cik` to `issuer_cik`)
+- [ ] Add column to form4_transactions table for acquisition/disposition flag ("(A) or (D)" value in XML)
+- [ ] Add support for position-only rows in Form 4 filings (rows with ownership data but no transaction details) using test cases from fixtures/000032012123000040_form4.xml (non-derivative section) and fixtures/000106299323011116_form4.xml (derivative section)
+- [ ] Add calculated total_shares_owned field to form4_relationships table aggregating all related transaction amounts
 - [ ] Reprocess problematic Form 4 filings after all fixes are implemented
 
 ### 2. Expand Form Type Support
