@@ -46,7 +46,82 @@ def test_parse_form4_fields():
     assert isinstance(parsed["non_derivative_transactions"], list), "non_derivative_transactions should be a list"
     assert isinstance(parsed["derivative_transactions"], list), "derivative_transactions should be a list"
     assert len(parsed["non_derivative_transactions"]) + len(parsed["derivative_transactions"]) > 0, "No transactions parsed"
+    
+def test_extract_issuer_cik_from_xml():
+    """
+    Test the static method to extract issuer CIK from XML (Bug 8 fix).
+    
+    This test validates the new functionality added to address Bug 8:
+    - Standardize on issuer CIK for URL construction
+    """
+    xml_content = load_fixture()
+    
+    # Use the static method to extract issuer CIK
+    issuer_cik = Form4Parser.extract_issuer_cik_from_xml(xml_content)
+    
+    # The fixture contains 1800flowers CIK
+    assert issuer_cik == "0001084869", f"Incorrect issuer CIK: {issuer_cik}"
+    
+def test_extract_issuer_cik_from_xml_handles_errors():
+    """
+    Test that the static method gracefully handles invalid XML.
+    
+    This ensures the method doesn't raise exceptions when given invalid input.
+    """
+    # Test with invalid XML
+    invalid_xml = "<invalid>This is not valid XML"
+    issuer_cik = Form4Parser.extract_issuer_cik_from_xml(invalid_xml)
+    assert issuer_cik is None, "Should return None for invalid XML"
+    
+    # Test with valid XML but no issuer element
+    valid_xml_no_issuer = "<ownershipDocument><reportingOwner><reportingOwnerId><rptOwnerCik>1234567</rptOwnerCik></reportingOwnerId></reportingOwner></ownershipDocument>"
+    issuer_cik = Form4Parser.extract_issuer_cik_from_xml(valid_xml_no_issuer)
+    assert issuer_cik is None, "Should return None when issuer element is missing"
+    
+    # Test with empty string
+    issuer_cik = Form4Parser.extract_issuer_cik_from_xml("")
+    assert issuer_cik is None, "Should return None for empty string"
+
+def test_extract_issuer_cik_from_sgml():
+    """
+    Test extracting issuer CIK from full SGML content with embedded XML.
+    
+    This simulates how the Form4Orchestrator uses the method.
+    """
+    # Create mock SGML content with embedded XML
+    xml_content = load_fixture()
+    sgml_content = f"""<SEC-HEADER>
+ACCESSION NUMBER:  0000000000-00-000000
+CONFORMED SUBMISSION TYPE: 4
+PUBLIC DOCUMENT COUNT: 1
+FILED AS OF DATE: 20250101
+</SEC-HEADER>
+
+<XML>
+{xml_content}
+</XML>
+"""
+    
+    # Extract XML from SGML
+    xml_start = sgml_content.find("<XML>")
+    xml_end = sgml_content.find("</XML>", xml_start)
+    extracted_xml = sgml_content[xml_start+5:xml_end].strip() if xml_start != -1 and xml_end != -1 else ""
+    
+    # Extract issuer CIK using our static method
+    issuer_cik = Form4Parser.extract_issuer_cik_from_xml(extracted_xml)
+    
+    # Verify we got the correct issuer CIK
+    assert issuer_cik == "0001084869", f"Failed to extract issuer CIK from SGML content: {issuer_cik}"
 
 if __name__ == "__main__":
     test_parse_form4_fields()
     print("✅ test_parse_form4_fields passed.")
+    
+    test_extract_issuer_cik_from_xml()
+    print("✅ test_extract_issuer_cik_from_xml passed.")
+    
+    test_extract_issuer_cik_from_xml_handles_errors()
+    print("✅ test_extract_issuer_cik_from_xml_handles_errors passed.")
+    
+    test_extract_issuer_cik_from_sgml()
+    print("✅ test_extract_issuer_cik_from_sgml passed.")

@@ -302,3 +302,135 @@ def test_form4_orchestrator_xml_file_path():
         assert raw_doc_arg.content == xml_content
         assert raw_doc_arg.document_type == "xml"
         assert raw_doc_arg.source_type == "form4_xml"
+    
+def test_bug8_orchestrator_uses_issuer_cik():  
+    """
+    Test for Bug 8 fix: Verify that the Form4Orchestrator correctly uses the issuer CIK
+    from the XML content when it differs from the filing metadata CIK.
+    
+    This test validates that:
+    1. The orchestrator calls Form4Parser.extract_issuer_cik_from_xml() to get the issuer CIK
+    2. It uses the issuer CIK for URL construction when downloading the file
+    3. It uses the issuer CIK for file path construction when writing to disk
+    """
+    # Create a filing mock with a reporting owner CIK (not the issuer)
+    filing_mock = MagicMock()
+    filing_mock.cik = "0009876543"  # Reporting owner CIK
+    filing_mock.accession_number = "0001234567-25-000001"
+    filing_mock.form_type = "4"
+    filing_mock.filing_date = date(2025, 5, 15)
+    filing_mock.processing_status = None
+    
+    # Create mock sgml content with embedded XML - without leading/trailing whitespace
+    mock_xml = """<ownershipDocument>
+        <issuer>
+            <issuerCik>0001234567</issuerCik>
+            <issuerName>Test Issuer Company</issuerName>
+        </issuer>
+        <reportingOwner>
+            <reportingOwnerId>
+                <rptOwnerCik>0009876543</rptOwnerCik>
+                <rptOwnerName>Test Owner</rptOwnerName>
+            </reportingOwnerId>
+        </reportingOwner>
+    </ownershipDocument>"""
+    
+    mock_sgml = f"""<SEC-HEADER>
+ACCESSION NUMBER:  0001234567-25-000001
+CONFORMED SUBMISSION TYPE: 4
+PUBLIC DOCUMENT COUNT: 1
+FILED AS OF DATE: 20250515
+</SEC-HEADER>
+
+<XML>
+{mock_xml}
+</XML>"""
+    
+    # Setup the mock downloader with appropriate behaviors
+    mock_downloader = MagicMock()
+    
+    # First time memory cache is checked, return False to force disk path check
+    # Second time (alternate URL check) return True for the issuer CIK path
+    mock_downloader.has_in_memory_cache.side_effect = [False, True]
+    
+    # When getting from memory cache, return the SGML content
+    mock_downloader.get_from_memory_cache.return_value = mock_sgml
+    
+    # When downloading, also return the SGML content as fallback
+    mock_downloader.download_sgml.return_value = mock_sgml
+    
+    # Mock database session
+    mock_db_session = MagicMock()
+    
+    # Create a more robust mock for Form4SgmlIndexer that returns the issuer_cik in its result
+    mock_form4_indexer = MagicMock()
+    mock_form4_indexer.index_documents.return_value = {
+        "documents": [],
+        "form4_data": Form4FilingData(
+            accession_number="0001234567-25-000001",
+            period_of_report=date(2025, 5, 14)
+        ),
+        "xml_content": mock_xml,
+        "issuer_cik": "0001234567"  # This is the issuer CIK extracted from XML
+    }
+    
+    # Mock form4 writer
+    mock_form4_writer = MagicMock()
+    mock_form4_writer.write_form4_data.return_value = True
+    
+    # Mock RawFileWriter for XML writing
+    mock_raw_writer = MagicMock()
+    mock_raw_writer.write.return_value = "/path/to/xml/file.xml"
+    
+    # CRITICAL BUG 8 TEST - Mock Form4Parser.extract_issuer_cik_from_xml
+    # This verifies that the orchestrator is actually calling the static method
+    # from Form4Parser rather than implementing its own extraction logic
+    with patch('parsers.forms.form4_parser.Form4Parser.extract_issuer_cik_from_xml') as mock_extract_cik:
+        # Set up the mock to return our expected issuer CIK
+        mock_extract_cik.return_value = "0001234567"
+        
+        # Apply our patches
+        with patch("orchestrators.forms.form4_orchestrator.Form4SgmlIndexer", return_value=mock_form4_indexer), \
+             patch("orchestrators.forms.form4_orchestrator.Form4Writer", return_value=mock_form4_writer), \
+             patch("orchestrators.forms.form4_orchestrator.RawFileWriter", return_value=mock_raw_writer), \
+             patch("orchestrators.forms.form4_orchestrator.get_db_session") as mock_get_session, \
+             patch("orchestrators.forms.form4_orchestrator.construct_sgml_txt_url") as mock_construct_url, \
+             patch("os.path.exists", return_value=False), \
+             patch.object(Form4Orchestrator, "_get_filings_to_process") as mock_get_filings, \
+             patch.object(Form4Orchestrator, "_get_sgml_file_path") as mock_get_file_path:
+            
+            # Setup mock returns
+            mock_get_filings.return_value = [filing_mock]
+            mock_get_session.return_value.__enter__.return_value = mock_db_session
+            mock_construct_url.return_value = "https://www.sec.gov/Archives/edgar/data/1234567/000123456725000001/0001234567-25-000001.txt"
+            mock_get_file_path.return_value = "/path/to/sgml/file.txt"
+            
+            # Create and run the orchestrator with writing XML enabled
+            orchestrator = Form4Orchestrator(downloader=mock_downloader, write_cache=True)
+            result = orchestrator.run(write_raw_xml=True)
+            
+            # Verify that the extract_issuer_cik_from_xml method was called at least once
+            # This is critical for Bug 8 to ensure the orchestrator is using Form4Parser
+            assert mock_extract_cik.call_count >= 1, "Form4Parser.extract_issuer_cik_from_xml was not called by orchestrator"
+            
+            # Verify success
+            assert result["succeeded"] == 1
+            assert result["failed"] == 0
+            
+            # The critical test for Bug 8: verify that construct_sgml_txt_url was called with the ISSUER CIK
+            # rather than the reporting owner CIK from the filing_mock
+            # Note: The url_builder formats the accession number by removing hyphens
+            mock_construct_url.assert_called_with("0001234567", "000123456725000001")
+            
+            # Also verify the file path construction used the issuer CIK
+            # Note: The method receives the original accession number format (with hyphens)
+            # and the format_for_filename conversion happens inside the _get_sgml_file_path method
+            mock_get_file_path.assert_called_with("0001234567", "0001234567-25-000001")
+            
+            # Verify that when writing raw XML, it also used the correct issuer CIK for RawDocument
+            raw_doc_arg = mock_raw_writer.write.call_args[0][0]
+            assert raw_doc_arg.cik == "0001234567", f"RawDocument should use issuer CIK, got {raw_doc_arg.cik}"
+            assert "1234567" in raw_doc_arg.source_url, "Source URL should use issuer CIK"
+            
+            # Verify our form4 writer was called
+            mock_form4_writer.write_form4_data.assert_called_once()

@@ -128,17 +128,33 @@ is_valid = FormTypeValidator.is_valid_form_type("8-K")
 
 #### url_builder.py
 
-Builds SEC EDGAR URLs for different data sources.
+Builds SEC EDGAR URLs for different data sources. 
+
+**Important Note on CIK Selection (Bug 8 Fix):**
+The SEC EDGAR system creates multiple URL paths for the same filing, one for each involved entity. For example, a Form 4 filing can be accessed through the issuer's CIK path or any of the reporting owners' CIK paths. Despite these multiple URL paths, there's only one actual filing identified by a unique accession number.
+
+**Standardization Guidelines:**
+- For Form 4 filings: Always use the issuer CIK for URL construction
+  - Form4Orchestrator extracts this directly from the XML content
+  - Form4SgmlIndexer provides the issuer CIK in its index_documents return value
+  - This ensures consistent URL construction regardless of which CIK was initially used
+- For most other filings: Use the primary filer's CIK (usually the company filing the form)
 
 ```python
 from utils.url_builder import construct_sgml_txt_url, construct_submission_json_url
 
-# Get URL for SGML submission file
+# Get URL for SGML submission file (with issuer CIK for Form 4s)
 sgml_url = construct_sgml_txt_url("0001234567", "000123456725000123")
 
 # Get URL for company submissions JSON
 submissions_url = construct_submission_json_url("0001234567")
 ```
+
+**URL Functions:**
+- `construct_primary_document_url`: For accessing specific documents within a filing
+- `construct_submission_json_url`: For accessing a company's submissions metadata
+- `construct_filing_index_url`: For accessing a filing's index page
+- `construct_sgml_txt_url`: For accessing the raw SGML text of a filing
 
 ### SEC Calendar
 

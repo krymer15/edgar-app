@@ -24,6 +24,36 @@ class Form4Parser(BaseParser):
         self.accession_number = accession_number
         self.cik = cik
         self.filing_date = filing_date
+        
+    @staticmethod
+    def extract_issuer_cik_from_xml(xml_content: str) -> Optional[str]:
+        """
+        Extract the issuer CIK from Form 4 XML content.
+        
+        This is a utility method for Bug 8 fix that allows other components
+        to extract the issuer CIK without duplicating XML parsing logic.
+        
+        Args:
+            xml_content: The XML content to parse
+            
+        Returns:
+            The issuer CIK if found, None otherwise
+        """
+        try:
+            tree = etree.parse(io.StringIO(xml_content))
+            root = tree.getroot()
+            
+            # Use the same logic as extract_entity_information
+            issuer_el = root.find(".//issuer")
+            if issuer_el is not None:
+                cik_el = issuer_el.find("issuerCik")
+                if cik_el is not None and cik_el.text:
+                    return cik_el.text.strip()
+        except Exception:
+            # Silent failure - caller should handle None return
+            pass
+            
+        return None
 
     def parse(self, xml_content: str) -> dict:
         try:

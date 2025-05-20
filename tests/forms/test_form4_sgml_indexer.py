@@ -628,3 +628,174 @@ def test_group_filing_flag_single_owner():
     relationship = form4_data.relationships[0]
     assert relationship.is_group_filing is False, "is_group_filing should be False for single owner"
     assert "is_group_filing" not in relationship.relationship_details, "is_group_filing should not be in relationship_details"
+    
+def test_bug8_issuer_cik_extraction():
+    """
+    Test for Bug 8 fix: Verify that the indexer correctly extracts the issuer CIK.
+    
+    This test validates that:
+    1. The issuer CIK is correctly extracted from XML content
+    2. The issuer CIK is included in the return value of index_documents()
+    3. This CIK is used instead of the reporting owner CIK when they differ
+    """
+    # Create a mock SGML with embedded XML that includes issuer CIK - without leading/trailing whitespace
+    mock_xml = """<ownershipDocument>
+        <issuer>
+            <issuerCik>0001234567</issuerCik>
+            <issuerName>Test Issuer Company</issuerName>
+            <issuerTradingSymbol>TEST</issuerTradingSymbol>
+        </issuer>
+        <reportingOwner>
+            <reportingOwnerId>
+                <rptOwnerCik>0009876543</rptOwnerCik>
+                <rptOwnerName>Test Owner</rptOwnerName>
+            </reportingOwnerId>
+            <reportingOwnerRelationship>
+                <isDirector>1</isDirector>
+                <isOfficer>0</isOfficer>
+                <isTenPercentOwner>0</isTenPercentOwner>
+                <isOther>0</isOther>
+            </reportingOwnerRelationship>
+        </reportingOwner>
+        <nonDerivativeTable>
+            <nonDerivativeTransaction>
+                <securityTitle>
+                    <value>Common Stock</value>
+                </securityTitle>
+                <transactionDate>
+                    <value>2025-01-01</value>
+                </transactionDate>
+                <transactionCoding>
+                    <transactionFormType>4</transactionFormType>
+                    <transactionCode>P</transactionCode>
+                    <equitySwapInvolved>0</equitySwapInvolved>
+                </transactionCoding>
+                <transactionAmounts>
+                    <transactionShares>
+                        <value>1000</value>
+                    </transactionShares>
+                    <transactionPricePerShare>
+                        <value>15.50</value>
+                    </transactionPricePerShare>
+                </transactionAmounts>
+                <ownershipNature>
+                    <directOrIndirectOwnership>
+                        <value>D</value>
+                    </directOrIndirectOwnership>
+                </ownershipNature>
+            </nonDerivativeTransaction>
+        </nonDerivativeTable>
+    </ownershipDocument>"""
+    
+    mock_sgml = f"""
+    <SEC-HEADER>
+    ACCESSION NUMBER:  0000123456-25-000001
+    CONFORMED SUBMISSION TYPE: 4
+    PUBLIC DOCUMENT COUNT: 1
+    FILED AS OF DATE: 20250101
+    </SEC-HEADER>
+    
+    <XML>
+    {mock_xml}
+    </XML>
+    """
+    
+    # Create the indexer with reporting owner CIK (not issuer)
+    # This tests that the indexer can find the correct issuer CIK even when
+    # initialized with a different CIK
+    indexer = Form4SgmlIndexer(cik="0009876543", accession_number="0000123456-25-000001")
+    
+    # Test the fallback path - make Form4Parser.parse fail so that it will call extract_issuer_cik_from_xml
+    with patch('parsers.forms.form4_parser.Form4Parser.parse') as mock_parse:
+        # Make the parser fail by returning a value without proper keys
+        mock_parse.return_value = {"error": "Mock failure"}
+        
+        # Now mock the extract_issuer_cik_from_xml method
+        with patch('parsers.forms.form4_parser.Form4Parser.extract_issuer_cik_from_xml') as mock_extract_cik:
+            # Set up the mock to return our expected issuer CIK
+            mock_extract_cik.return_value = "0001234567"
+            
+            # Call index_documents
+            result = indexer.index_documents(mock_sgml)
+            
+            # Verify that extract_issuer_cik_from_xml was called when the parser failed
+            mock_extract_cik.assert_called_with(mock_xml)
+    
+    # Verify that issuer_cik is included in the result - Bug 8 fix
+    assert "issuer_cik" in result, "issuer_cik missing from index_documents result (Bug 8 fix)"
+    assert result["issuer_cik"] == "0001234567", f"Incorrect issuer CIK: {result.get('issuer_cik')}"
+    
+    # Verify the issuer CIK is different from the CIK used to initialize the indexer
+    assert result["issuer_cik"] != indexer.cik, "issuer_cik should be different from initialization CIK"
+
+def test_bug8_issuer_cik_extraction_from_entity():
+    """
+    Test that the issuer CIK is correctly extracted from the entity data in the happy path.
+    
+    This tests the primary code path where Form4Parser's parse method returns valid
+    entity data, and Form4SgmlIndexer extracts the issuer CIK from there.
+    """
+    # Create a mock SGML with embedded XML
+    mock_xml = """
+    <ownershipDocument>
+        <issuer>
+            <issuerCik>0001234567</issuerCik>
+            <issuerName>Test Issuer Company</issuerName>
+        </issuer>
+    </ownershipDocument>
+    """
+    
+    mock_sgml = f"""
+    <SEC-HEADER>
+    ACCESSION NUMBER:  0000123456-25-000001
+    CONFORMED SUBMISSION TYPE: 4
+    PUBLIC DOCUMENT COUNT: 1
+    FILED AS OF DATE: 20250101
+    </SEC-HEADER>
+    
+    <XML>
+    {mock_xml}
+    </XML>
+    """
+    
+    # Create the indexer with a different CIK
+    indexer = Form4SgmlIndexer(cik="0009876543", accession_number="0000123456-25-000001")
+    
+    # Mock the Form4Parser.parse method to return our expected entity data
+    with patch('parsers.forms.form4_parser.Form4Parser.parse') as mock_parse:
+        from models.dataclasses.entity import EntityData
+        
+        # Create a mock issuer entity with the expected CIK
+        issuer_entity = EntityData(
+            cik="1234567",
+            name="Test Issuer Company",
+            entity_type="company"
+        )
+        
+        # Create the parser response with a valid entity_data structure
+        mock_parse.return_value = {
+            "parsed_data": {
+                "entity_data": {
+                    "issuer_entity": issuer_entity,
+                    "owner_entities": [],
+                    "relationships": []
+                },
+                "non_derivative_transactions": [],
+                "derivative_transactions": []
+            }
+        }
+        
+        # Mock other methods that will be called
+        with patch.object(indexer, '_update_form4_data_from_xml'), \
+             patch.object(indexer, '_add_transactions_from_parsed_xml'), \
+             patch.object(indexer, '_link_transactions_to_relationships'):
+            
+            # Call index_documents
+            result = indexer.index_documents(mock_sgml)
+    
+    # Verify that the correct issuer CIK is in the result
+    assert "issuer_cik" in result, "issuer_cik missing from index_documents result"
+    assert result["issuer_cik"] == "1234567", f"Incorrect issuer CIK: {result.get('issuer_cik')}"
+    
+    # Verify the issuer CIK is different from the CIK used to initialize the indexer
+    assert result["issuer_cik"] != indexer.cik, "issuer_cik should be different from initialization CIK"

@@ -1,5 +1,11 @@
 # Form 4 Entity and Transaction Extraction Architecture
 
+> **DEPRECATED**: This document has been consolidated into the following files and should no longer be considered the authoritative source:
+> - [Form Parsers README](/parsers/forms/README.md) - See the "Form 4 Entity Extraction Implementation" section
+> - [Form SGML Indexers README](/parsers/sgml/indexers/forms/README.md) - See the "Transaction Processing Methods" and "Entity Extraction Strategy" sections
+>
+> Please update any references to this document. This file will be removed in a future update.
+
 ## Overview
 
 This document describes the enhanced entity and transaction extraction approach for SEC Form 4 filings. The Form 4 pipeline extracts relationships between reporting entities (issuers and owners) and transaction details from XML data embedded in Form 4 filings.

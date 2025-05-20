@@ -98,16 +98,16 @@
 │   ├── stop_postgres.bat
 │   └── tree_view.py
 ├── docs/
+│   └── leverage_reporting_ciks_for_query.md
 │   ├── to_sort/
 │   │   ├── 8k_item_codes.txt
+│   │   ├── CLAUDE_dir_browsing_vs_sgml_parsing.md
 │   │   ├── CLAUDE_form_cik_summary.md
-│   │   ├── CLAUDE_multi_cik_relationship_model.md
 │   │   ├── CLAUDE_sgml_tag_analysis.md
-│   │   ├── CLAUDE_to_do.md
+│   │   ├── DEPRECATED_CLAUDE_multi_cik_relationship_model.md
+│   │   ├── DEPRECATED_form4_entity_and_transaction_extraction.md
+│   │   ├── DEPRECATED_form4_entity_extraction.md
 │   │   ├── dataclass_architecture.md
-│   │   ├── form4_entity_and_transaction_extraction.md
-│   │   ├── form4_entity_extraction.md
-│   │   ├── form4_extraction_issues.md
 │   │   ├── form4_processing_documentation.md
 │   │   ├── readme-form-filtering.md
 │   │   └── sec_forms.md
@@ -220,6 +220,7 @@
 │   │   │   ├── sgml_document_indexer.py
 │   │   │   └── sgml_indexer_factory.py
 │   │   │   ├── forms/
+│   │   │   │   ├── CIK_PARSING.md
 │   │   │   │   ├── README.md
 │   │   │   │   ├── form4-sgml-analysis.md
 │   │   │   │   ├── form4_sgml_indexer.py
@@ -370,16 +371,41 @@
 │   │   │   │   ├── 2023/
 │   │   │   │   │   ├── 4/
 │   │   │   │   │   │   ├── 000120919123029607/
+│   │   │   ├── 1611597/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 4/
+│   │   │   │   │   │   ├── 0001611597-23-000014/
+│   │   │   │   │   │   │   └── 000161159723000014_form4.xml
 │   │   │   ├── 1637873/
 │   │   │   │   ├── 2023/
 │   │   │   │   │   ├── 4/
 │   │   │   │   │   │   ├── 0000899243-23-012964/
 │   │   │   │   │   │   │   └── 000089924323012964_form4.xml
+│   │   │   ├── 1750019/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 4/
+│   │   │   │   │   │   ├── 0001209191-23-029527/
+│   │   │   │   │   │   │   └── 000120919123029527_form4.xml
 │   │   │   ├── 1770787/
 │   │   │   │   ├── 2023/
 │   │   │   │   │   ├── 4/
 │   │   │   │   │   │   ├── 0001610717-23-000035/
 │   │   │   │   │   │   │   └── 000161071723000035_form4.xml
+│   │   │   ├── 1811625/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 4/
+│   │   │   │   │   │   ├── 0001062993-23-011116/
+│   │   │   │   │   │   │   └── 000106299323011116_form4.xml
+│   │   │   ├── 1831624/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 4/
+│   │   │   │   │   │   ├── 0000320121-23-000040/
+│   │   │   │   │   │   │   └── 000032012123000040_form4.xml
+│   │   │   ├── 1974878/
+│   │   │   │   ├── 2023/
+│   │   │   │   │   ├── 4/
+│   │   │   │   │   │   ├── 0001209191-23-029247/
+│   │   │   │   │   │   │   └── 000120919123029247_form4.xml
 │   │   │   ├── 824142/
 │   │   │   │   ├── 2023/
 │   │   │   │   │   ├── 4/
@@ -431,8 +457,11 @@
 │   │   ├── test_sgml_disk_orchestrator.py
 │   │   └── test_writer_issuer_cik.py
 │   ├── fixtures/
+│   │   ├── 000032012123000040_form4.xml
 │   │   ├── 0000921895-25-001190.txt
 │   │   ├── 0000925421-24-000007.txt
+│   │   ├── 000106299323011116_form4.xml
+│   │   ├── 000120919123029527_form4.xml
 │   │   ├── 0001610717-23-000035.xml
 │   │   ├── 0001610717-23-000035_rel_num.xml
 │   │   ├── app_config_test.yaml
@@ -472,6 +501,14 @@
 │   │   ├── test_submissions_collector.py
 │   │   └── test_submissions_ingestion_orchestrator.py
 │   ├── tmp/
+│   │   ├── README.md
+│   │   ├── cik_url_construction_analysis.md
+│   │   ├── form4_bugs_summary.md
+│   │   ├── form4_extraction_doc_comparison.md
+│   │   ├── form4_group_filing_analysis.md
+│   │   ├── form4_relationship_model_analysis.md
+│   │   ├── group_filing_flag_fix.py
+│   │   └── next_session_prompt.md
 ├── utils/
 │   ├── README.md
 │   ├── __init__.py

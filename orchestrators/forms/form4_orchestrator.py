@@ -2,6 +2,7 @@
 
 from orchestrators.base_orchestrator import BaseOrchestrator
 from parsers.sgml.indexers.forms.form4_sgml_indexer import Form4SgmlIndexer
+from parsers.forms.form4_parser import Form4Parser
 from writers.forms.form4_writer import Form4Writer
 from writers.shared.raw_file_writer import RawFileWriter
 from downloaders.sgml_downloader import SgmlDownloader
@@ -133,6 +134,11 @@ class Form4Orchestrator(BaseOrchestrator):
 
                     form4_data = indexed_data.get("form4_data")
                     xml_content = indexed_data.get("xml_content")
+                    
+                    # Bug 8: Get the issuer CIK from the indexer
+                    issuer_cik = indexed_data.get("issuer_cik")
+                    if issuer_cik and issuer_cik != filing.cik:
+                        log_info(f"[FORM4] Using issuer CIK {issuer_cik} from XML instead of {filing.cik}")
 
                     if not form4_data:
                         log_error(f"[FORM4] Failed to parse Form 4 data for {filing.accession_number}")
@@ -151,11 +157,17 @@ class Form4Orchestrator(BaseOrchestrator):
                         # Create a RawDocument with the XML content for RawFileWriter
                         xml_filename = f"{format_for_filename(filing.accession_number)}_form4.xml"
                         
-                        # Construct source URL (even if we don't use it for local files)
-                        source_url = construct_sgml_txt_url(filing.cik, format_for_url(filing.accession_number))
+                        # Bug 8: Use issuer CIK for both the source URL and the RawDocument
+                        # This ensures the file is saved under the correct issuer CIK path
+                        use_cik = issuer_cik if issuer_cik else filing.cik
+                        
+                        source_url = construct_sgml_txt_url(
+                            use_cik, 
+                            format_for_url(filing.accession_number)
+                        )
                         
                         xml_doc = RawDocument(
-                            cik=filing.cik,
+                            cik=use_cik,  # Bug 8: Use issuer CIK to ensure correct file path construction
                             accession_number=filing.accession_number,  # Keep dashes for path construction
                             form_type=filing.form_type,
                             filing_date=filing.filing_date,
@@ -304,9 +316,13 @@ class Form4Orchestrator(BaseOrchestrator):
         
         This method is responsible for translating between dataclass and string 
         representations as needed by different components.
+        
+        Bug 8 Fix: This method now tries to extract the issuer CIK from XML content when
+        it becomes available, and uses that for URL construction in subsequent operations
+        to ensure consistency.
 
         Args:
-            cik: CIK
+            cik: CIK (could be issuer or reporting owner)
             accession_number: Accession number
 
         Returns:
@@ -320,14 +336,50 @@ class Form4Orchestrator(BaseOrchestrator):
         # Check if the downloader has this URL in its memory cache
         if self.downloader.has_in_memory_cache(url):
             log_info(f"[FORM4] Using SGML from memory cache for {accession_number}")
-            return self.downloader.get_from_memory_cache(url)
+            sgml_content = self.downloader.get_from_memory_cache(url)
+            
+            # Bug 8: After getting content, try to extract issuer CIK
+            xml_start = sgml_content.find("<XML>")
+            xml_end = sgml_content.find("</XML>", xml_start) if xml_start != -1 else -1
+            issuer_cik = None
+            if xml_start != -1 and xml_end != -1:
+                xml_content = sgml_content[xml_start+5:xml_end].strip()
+                issuer_cik = Form4Parser.extract_issuer_cik_from_xml(xml_content)
+            if issuer_cik and issuer_cik != cik:
+                log_info(f"[FORM4] Found issuer CIK {issuer_cik} in XML, different from {cik}")
+                # If we found a different issuer CIK, check if we should try another URL
+                alt_url = construct_sgml_txt_url(issuer_cik, format_for_url(accession_number))
+                if alt_url != url and self.downloader.has_in_memory_cache(alt_url):
+                    log_info(f"[FORM4] Found alternate URL in cache using issuer CIK {issuer_cik}")
+                    return self.downloader.get_from_memory_cache(alt_url)
+            
+            return sgml_content
 
         # Next, try from disk if Pipeline 3 has already saved it
         sgml_path = self._get_sgml_file_path(cik, accession_number)
         if os.path.exists(sgml_path):
             log_info(f"[FORM4] Using SGML from disk for {accession_number}")
             with open(sgml_path, 'r', encoding='utf-8', errors='replace') as f:
-                return f.read()
+                sgml_content = f.read()
+                
+                # Bug 8: Try to extract issuer CIK from the content
+                xml_start = sgml_content.find("<XML>")
+                xml_end = sgml_content.find("</XML>", xml_start) if xml_start != -1 else -1
+                issuer_cik = None
+                if xml_start != -1 and xml_end != -1:
+                    xml_content = sgml_content[xml_start+5:xml_end].strip()
+                    issuer_cik = Form4Parser.extract_issuer_cik_from_xml(xml_content)
+                if issuer_cik and issuer_cik != cik:
+                    log_info(f"[FORM4] Found issuer CIK {issuer_cik} in XML, different from {cik}")
+                    
+                    # Check if there's a file under the issuer CIK path
+                    alt_path = self._get_sgml_file_path(issuer_cik, accession_number)
+                    if os.path.exists(alt_path) and alt_path != sgml_path:
+                        log_info(f"[FORM4] Found file at issuer CIK path {alt_path}, using that instead")
+                        with open(alt_path, 'r', encoding='utf-8', errors='replace') as f2:
+                            return f2.read()
+                
+                return sgml_content
 
         # Finally, try to download (this will also update memory cache)
         log_info(f"[FORM4] Downloading SGML for {accession_number}")
@@ -351,8 +403,33 @@ class Form4Orchestrator(BaseOrchestrator):
             else:
                 sgml_content = str(sgml_doc)
                 
+            # Bug 8: Try to extract issuer CIK from content before writing to disk
+            xml_start = sgml_content.find("<XML>")
+            xml_end = sgml_content.find("</XML>", xml_start) if xml_start != -1 else -1
+            issuer_cik = None
+            if xml_start != -1 and xml_end != -1:
+                xml_content = sgml_content[xml_start+5:xml_end].strip()
+                issuer_cik = Form4Parser.extract_issuer_cik_from_xml(xml_content)
+            if issuer_cik and issuer_cik != cik:
+                log_info(f"[FORM4] Found issuer CIK {issuer_cik} in downloaded XML, different from {cik}")
+                
+                # Try to download with issuer CIK if it's different
+                alt_sgml_doc = self.downloader.download_sgml(issuer_cik, accession_number, year)
+                if alt_sgml_doc:
+                    if hasattr(alt_sgml_doc, 'content'):
+                        new_content = alt_sgml_doc.content
+                    else:
+                        new_content = str(alt_sgml_doc)
+                        
+                    if new_content:
+                        log_info(f"[FORM4] Successfully downloaded using issuer CIK {issuer_cik}")
+                        sgml_content = new_content
+                        cik = issuer_cik  # Use issuer CIK for path construction
+                
             # For standalone mode, write to disk if requested
             if sgml_content and self.write_cache:
+                # Bug 8: Use the correct CIK (original or issuer) for path construction
+                sgml_path = self._get_sgml_file_path(cik, accession_number)
                 os.makedirs(os.path.dirname(sgml_path), exist_ok=True)
                 with open(sgml_path, 'w', encoding='utf-8') as f:
                     f.write(sgml_content)
@@ -385,3 +462,4 @@ class Form4Orchestrator(BaseOrchestrator):
         )
 
         return sgml_path
+        

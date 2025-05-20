@@ -19,6 +19,12 @@ The `Form4Orchestrator` is responsible for specialized processing of Form 4 fili
 - **XML Extraction**: Uses `Form4SgmlIndexer` to extract XML from SGML containers
 - **Entity Relationship Modeling**: Maintains the complex relationships between issuers, reporting persons, and transactions
 - **Transaction Processing**: Handles the diverse transaction types and reporting requirements
+- **CIK Standardization (Bug 8 Fix)**: Reliably extracts the issuer CIK from Form 4 XML content and uses it consistently for URL construction, file paths, and RawDocument creation. This ensures:
+  - Consistent handling across the pipeline
+  - All XML files are stored under the issuer CIK directory structure
+  - Files are correctly organized by the company whose securities are being traded
+  - The same accession number is found under a single logical path
+  - SEC EDGAR's multiple URL paths (one per involved entity) are reconciled to a single canonical path
 
 #### Internal Components
 

@@ -142,6 +142,9 @@ python -m scripts.crawler_idx.run_daily_metadata_ingest --date 2025-05-12
 
 # Run specialized form processing
 python -m scripts.forms.run_form4_ingest --date 2025-05-12
+
+# Process a specific Form 4 filing with XML extraction
+python -m scripts.forms.run_form4_ingest --accessions 0001234567-25-000123 --write-xml
 ```
 
 ### Filtering Options

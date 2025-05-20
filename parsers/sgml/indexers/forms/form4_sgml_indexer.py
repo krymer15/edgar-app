@@ -30,6 +30,7 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
             - "documents": List of FilingDocumentMetadata
             - "form4_data": Form4FilingData object
             - "xml_content": Raw XML content for further processing
+            - "issuer_cik": The CIK of the issuer company (Bug 8 fix)
         """
         # Extract standard document metadata
         documents = super().index_documents(txt_contents)
@@ -40,6 +41,9 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
         # Extract XML content for entity and transaction details
         xml_content = self.extract_xml_content(txt_contents)
         
+        # Bug 8: Initialize issuer_cik - will be updated if found in XML
+        issuer_cik = self.cik
+        
         if xml_content:
             # Use the enhanced Form4Parser to extract entity information from XML
             form4_parser = Form4Parser(self.accession_number, self.cik, 
@@ -49,6 +53,13 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
             if parsed_xml and "parsed_data" in parsed_xml and "entity_data" in parsed_xml["parsed_data"]:
                 # Extract entity information
                 entity_data = parsed_xml["parsed_data"]["entity_data"]
+                
+                # Bug 8: Extract issuer_cik from parsed data if available
+                if "issuer_entity" in entity_data and entity_data["issuer_entity"]:
+                    issuer_entity = entity_data["issuer_entity"]
+                    if hasattr(issuer_entity, "cik") and issuer_entity.cik:
+                        issuer_cik = issuer_entity.cik
+                        log_info(f"[FORM4] Found issuer CIK {issuer_cik} in XML for {self.accession_number}")
                 
                 # Replace the entities and relationships with more accurate XML-based data
                 self._update_form4_data_from_xml(form4_data, entity_data)
@@ -69,13 +80,20 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                 log_warn(f"Enhanced Form4Parser failed, falling back to legacy parser for {self.accession_number}")
                 self.parse_xml_transactions(xml_content, form4_data)
                 
+                # Bug 8: Try to extract issuer_cik directly from XML as a fallback
+                direct_issuer_cik = Form4Parser.extract_issuer_cik_from_xml(xml_content)
+                if direct_issuer_cik:
+                    issuer_cik = direct_issuer_cik
+                    log_info(f"[FORM4] Found issuer CIK {issuer_cik} from direct XML lookup for {self.accession_number}")
+                
                 # Associate transactions with relationships (legacy path)
                 self._link_transactions_to_relationships(form4_data)
         
         return {
             "documents": documents,
             "form4_data": form4_data,
-            "xml_content": xml_content
+            "xml_content": xml_content,
+            "issuer_cik": issuer_cik  # Bug 8: Include issuer_cik in the return value
         }
     
     def extract_form4_data(self, txt_contents: str) -> Form4FilingData:

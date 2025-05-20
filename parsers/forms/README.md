@@ -53,17 +53,45 @@ Processes ownership transaction XML content from Form 4 filings, extracting:
 - Relationship information between issuers and owners
 - Footnotes and additional references
 
-Key features:
-- Creates entity data objects for direct use in writers
-- Handles both direct and indirect ownership
-- Classifies entity types (person vs. company)
+#### Key Features
+
+- Creates `EntityData` objects directly from XML content for use in writers
+- Handles both direct and indirect ownership types
+- Intelligently classifies entity types (person vs. company) based on name patterns
 - Processes multiple reporting owners in a single filing
 - Supports both "1" and "true" string values for relationship flags (is_director, is_officer, etc.)
 - Extracts footnote references for both derivative and non-derivative transactions using multiple extraction strategies
 - Captures footnotes from various locations in the XML structure (direct elements, attributes, and nested elements)
 - Comprehensive footnote ID mapping for creating accurate reference links between transactions and their footnotes
 - Properly flags group filings when multiple reporting owners exist in a single filing
+- Provides reliable issuer CIK extraction via a static method (`extract_issuer_cik_from_xml`) that can be used by other components (Bug 8 fix)
 - Uses [`parser_utils.build_standard_output()`](../utils/parser_utils.py) for consistent output format
+
+#### Form 4 Entity Extraction Implementation
+
+The `Form4Parser` implements detailed entity extraction from XML through these key methods:
+
+1. **`extract_entity_information(root)`**: 
+   - Extracts issuer CIK, name, and trading symbol
+   - Extracts reporting owner CIK, name, and relationship details
+   - Creates properly structured relationship data between issuers and owners
+   - Returns both raw data dictionaries and strongly-typed EntityData objects
+   - Intelligently determines entity types based on name patterns
+
+2. **`extract_non_derivative_transactions(root)`**:
+   - Processes direct stock transactions (purchases, sales, etc.)
+   - Extracts security title, date, shares, price, and all transaction details
+   - Captures ownership type (direct/indirect) and related footnotes
+
+3. **`extract_derivative_transactions(root)`**:
+   - Processes options, warrants, rights to buy/sell, etc.
+   - Extracts additional derivative-specific fields like exercise price, expiration date
+
+4. **`extract_issuer_cik_from_xml(xml_content)`**:
+   - Static utility method for extracting issuer CIK directly from XML content
+   - Used by orchestrators and indexers when entity extraction isn't needed
+
+These methods provide a comprehensive approach to entity extraction, ensuring high accuracy and consistency in Form 4 processing.
 
 ### Form 8-K Parser (`form8k_parser.py`)
 
