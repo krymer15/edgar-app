@@ -1,6 +1,6 @@
 # models/orm_models/forms/form4_relationship_orm.py
 
-from sqlalchemy import Column, String, Boolean, Date, TIMESTAMP, func, ForeignKey, JSON, CheckConstraint, Index
+from sqlalchemy import Column, String, Boolean, Date, TIMESTAMP, func, ForeignKey, JSON, CheckConstraint, Index, Numeric
 from sqlalchemy.dialects.postgresql import UUID, JSONB  # Using JSONB is better
 from sqlalchemy.orm import relationship
 import uuid
@@ -23,6 +23,8 @@ class Form4Relationship(Base):
     relationship_details = Column(JSONB)  # JSONB for better performance
     is_group_filing = Column(Boolean, default=False)
     filing_date = Column(Date, nullable=False)
+    # Bug 11 Fix: Add total_shares_owned column
+    total_shares_owned = Column(Numeric)  # Calculated from all related transactions
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at = Column(
         TIMESTAMP(timezone=True),

@@ -9,7 +9,7 @@ CREATE TABLE public.form4_transactions (
 	form4_filing_id uuid NOT NULL,
 	relationship_id uuid NOT NULL,
 	transaction_code text NOT NULL,
-	transaction_date date NOT NULL,
+	transaction_date date NULL,
 	security_title text NOT NULL,
 	transaction_form_type text NULL,
 	shares_amount numeric NULL,
@@ -25,6 +25,10 @@ CREATE TABLE public.form4_transactions (
 	expiration_date date NULL,
 	created_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
 	updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	acquisition_disposition_flag text NULL,
+	is_position_only bool DEFAULT false NULL,
+	underlying_security_shares numeric NULL,
+	CONSTRAINT acquisition_disposition_flag_check CHECK (((acquisition_disposition_flag = ANY (ARRAY['A'::text, 'D'::text])) OR (acquisition_disposition_flag IS NULL))),
 	CONSTRAINT form4_transactions_pkey PRIMARY KEY (id)
 );
 CREATE INDEX idx_form4_transactions_filing_id ON public.form4_transactions USING btree (form4_filing_id);

@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<ownershipDocument>
+
+    <schemaVersion>X0407</schemaVersion>
+
+    <documentType>4</documentType>
+
+    <periodOfReport>2023-05-11</periodOfReport>
+
+    <issuer>
+        <issuerCik>0001493761</issuerCik>
+        <issuerName>Turtle Beach Corp</issuerName>
+        <issuerTradingSymbol>HEAR</issuerTradingSymbol>
+    </issuer>
+
+    <reportingOwner>
+        <reportingOwnerId>
+            <rptOwnerCik>0001777906</rptOwnerCik>
+            <rptOwnerName>SZE JULIA</rptOwnerName>
+        </reportingOwnerId>
+        <reportingOwnerAddress>
+            <rptOwnerStreet1>C/O TURTLE BEACH CORPORATION</rptOwnerStreet1>
+            <rptOwnerStreet2>44 SOUTH BROADWAY, 4TH FLOOR</rptOwnerStreet2>
+            <rptOwnerCity>WHITE PLAINS</rptOwnerCity>
+            <rptOwnerState>NY</rptOwnerState>
+            <rptOwnerZipCode>10601</rptOwnerZipCode>
+            <rptOwnerStateDescription></rptOwnerStateDescription>
+        </reportingOwnerAddress>
+        <reportingOwnerRelationship>
+            <isDirector>true</isDirector>
+        </reportingOwnerRelationship>
+    </reportingOwner>
+
+    <aff10b5One>false</aff10b5One>
+
+    <nonDerivativeTable>
+        <nonDerivativeTransaction>
+            <securityTitle>
+                <value>Common Stock</value>
+            </securityTitle>
+            <transactionDate>
+                <value>2023-05-11</value>
+            </transactionDate>
+            <transactionCoding>
+                <transactionFormType>4</transactionFormType>
+                <transactionCode>P</transactionCode>
+                <equitySwapInvolved>0</equitySwapInvolved>
+            </transactionCoding>
+            <transactionAmounts>
+                <transactionShares>
+                    <value>5000</value>
+                </transactionShares>
+                <transactionPricePerShare>
+                    <value>11.03</value>
+                    <footnoteId id="F1"/>
+                </transactionPricePerShare>
+                <transactionAcquiredDisposedCode>
+                    <value>A</value>
+                </transactionAcquiredDisposedCode>
+            </transactionAmounts>
+            <postTransactionAmounts>
+                <sharesOwnedFollowingTransaction>
+                    <value>18453</value>
+                </sharesOwnedFollowingTransaction>
+            </postTransactionAmounts>
+            <ownershipNature>
+                <directOrIndirectOwnership>
+                    <value>D</value>
+                </directOrIndirectOwnership>
+            </ownershipNature>
+        </nonDerivativeTransaction>
+    </nonDerivativeTable>
+
+    <footnotes>
+        <footnote id="F1">Reflects the weighted average price of purchases on May 11, 2023. The shares were purchased in multiple transactions at prices ranging from $11.00 to $11.04, inclusive. The reporting person undertakes to provide to Turtle Beach Corporation, any security holder of Turtle Beach Corporation, or the staff of the Securities and Exchange Commission, upon request, full information regarding the number of shares purchased at each separate price within such range.</footnote>
+    </footnotes>
+
+    <ownerSignature>
+        <signatureName>/s/ John T. Hanson, attorney-in-fact for Julia Sze</signatureName>
+        <signatureDate>2023-05-15</signatureDate>
+    </ownerSignature>
+</ownershipDocument>

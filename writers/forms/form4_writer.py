@@ -162,7 +162,10 @@ class Form4Writer:
             raise
 
     def _write_relationships_and_transactions(self, form4_data: Form4FilingData, form4_filing: Form4Filing) -> None:
-        """Write relationships and transactions for a Form 4 filing"""
+        """
+        Write relationships and transactions for a Form 4 filing.
+        Calculates and stores total_shares_owned for each relationship based on related transactions.
+        """
         # Track relationship mappings (from dataclass ID to ORM object)
         relationship_map = {}
 
@@ -269,7 +272,9 @@ class Form4Writer:
                 other_text=rel_data.other_text,
                 relationship_details=rel_data.relationship_details,
                 is_group_filing=rel_data.is_group_filing,
-                filing_date=rel_data.filing_date
+                filing_date=rel_data.filing_date,
+                # Bug 11 Fix: Initialize total_shares_owned from dataclass if available
+                total_shares_owned=rel_data.total_shares_owned
             )
 
             self.db_session.add(relationship)
@@ -299,8 +304,10 @@ class Form4Writer:
             log_error(f"Error committing relationships before transactions: {e}")
             raise
             
-        # Process transactions
+        # Process transactions and track them by relationship for total_shares_owned calculation
         log_info(f"Processing {len(form4_data.transactions)} transactions")
+        relationship_transactions = {}  # Dictionary to track transactions by relationship ID
+        
         for txn_data in form4_data.transactions:
             # Determine which relationship to associate with
             relationship = None
@@ -317,12 +324,25 @@ class Form4Writer:
 
             if relationship:
                 try:
-                    log_info(f"Creating transaction: {txn_data.security_title} on {txn_data.transaction_date}")
+                    # Add to relationship_transactions for total_shares_owned calculation
+                    if relationship.id not in relationship_transactions:
+                        relationship_transactions[relationship.id] = []
+                    relationship_transactions[relationship.id].append(txn_data)
+                    
+                    # Debug info for transaction
+                    log_msg = f"Creating transaction: {txn_data.security_title}"
+                    if txn_data.is_position_only:
+                        log_msg += f" (position-only)"
+                    elif txn_data.transaction_date:
+                        log_msg += f" on {txn_data.transaction_date}"
+                    log_info(log_msg)
+                    
                     log_info(f"  Transaction code: {txn_data.transaction_code}")
                     log_info(f"  Shares: {txn_data.shares_amount}, Price: {txn_data.price_per_share}")
                     log_info(f"  Using relationship ID: {relationship.id}")
                     log_info(f"  Using form4_filing_id: {form4_filing.id}")
                     
+                    # Create transaction ORM object
                     transaction = Form4Transaction(
                         form4_filing_id=form4_filing.id,
                         relationship_id=relationship.id,
@@ -340,24 +360,73 @@ class Form4Writer:
                         footnote_ids=txn_data.footnote_ids,
                         conversion_price=txn_data.conversion_price,
                         exercise_date=txn_data.exercise_date,
-                        expiration_date=txn_data.expiration_date
+                        expiration_date=txn_data.expiration_date,
+                        acquisition_disposition_flag=txn_data.acquisition_disposition_flag,
+                        # Bug 10 Fix: Set is_position_only flag in database
+                        is_position_only=txn_data.is_position_only,
+                        # Set underlying_security_shares for derivative holdings
+                        underlying_security_shares=txn_data.underlying_security_shares
                     )
 
                     self.db_session.add(transaction)
                     # Flush to detect any immediate database issues
                     self.db_session.flush()
-                    log_info(f"Added transaction: {txn_data.security_title} on {txn_data.transaction_date} (ID: {transaction.id})")
+                    
+                    if txn_data.is_position_only:
+                        log_info(f"Added position-only entry: {txn_data.security_title} with {txn_data.shares_amount} shares (ID: {transaction.id})")
+                    else:
+                        log_info(f"Added transaction: {txn_data.security_title} on {txn_data.transaction_date} (ID: {transaction.id})")
                 except Exception as e:
                     log_error(f"Error creating transaction: {e}")
                     # Continue processing other transactions
                     continue
             else:
                 log_warn(f"No relationship found for transaction: {txn_data.security_title}. Transaction will be skipped.")
+        
+        # Bug 11 Fix: Calculate and set total_shares_owned for each relationship
+        for rel_id, transactions in relationship_transactions.items():
+            relationship = None
+            for rel in self.db_session.query(Form4Relationship).filter_by(id=rel_id).all():
+                relationship = rel
+                break
                 
-        # After all transactions are processed, do an explicit commit to ensure they're saved
+            if relationship:
+                # Calculate total shares from non-derivative and position-only transactions
+                from decimal import Decimal
+                total_shares = Decimal('0')
+                
+                # Group transactions by security title for more accurate counting
+                securities = {}
+                
+                for txn in transactions:
+                    # Skip derivative transactions for share count (they represent options, not actual shares)
+                    if txn.is_derivative:
+                        continue
+                        
+                    # Get the position impact value (handles A/D flags and position-only rows)
+                    if txn.position_value is not None:
+                        security_title = txn.security_title
+                        
+                        # Initialize if not exists
+                        if security_title not in securities:
+                            securities[security_title] = Decimal('0')
+                        
+                        # Add to the security's total
+                        securities[security_title] += txn.position_value
+                
+                # Sum up all securities
+                for security, shares in securities.items():
+                    total_shares += shares
+                
+                # Set the total_shares_owned on the relationship
+                if total_shares != Decimal('0'):
+                    relationship.total_shares_owned = total_shares
+                    log_info(f"Set total_shares_owned to {total_shares} for relationship {rel_id}")
+                
+        # After all calculations, do an explicit commit to ensure everything is saved
         try:
             self.db_session.commit()
-            log_info(f"Committed all transactions to database")
+            log_info(f"Committed all transactions and total_shares_owned calculations to database")
         except Exception as e:
-            log_error(f"Error committing transactions: {e}")
+            log_error(f"Error committing transactions and calculations: {e}")
             raise

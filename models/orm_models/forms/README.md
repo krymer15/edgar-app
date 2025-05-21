@@ -105,6 +105,9 @@ relationship_id = Column(UUID(as_uuid=True), ForeignKey("form4_relationships.id"
 transaction_code = Column(String, nullable=False)
 transaction_date = Column(Date, nullable=False)
 security_title = Column(String, nullable=False)
+acquisition_disposition_flag = Column(String)  # 'A' for Acquisition, 'D' for Disposition
+shares_amount = Column(Numeric)
+price_per_share = Column(Numeric)
 ```
 
 ### Entity ORM (`entity_orm.py`)
@@ -133,8 +136,9 @@ owner_relationships = relationship("Form4Relationship",
    - Supporting historical analysis of ownership changes over time
 
 2. **Transaction Classification**
-   - Enhanced flags for acquisition/disposition on transactions
-   - Improved reporting capabilities for buying vs. selling activities
+   - Tracks acquisition/disposition flags ('A'/'D') on transactions
+   - Enables clear distinction between buying and selling activities
+   - Provides improved reporting capabilities for analyzing insider trading patterns
 
 3. **Performance Optimization**
    - Additional indexes for common query patterns

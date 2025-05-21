@@ -1,0 +1,21 @@
+from enum import Enum
+
+class Form4TransactionCode(Enum):
+    P = "Open market or private purchase"
+    S = "Open market or private sale"
+    A = "Grant, award, or other acquisition"
+    D = "Disposition to the issuer of issuer equity securities"
+    F = "Payment of exercise price or tax liability by delivering or withholding securities"
+    M = "Exercise or conversion of derivative security"
+    C = "Conversion of derivative security"
+    E = "Expiration of short position"
+    G = "Gift of securities by or to the insider"
+    H = "Expiration (or closing) of a short derivative position"
+    I = "Discretionary transaction (within a trust)"
+    K = "Equity swap or similar instrument"
+    L = "Small acquisition under Rule 16a-6"
+    O = "Exercise of out-of-the-money derivative"
+    U = "Disposition pursuant to a tender of shares"
+    X = "Transaction under a 10b5-1 trading plan"
+    Z = "Deposit into or withdrawal from a voting trust"
+    J = "Other acquisition or disposition (explain in footnote)"

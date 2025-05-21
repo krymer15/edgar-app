@@ -411,7 +411,8 @@ def test_add_transactions_from_parsed_xml():
             "formType": "4",
             "shares": "1000",
             "pricePerShare": "15.50",
-            "ownership": "D"
+            "ownership": "D",
+            "acquisitionDispositionFlag": "A"  # Added acquisition flag
         },
         {
             "securityTitle": "Class A Common Stock",
@@ -421,7 +422,8 @@ def test_add_transactions_from_parsed_xml():
             "shares": "500",
             "pricePerShare": "20.25",
             "ownership": "I",
-            "indirectOwnershipNature": "By Trust"
+            "indirectOwnershipNature": "By Trust",
+            "acquisitionDispositionFlag": "D"  # Added disposition flag
         }
     ]
     
@@ -435,7 +437,8 @@ def test_add_transactions_from_parsed_xml():
             "pricePerShare": "0.00",
             "ownership": "D",
             "conversionOrExercisePrice": "15.00",
-            "expirationDate": "2035-05-14"
+            "expirationDate": "2035-05-14",
+            "acquisitionDispositionFlag": "A"  # Added acquisition flag
         }
     ]
     
@@ -466,11 +469,13 @@ def test_add_transactions_from_parsed_xml():
     assert purchase_transaction.security_title == "Common Stock"
     assert purchase_transaction.shares_amount == 1000.0
     assert purchase_transaction.price_per_share == 15.50
+    assert purchase_transaction.acquisition_disposition_flag == "A"  # Check acquisition flag
     
     # Check indirect ownership transaction
     indirect_transaction = next((t for t in filing.transactions if t.ownership_nature == "I"), None)
     assert indirect_transaction is not None
     assert indirect_transaction.indirect_ownership_explanation == "By Trust"
+    assert indirect_transaction.acquisition_disposition_flag == "D"  # Check disposition flag
     
     # Check derivative transaction
     option_transaction = next((t for t in filing.transactions if t.is_derivative), None)
@@ -478,6 +483,7 @@ def test_add_transactions_from_parsed_xml():
     assert option_transaction.security_title == "Stock Option (Right to Buy)"
     assert option_transaction.conversion_price == 15.00
     assert option_transaction.expiration_date.year == 2035
+    assert option_transaction.acquisition_disposition_flag == "A"  # Check acquisition flag
     
 def test_group_filing_flag_multi_owner():
     """Test that the is_group_filing flag is correctly set when multiple reporting owners exist."""

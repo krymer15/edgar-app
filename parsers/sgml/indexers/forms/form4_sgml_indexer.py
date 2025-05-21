@@ -644,6 +644,12 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
             price_el = txn_element.find(".//transactionAmounts/transactionPricePerShare/value")
             price = float(price_el.text) if price_el is not None and price_el.text else None
             
+            # Extract acquisition/disposition flag
+            acq_disp_el = txn_element.find(".//transactionAmounts/transactionAcquiredDisposedCode/value")
+            acquisition_disposition_flag = acq_disp_el.text.strip() if acq_disp_el is not None and acq_disp_el.text else None
+            # Debug log for acquisition/disposition flag
+            log_info(f"[FORM4-DEBUG] Found acquisition_disposition_flag: {acquisition_disposition_flag} in transaction {transaction_code}")
+            
             # Extract ownership nature
             ownership_el = txn_element.find(".//ownershipNature/directOrIndirectOwnership/value")
             ownership_nature = ownership_el.text.strip() if ownership_el is not None and ownership_el.text else None
@@ -726,6 +732,7 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                 ownership_nature=ownership_nature,
                 is_derivative=is_derivative,
                 equity_swap_involved=equity_swap_involved,
+                acquisition_disposition_flag=acquisition_disposition_flag,
                 footnote_ids=footnote_ids,  # Bug 3 Fix: Set the extracted footnote IDs
                 # Add the new fields:
                 conversion_price=conversion_price,
@@ -813,13 +820,11 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
         Convert transaction dictionaries from Form4Parser to Form4TransactionData objects
         and add them to Form4FilingData.
         
-        Bug 5 Fix Implementation:
-        This method properly transfers footnote IDs extracted by Form4Parser
-        to the Form4TransactionData objects that will be persisted to the database.
-        The problem previously was that even when Form4Parser correctly extracted
-        footnote references, they were not being transferred to the transaction objects
-        created in this method. This implementation fixes that issue by properly
-        extracting and setting footnote_ids on all transaction objects.
+        Includes support for:
+        - Bug 5 Fix: Properly transfers footnote IDs extracted by Form4Parser
+          to the Form4TransactionData objects that will be persisted to the database.
+        - Bug 10 Fix: Handles position-only rows (nonDerivativeHolding/derivativeHolding)
+          that report positions without transactions.
         
         Args:
             form4_data: The Form4FilingData to update
@@ -857,29 +862,40 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                         pass
                 
                 # Bug 5 Fix: Extract footnote_ids from the transaction dictionary
-                # This is the critical part that ensures footnotes are transferred from
-                # the parser output to the transaction objects
                 footnote_ids = txn_dict.get('footnoteIds', [])
                 if footnote_ids:
                     log_info(f"Non-derivative transaction has footnoteIds: {footnote_ids}")
                 
+                # Bug 10 Fix: Check if this is a position-only row
+                is_position_only = txn_dict.get('is_position_only', False)
+                if is_position_only:
+                    log_info(f"Processing non-derivative position-only row for {txn_dict.get('securityTitle')}")
+                
+                # Debug log for acquisition/disposition flag
+                acq_disp_flag = txn_dict.get('acquisitionDispositionFlag')
+                
                 # Create transaction object
                 transaction = Form4TransactionData(
                     security_title=txn_dict.get('securityTitle', 'Unknown Security'),
-                    transaction_date=transaction_date or form4_data.period_of_report,
                     transaction_code=txn_dict.get('transactionCode', 'P'),  # Default to Purchase
+                    transaction_date=transaction_date,  # Can be None for position-only rows
                     transaction_form_type=txn_dict.get('formType'),
                     shares_amount=shares_amount,
                     price_per_share=price_per_share,
                     ownership_nature=txn_dict.get('ownership'),
                     indirect_ownership_explanation=txn_dict.get('indirectOwnershipNature'),
+                    acquisition_disposition_flag=acq_disp_flag,
                     is_derivative=False,
+                    is_position_only=is_position_only,  # Bug 10 Fix: Set position-only flag
                     footnote_ids=footnote_ids if footnote_ids else []  # Bug 5 Fix: Set footnote_ids
                 )
                 
                 # Add to form4_data
                 form4_data.transactions.append(transaction)
-                log_info(f"Added non-derivative transaction: {transaction.security_title} on {transaction.transaction_date}")
+                if is_position_only:
+                    log_info(f"Added non-derivative position: {transaction.security_title} with {shares_amount} shares")
+                else:
+                    log_info(f"Added non-derivative transaction: {transaction.security_title} on {transaction.transaction_date}")
                 
             except Exception as e:
                 log_error(f"Error creating non-derivative transaction: {e}")
@@ -919,6 +935,14 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                     except ValueError:
                         pass
                 
+                # Bug 10 Fix: Get underlying security shares for derivatives
+                underlying_security_shares = None
+                if txn_dict.get('underlyingSecurityShares'):
+                    try:
+                        underlying_security_shares = float(txn_dict['underlyingSecurityShares'])
+                    except ValueError:
+                        pass
+                
                 # Handle dates
                 exercise_date = None
                 if txn_dict.get('exerciseDate'):
@@ -935,32 +959,44 @@ class Form4SgmlIndexer(SgmlDocumentIndexer):
                         pass
                 
                 # Bug 5 Fix: Extract footnote_ids from the transaction dictionary
-                # Derivative transactions commonly have footnotes for exercise dates, 
-                # expiration dates, or conversion/exercise prices
                 footnote_ids = txn_dict.get('footnoteIds', [])
                 if footnote_ids:
                     log_info(f"Derivative transaction has footnoteIds: {footnote_ids}")
                 
+                # Bug 10 Fix: Check if this is a position-only row
+                is_position_only = txn_dict.get('is_position_only', False)
+                if is_position_only:
+                    log_info(f"Processing derivative position-only row for {txn_dict.get('securityTitle')}")
+                
+                # Debug log for acquisition/disposition flag
+                acq_disp_flag = txn_dict.get('acquisitionDispositionFlag')
+                
                 # Create transaction object
                 transaction = Form4TransactionData(
                     security_title=txn_dict.get('securityTitle', 'Unknown Security'),
-                    transaction_date=transaction_date or form4_data.period_of_report,
                     transaction_code=txn_dict.get('transactionCode', 'P'),  # Default to Purchase
+                    transaction_date=transaction_date,  # Can be None for position-only rows
                     transaction_form_type=txn_dict.get('formType'),
                     shares_amount=shares_amount,
                     price_per_share=price_per_share,
                     ownership_nature=txn_dict.get('ownership'),
                     indirect_ownership_explanation=txn_dict.get('indirectOwnershipNature'),
+                    acquisition_disposition_flag=acq_disp_flag,
                     is_derivative=True,
+                    is_position_only=is_position_only,  # Bug 10 Fix: Set position-only flag
                     conversion_price=conversion_price,
                     exercise_date=exercise_date,
                     expiration_date=expiration_date,
+                    underlying_security_shares=underlying_security_shares,  # Bug 10 Fix: Set underlying shares
                     footnote_ids=footnote_ids if footnote_ids else []  # Bug 5 Fix: Set footnote_ids
                 )
                 
                 # Add to form4_data
                 form4_data.transactions.append(transaction)
-                log_info(f"Added derivative transaction: {transaction.security_title} on {transaction.transaction_date}")
+                if is_position_only:
+                    log_info(f"Added derivative position: {transaction.security_title} with {shares_amount} shares")
+                else:
+                    log_info(f"Added derivative transaction: {transaction.security_title} on {transaction.transaction_date}")
                 
             except Exception as e:
                 log_error(f"Error creating derivative transaction: {e}")

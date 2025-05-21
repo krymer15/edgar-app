@@ -2,19 +2,6 @@
 
 This document lists high-priority architectural and feature improvements for the Edgar App project.
 
-## Architectural Improvements
-
-### 1. ~~Refactor Form 4 SGML/XML Processing~~ (Resolved through documentation)
-
-- [x] Updated README.md files in parsers directories to document the intentional hybrid approach to SGML/XML processing
-
-### 2. ~~Implement Consistent Filing Processing Architecture~~ (Resolved through documentation)
-
-- [x] Updated README.md files to document the inherent diversity of SEC filing formats
-- [x] Documented the necessary flexibility in processing different form types
-- [x] Provided clear patterns for implementing new form processors while acknowledging natural variations
-- [x] Focused on documentation consistency rather than enforcing rigid architecture
-
 ## Feature Improvements
 
 ### 1. Form 4 Processing Improvements
@@ -28,7 +15,7 @@ This document lists high-priority architectural and feature improvements for the
 - [x] Add comprehensive tests for all Form 4 processing fixes
 - [x] Fix Bug 7: Set is_group_filing flag properly for multi-owner Form 4 filings
 - [x] Fix Bug 8: Standardize URL construction to always use issuer CIK, ensuring consistent file paths and proper storage of XML files
-- [ ] Add column to form4_transactions table for acquisition/disposition flag ("(A) or (D)" value in XML)
+- [x] Add column to form4_transactions table for acquisition/disposition flag ("(A) or (D)" value in XML)
 - [ ] Add support for position-only rows in Form 4 filings (rows with ownership data but no transaction details) using test cases from fixtures/000032012123000040_form4.xml (non-derivative section) and fixtures/000106299323011116_form4.xml (derivative section)
 - [ ] Add calculated total_shares_owned field to form4_relationships table aggregating all related transaction amounts
 - [ ] Reprocess problematic Form 4 filings after all fixes are implemented
@@ -67,3 +54,27 @@ This document lists high-priority architectural and feature improvements for the
 - [ ] Implement batch processing for high-volume form types
 - [ ] Add caching for frequently accessed entities
 - [ ] Profile and optimize memory usage in large document processing
+
+## Implementation Plan
+
+I recommend this implementation order:
+
+  1. Database Schema Updates (First Priority)
+    - Create migration script to add transaction_shares and position_shares columns to form4_transactions
+    - Add derivative_total_shares_owned column to form4_relationships
+    - This forms the foundation for all other changes
+  2. ORM Model Updates
+    - Update the Form4Transaction and Form4Relationship ORM models
+    - Keep backward compatibility with existing shares_amount field
+  3. Parser Updates
+    - Modify Form4Parser to extract and separate transaction amounts from position amounts
+    - Update position extraction for both derivatives and non-derivatives
+  4. Writer Updates
+    - Update Form4Writer to store values in the new columns
+    - Implement separate derivative/non-derivative total calculations
+  5. Testing
+    - Update test cases to verify correct column usage
+    - Test with both example files to ensure both types work
+
+  Each step should be implemented and tested thoroughly before moving to the next. This approach minimizes risk and ensures we can verify
+  each component works correctly.

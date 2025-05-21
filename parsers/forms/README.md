@@ -50,7 +50,10 @@ Processes ownership transaction XML content from Form 4 filings, extracting:
 - Reporting owner details (insiders filing the form)
 - Non-derivative transaction data (direct stock transactions)
 - Derivative transaction data (options, warrants, etc.)
+- Position-only holdings (ownership data without transaction details)
 - Relationship information between issuers and owners
+- Acquisition/Disposition flags (whether securities were acquired or disposed)
+- Total shares owned calculations
 - Footnotes and additional references
 
 #### Key Features
@@ -60,6 +63,16 @@ Processes ownership transaction XML content from Form 4 filings, extracting:
 - Intelligently classifies entity types (person vs. company) based on name patterns
 - Processes multiple reporting owners in a single filing
 - Supports both "1" and "true" string values for relationship flags (is_director, is_officer, etc.)
+- Extracts acquisition/disposition flags ('A'/'D') from transactions to track whether securities were acquired or disposed
+- Supports position-only rows (nonDerivativeHolding/derivativeHolding elements) for holdings without transactions (Bug 10 fix)
+  - Position-only rows represent ownership holdings without a corresponding transaction
+  - These rows have no transaction_code, transaction_date, or acquisition_disposition_flag
+  - The shares_amount field represents Column 5 (total shares owned), not Column 4 (transaction shares)
+  - Position-only rows are marked with the is_position_only flag to distinguish them from regular transactions
+- Calculates total_shares_owned field for form4_relationships to aggregate position information (Bug 11 fix)
+  - Aggregates both transactions and position-only rows to calculate total ownership
+  - Uses position_value property to determine the impact of each transaction/position on the total
+  - Groups by security_title to ensure accurate calculation across different securities
 - Extracts footnote references for both derivative and non-derivative transactions using multiple extraction strategies
 - Captures footnotes from various locations in the XML structure (direct elements, attributes, and nested elements)
 - Comprehensive footnote ID mapping for creating accurate reference links between transactions and their footnotes
@@ -71,6 +84,7 @@ Processes ownership transaction XML content from Form 4 filings, extracting:
   - Identifying group filings and joint reporting relationships
   - Capturing detailed transaction information including footnotes
   - Supporting various relationship types and their metadata
+  - Tracking total share ownership positions
 
 #### Form 4 Entity Extraction Implementation
 
@@ -86,11 +100,13 @@ The `Form4Parser` implements detailed entity extraction from XML through these k
 2. **`extract_non_derivative_transactions(root)`**:
    - Processes direct stock transactions (purchases, sales, etc.)
    - Extracts security title, date, shares, price, and all transaction details
+   - Captures acquisition/disposition flag (A/D) indicating whether securities were acquired or disposed
    - Captures ownership type (direct/indirect) and related footnotes
 
 3. **`extract_derivative_transactions(root)`**:
    - Processes options, warrants, rights to buy/sell, etc.
    - Extracts additional derivative-specific fields like exercise price, expiration date
+   - Captures acquisition/disposition flag (A/D) for derivative securities
 
 4. **`extract_issuer_cik_from_xml(xml_content)`**:
    - Static utility method for extracting issuer CIK directly from XML content

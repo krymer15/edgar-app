@@ -21,12 +21,14 @@ CREATE TABLE public.form4_relationships (
 	filing_date date NOT NULL,
 	created_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
 	updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	total_shares_owned numeric NULL,
 	CONSTRAINT form4_relationships_pkey PRIMARY KEY (id),
 	CONSTRAINT relationship_type_check CHECK ((relationship_type = ANY (ARRAY['director'::text, 'officer'::text, '10_percent_owner'::text, 'other'::text])))
 );
 CREATE INDEX idx_form4_relationships_filing_id ON public.form4_relationships USING btree (form4_filing_id);
 CREATE INDEX idx_form4_relationships_issuer ON public.form4_relationships USING btree (issuer_entity_id);
 CREATE INDEX idx_form4_relationships_owner ON public.form4_relationships USING btree (owner_entity_id);
+CREATE INDEX idx_form4_relationships_total_shares ON public.form4_relationships USING btree (total_shares_owned);
 
 
 -- public.form4_relationships foreign keys

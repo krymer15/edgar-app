@@ -113,6 +113,55 @@ FILED AS OF DATE: 20250101
     # Verify we got the correct issuer CIK
     assert issuer_cik == "0001084869", f"Failed to extract issuer CIK from SGML content: {issuer_cik}"
 
+def test_acquisition_disposition_flag_extraction():
+    """
+    Tests the extraction of the acquisition/disposition flag from Form 4 XML.
+    
+    This flag indicates whether securities were acquired (A) or disposed (D)
+    in the transaction.
+    """
+    xml_content = load_fixture()
+    
+    # These can be mocked as dummy metadata for test purposes
+    accession_number = "0000000000-00-000000"
+    cik = "0000000000"
+    filing_date = "2025-01-01"
+    
+    parser = Form4Parser(
+        accession_number=accession_number,
+        cik=cik,
+        filing_date=filing_date
+    )
+    result = parser.parse(xml_content)
+    
+    if "error" in result:
+        print("❌ Parser error:", result["error"])
+        assert False, "Form4Parser failed to parse XML."
+    
+    parsed = result.get("parsed_data", {})
+    
+    # Check non-derivative transactions
+    if len(parsed["non_derivative_transactions"]) > 0:
+        # Get the first non-derivative transaction
+        transaction = parsed["non_derivative_transactions"][0]
+        
+        # Verify the acquisitionDispositionFlag is extracted
+        assert "acquisitionDispositionFlag" in transaction, "Missing acquisitionDispositionFlag in non-derivative transaction"
+        
+        # Verify the flag has a valid value (A or D)
+        assert transaction["acquisitionDispositionFlag"] in ["A", "D"], "Invalid acquisitionDispositionFlag value"
+    
+    # Check derivative transactions if any
+    if len(parsed["derivative_transactions"]) > 0:
+        # Get the first derivative transaction
+        transaction = parsed["derivative_transactions"][0]
+        
+        # Verify the acquisitionDispositionFlag is extracted
+        assert "acquisitionDispositionFlag" in transaction, "Missing acquisitionDispositionFlag in derivative transaction"
+        
+        # Verify the flag has a valid value (A or D)
+        assert transaction["acquisitionDispositionFlag"] in ["A", "D"], "Invalid acquisitionDispositionFlag value"
+
 if __name__ == "__main__":
     test_parse_form4_fields()
     print("✅ test_parse_form4_fields passed.")
@@ -125,3 +174,6 @@ if __name__ == "__main__":
     
     test_extract_issuer_cik_from_sgml()
     print("✅ test_extract_issuer_cik_from_sgml passed.")
+    
+    test_acquisition_disposition_flag_extraction()
+    print("✅ test_acquisition_disposition_flag_extraction passed.")

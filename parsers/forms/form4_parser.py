@@ -246,10 +246,11 @@ class Form4Parser(BaseParser):
         Extract non-derivative transaction information from Form 4 XML,
         including footnote references.
         
-        This implementation includes full support for footnote extraction (Bug 3 fix).
-        The method uses multiple strategies to find footnote references in various
-        locations within the transaction XML structure, including direct footnoteId
-        elements and nested footnote references.
+        This implementation includes full support for:
+        - Footnote extraction (Bug 3 fix): Uses multiple strategies to find footnote 
+          references in various locations within the transaction XML structure.
+        - Position-only rows (Bug 10 fix): Supports non-derivative holding entries 
+          that report positions without transactions.
         
         Args:
             root: XML root element
@@ -262,6 +263,8 @@ class Form4Parser(BaseParser):
             return node.text.strip() if node is not None and node.text else None
             
         transactions = []
+        
+        # Process transaction entries
         for txn in root.findall(".//nonDerivativeTransaction"):
             # Extract footnote IDs - Bug 3 fix implementation
             footnote_ids = []
@@ -283,13 +286,51 @@ class Form4Parser(BaseParser):
                 "securityTitle": get_text(txn, ".//securityTitle/value"),
                 "transactionDate": get_text(txn, ".//transactionDate/value"),
                 "transactionCode": get_text(txn, ".//transactionCoding/transactionCode"),
-                "formType": get_text(txn, ".//transactionCoding/formType"),
+                "formType": get_text(txn, ".//transactionCoding/transactionFormType"),
                 "shares": get_text(txn, ".//transactionAmounts/transactionShares/value"),
                 "pricePerShare": get_text(txn, ".//transactionAmounts/transactionPricePerShare/value"),
+                "acquisitionDispositionFlag": get_text(txn, ".//transactionAmounts/transactionAcquiredDisposedCode/value"),
                 "ownership": get_text(txn, ".//ownershipNature/directOrIndirectOwnership/value"),
                 "indirectOwnershipNature": get_text(txn, ".//ownershipNature/natureOfOwnership/value"),
-                "footnoteIds": footnote_ids if footnote_ids else None  # Bug 3 fix: Include footnote IDs
+                "footnoteIds": footnote_ids if footnote_ids else None,  # Bug 3 fix: Include footnote IDs
+                "is_position_only": False
             })
+        
+        # Bug 10 Fix: Process position-only rows (nonDerivativeHolding)
+        for holding in root.findall(".//nonDerivativeHolding"):
+            # Extract footnote IDs using the same methods as for transactions
+            footnote_ids = []
+            
+            # Method 1: Direct footnoteId elements
+            for el in holding.findall(".//footnoteId"):
+                footnote_id = el.get("id")
+                if footnote_id and footnote_id not in footnote_ids:
+                    footnote_ids.append(footnote_id)
+            
+            # Method 2: Elements with footnoteId children
+            for element_with_footnote in holding.findall(".//*[footnoteId]"):
+                for footnote_el in element_with_footnote.findall("./footnoteId"):
+                    footnote_id = footnote_el.get("id")
+                    if footnote_id and footnote_id not in footnote_ids:
+                        footnote_ids.append(footnote_id)
+            
+            shares_owned = get_text(holding, ".//postTransactionAmounts/sharesOwnedFollowingTransaction/value")
+            
+            # Add position-only row to transactions list with special flag
+            transactions.append({
+                "securityTitle": get_text(holding, ".//securityTitle/value"),
+                "transactionDate": None,  # No transaction date for holdings
+                "transactionCode": None,  # Position-only rows have no transaction code
+                "formType": "4",          # Default to Form 4
+                "shares": shares_owned,   # Use shares owned as the share amount
+                "pricePerShare": None,    # No price for position-only rows
+                "acquisitionDispositionFlag": None,  # No A/D flag for position-only rows
+                "ownership": get_text(holding, ".//ownershipNature/directOrIndirectOwnership/value"),
+                "indirectOwnershipNature": get_text(holding, ".//ownershipNature/natureOfOwnership/value"),
+                "footnoteIds": footnote_ids if footnote_ids else None,
+                "is_position_only": True  # Flag as position-only row
+            })
+            
         return transactions
     
     def extract_derivative_transactions(self, root) -> List[Dict[str, Any]]:
@@ -297,10 +338,11 @@ class Form4Parser(BaseParser):
         Extract derivative transaction information from Form 4 XML,
         including footnote references.
         
-        This implementation includes full support for footnote extraction (Bug 3 fix).
-        Derivative transactions often contain footnotes for exercise dates, expiration dates,
-        or conversion prices. This method extracts those footnote references using multiple
-        strategies to ensure all footnotes are captured correctly.
+        This implementation includes full support for:
+        - Footnote extraction (Bug 3 fix): Extracts footnote references for exercise dates,
+          expiration dates, or conversion prices using multiple strategies.
+        - Position-only rows (Bug 10 fix): Supports derivative holding entries that report
+          positions without transactions.
         
         Args:
             root: XML root element
@@ -313,6 +355,8 @@ class Form4Parser(BaseParser):
             return node.text.strip() if node is not None and node.text else None
             
         transactions = []
+        
+        # Process transaction entries
         for txn in root.findall(".//derivativeTransaction"):
             # Extract footnote IDs - Bug 3 fix implementation
             footnote_ids = []
@@ -334,14 +378,59 @@ class Form4Parser(BaseParser):
                 "securityTitle": get_text(txn, ".//securityTitle/value"),
                 "transactionDate": get_text(txn, ".//transactionDate/value"),
                 "transactionCode": get_text(txn, ".//transactionCoding/transactionCode"),
-                "formType": get_text(txn, ".//transactionCoding/formType"),
+                "formType": get_text(txn, ".//transactionCoding/transactionFormType"),
                 "shares": get_text(txn, ".//transactionAmounts/transactionShares/value"),
                 "pricePerShare": get_text(txn, ".//transactionAmounts/transactionPricePerShare/value"),
+                "acquisitionDispositionFlag": get_text(txn, ".//transactionAmounts/transactionAcquiredDisposedCode/value"),
                 "conversionOrExercisePrice": get_text(txn, ".//conversionOrExercisePrice/value"),
                 "exerciseDate": get_text(txn, ".//exerciseDate/value"),
                 "expirationDate": get_text(txn, ".//expirationDate/value"),
                 "ownership": get_text(txn, ".//ownershipNature/directOrIndirectOwnership/value"),
                 "indirectOwnershipNature": get_text(txn, ".//ownershipNature/natureOfOwnership/value"),
-                "footnoteIds": footnote_ids if footnote_ids else None  # Bug 3 fix: Include footnote IDs
+                "footnoteIds": footnote_ids if footnote_ids else None,  # Bug 3 fix: Include footnote IDs
+                "is_position_only": False,
+                "underlyingSecurityShares": get_text(txn, ".//underlyingSecurity/underlyingSecurityShares/value")
             })
+            
+        # Bug 10 Fix: Process position-only rows (derivativeHolding)
+        for holding in root.findall(".//derivativeHolding"):
+            # Extract footnote IDs using the same methods as for transactions
+            footnote_ids = []
+            
+            # Method 1: Direct footnoteId elements
+            for el in holding.findall(".//footnoteId"):
+                footnote_id = el.get("id")
+                if footnote_id and footnote_id not in footnote_ids:
+                    footnote_ids.append(footnote_id)
+            
+            # Method 2: Elements with footnoteId children
+            for element_with_footnote in holding.findall(".//*[footnoteId]"):
+                for footnote_el in element_with_footnote.findall("./footnoteId"):
+                    footnote_id = footnote_el.get("id")
+                    if footnote_id and footnote_id not in footnote_ids:
+                        footnote_ids.append(footnote_id)
+            
+            # Get underlying shares for derivatives
+            underlying_shares = get_text(holding, ".//underlyingSecurity/underlyingSecurityShares/value")
+            shares_owned = get_text(holding, ".//postTransactionAmounts/sharesOwnedFollowingTransaction/value")
+            
+            # Add position-only row to transactions list with special flag
+            transactions.append({
+                "securityTitle": get_text(holding, ".//securityTitle/value"),
+                "transactionDate": None,  # No transaction date for holdings
+                "transactionCode": None,  # Position-only rows have no transaction code
+                "formType": "4",          # Default to Form 4
+                "shares": shares_owned,   # Use shares owned as the share amount
+                "pricePerShare": None,    # No price for position-only rows
+                "acquisitionDispositionFlag": None,  # No A/D flag for position-only rows
+                "conversionOrExercisePrice": get_text(holding, ".//conversionOrExercisePrice/value"),
+                "exerciseDate": get_text(holding, ".//exerciseDate/value"),
+                "expirationDate": get_text(holding, ".//expirationDate/value"),
+                "ownership": get_text(holding, ".//ownershipNature/directOrIndirectOwnership/value"),
+                "indirectOwnershipNature": get_text(holding, ".//ownershipNature/natureOfOwnership/value"),
+                "footnoteIds": footnote_ids if footnote_ids else None,
+                "is_position_only": True,  # Flag as position-only row
+                "underlyingSecurityShares": underlying_shares
+            })
+            
         return transactions

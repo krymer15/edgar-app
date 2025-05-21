@@ -14,6 +14,16 @@ The `Form4Writer` class is a sophisticated writer that handles the complex data 
 - Establishes relationships between issuers and owners
 - Records individual securities transactions
 - Handles both non-derivative (stock) and derivative (options, warrants) transactions
+- Supports position-only rows without transaction details (Bug 10 fix)
+  - Maintains null transaction_code, transaction_date fields for position rows
+  - Sets is_position_only flag to distinguish from regular transactions
+  - Uses shares_amount to store Column 5 position data (not transaction amount)
+  - Handles underlying_security_shares for derivative position records
+- Calculates and stores total shares owned by relationship (Bug 11 fix)
+  - Aggregates impact of all transactions for a given relationship
+  - Groups calculations by security_title for accurate position tracking
+  - Considers acquisition/disposition flags to add/subtract from total position
+  - Includes position-only rows in the calculation
 - Ensures proper database transaction management and error handling
 
 #### Database Schema
@@ -32,12 +42,13 @@ The Form 4 data is stored across several related tables:
 3. **form4_relationships**: Relationships between issuers and reporting owners
    - Primary key: `id` (UUID)
    - Foreign keys: `form4_filing_id`, `issuer_entity_id`, `owner_entity_id`
-   - Key fields: `is_director`, `is_officer`, `is_ten_percent_owner`, `officer_title`
+   - Key fields: `is_director`, `is_officer`, `is_ten_percent_owner`, `officer_title`, `total_shares_owned`
 
-4. **form4_transactions**: Individual security transactions
+4. **form4_transactions**: Individual security transactions and positions
    - Primary key: `id` (UUID)
    - Foreign keys: `form4_filing_id`, `relationship_id`
    - Key fields: `transaction_code`, `transaction_date`, `security_title`, `shares_amount`, `price_per_share`
+   - Additional fields: `is_position_only`, `underlying_security_shares`
 
 #### Usage
 
@@ -74,10 +85,12 @@ The `Form4Writer` implements a multi-step transaction process:
    - Records director/officer/ten-percent owner status
    - Stores officer titles and other relationship metadata
 
-4. **Transaction Recording**
+4. **Transaction and Position Recording**
    - Associates transactions with the appropriate relationship
    - Stores transaction codes, dates, amounts, and prices
    - Handles both direct ownership and indirect ownership details
+   - Supports position-only rows for holdings without transaction details
+   - Calculates total share ownership from transactions and positions
 
 5. **Transaction Management**
    - Uses strategic transaction boundaries for data consistency

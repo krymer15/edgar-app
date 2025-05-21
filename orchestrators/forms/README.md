@@ -9,7 +9,7 @@ This directory contains orchestrators specialized for processing particular SEC 
 The `Form4Orchestrator` is responsible for specialized processing of Form 4 filings (Statement of Changes in Beneficial Ownership). It:
 
 1. Extracts Form 4 XML data from SGML container files
-2. Parses the XML into structured entity, relationship, and transaction data
+2. Parses the XML into structured entity, relationship, and transaction data, including acquisition/disposition flags
 3. Writes the data to the specialized Form 4 database tables
 
 #### Key Features
@@ -19,6 +19,7 @@ The `Form4Orchestrator` is responsible for specialized processing of Form 4 fili
 - **XML Extraction**: Uses `Form4SgmlIndexer` to extract XML from SGML containers
 - **Entity Relationship Modeling**: Maintains the complex relationships between issuers, reporting persons, and transactions
 - **Transaction Processing**: Handles the diverse transaction types and reporting requirements
+- **Acquisition/Disposition Tracking**: Captures whether securities were acquired (A) or disposed (D) in each transaction
 - **CIK Standardization (Bug 8 Fix)**: Reliably extracts the issuer CIK from Form 4 XML content and uses it consistently for URL construction, file paths, and RawDocument creation. This ensures:
   - Consistent handling across the pipeline
   - All XML files are stored under the issuer CIK directory structure
