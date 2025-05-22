@@ -1,8 +1,10 @@
 # Form-Specific ORM Models
 
-This directory contains SQLAlchemy ORM models for SEC form-specific data tables, with a focus on Form 4 filings and their associated relationships.
+This directory contains SQLAlchemy ORM models for SEC form-specific data tables, with a focus on Form 4 filings and their associated relationships, securities, and transactions.
 
-## Form 4 Entity Relationship Model
+## Form 4 Models
+
+### Form 4 Entity Relationship Model
 
 The Form 4 entity relationship model implements a comprehensive and flexible design for tracking insider trading activities. The model consists of several interconnected components:
 
@@ -129,16 +131,105 @@ owner_relationships = relationship("Form4Relationship",
                                   back_populates="owner_entity")
 ```
 
+## Security and Transaction Normalization Models
+
+As part of the Form 4 schema redesign effort, the following models have been implemented to normalize securities and transaction data:
+
+### Security ORM (`security_orm.py`)
+
+Normalized securities table that stores unique securities across all filings:
+
+```python
+id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+title = Column(String, nullable=False)
+issuer_entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"))
+security_type = Column(String, nullable=False)  # 'equity', 'option', 'convertible', 'other_derivative'
+standard_cusip = Column(String)
+```
+
+### DerivativeSecurity ORM (`derivative_security_orm.py`)
+
+Stores derivative security-specific details linked to the main securities table:
+
+```python
+id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+security_id = Column(UUID(as_uuid=True), ForeignKey("securities.id"))
+underlying_security_id = Column(UUID(as_uuid=True), ForeignKey("securities.id"))
+underlying_security_title = Column(String, nullable=False)
+conversion_price = Column(Numeric)
+exercise_date = Column(Date)
+expiration_date = Column(Date)
+```
+
+### NonDerivativeTransaction ORM (`non_derivative_transaction_orm.py`)
+
+Normalized non-derivative transactions table:
+
+```python
+id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+form4_filing_id = Column(UUID(as_uuid=True), ForeignKey("form4_filings.id"))
+relationship_id = Column(UUID(as_uuid=True), ForeignKey("form4_relationships.id"))
+security_id = Column(UUID(as_uuid=True), ForeignKey("securities.id"))
+transaction_code = Column(String, nullable=False)
+transaction_date = Column(Date, nullable=False)
+transaction_form_type = Column(String)
+shares_amount = Column(Numeric, nullable=False)
+price_per_share = Column(Numeric)
+direct_ownership = Column(Boolean, nullable=False, default=True)
+ownership_nature_explanation = Column(String)
+transaction_timeliness = Column(String)
+footnote_ids = Column(ARRAY(String))
+acquisition_disposition_flag = Column(String, nullable=False)
+is_part_of_group_filing = Column(Boolean, default=False)
+```
+
+### DerivativeTransaction ORM (`derivative_transaction_orm.py`)
+
+Normalized derivative transactions table:
+
+```python
+id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+form4_filing_id = Column(UUID(as_uuid=True), ForeignKey("form4_filings.id"))
+relationship_id = Column(UUID(as_uuid=True), ForeignKey("form4_relationships.id"))
+security_id = Column(UUID(as_uuid=True), ForeignKey("securities.id"))
+derivative_security_id = Column(UUID(as_uuid=True), ForeignKey("derivative_securities.id"))
+transaction_code = Column(String, nullable=False)
+transaction_date = Column(Date, nullable=False)
+transaction_form_type = Column(String)
+derivative_shares_amount = Column(Numeric, nullable=False)
+price_per_derivative = Column(Numeric)
+underlying_shares_amount = Column(Numeric)
+direct_ownership = Column(Boolean, nullable=False, default=True)
+ownership_nature_explanation = Column(String)
+transaction_timeliness = Column(String)
+footnote_ids = Column(ARRAY(String))
+acquisition_disposition_flag = Column(String, nullable=False)
+is_part_of_group_filing = Column(Boolean, default=False)
+```
+
+## Security and Transaction Services
+
+The schema redesign includes service classes that provide functionality for managing securities and transactions:
+
+1. **SecurityService**
+   - Creating and retrieving normalized securities
+   - Finding securities by title and issuer
+   - Managing derivative securities with their specific attributes
+
+2. **TransactionService**
+   - Creating and retrieving non-derivative and derivative transactions
+   - Finding transactions by various criteria (security, filing, relationship)
+   - Supporting date range queries for transaction analysis
+
 ## Planned Enhancements
 
 1. **Position Tracking**
-   - Adding `total_shares_owned` field to Form4Relationship to track ownership positions
+   - Adding `relationship_positions` table to track ownership positions
    - Supporting historical analysis of ownership changes over time
 
-2. **Transaction Classification**
-   - Tracks acquisition/disposition flags ('A'/'D') on transactions
-   - Enables clear distinction between buying and selling activities
-   - Provides improved reporting capabilities for analyzing insider trading patterns
+2. **Transaction Integration**
+   - Updating Form4Parser to utilize the new normalized transaction models
+   - Migrating existing data to the new schema
 
 3. **Performance Optimization**
    - Additional indexes for common query patterns
@@ -146,28 +237,35 @@ owner_relationships = relationship("Form4Relationship",
 
 ## Design Advantages
 
-This relationship model offers several key advantages:
+This normalized schema offers several key advantages:
 
 1. **Normalized Schema**: Properly normalized to minimize data duplication
 2. **Flexible Entity Model**: Universal entity registry with type differentiation
-3. **Many-to-Many Support**: Robust handling of complex relationships
-4. **Group Filing Support**: Proper tracking of group insider filings
-5. **Historical Tracking**: Ability to track relationship changes over time
+3. **Security Normalization**: Securities are stored once and referenced by multiple transactions
+4. **Transaction Separation**: Clear separation between derivative and non-derivative transactions
+5. **Historical Tracking**: Ability to track relationship and position changes over time
 6. **Efficient Queries**: Optimized for common reporting and analysis queries
-7. **Schema Evolution**: JSONB fields allow for extending without schema changes
 
 ## Usage Notes
 
 When working with these ORM models, note the following best practices:
 
-1. Use the `Entity.get_or_create()` method to ensure entity uniqueness by CIK
-2. Use the `Form4Relationship.find_by_entities()` method to locate existing relationships
-3. Set appropriate relationship flags based on parsed Form 4 data
-4. Ensure proper transaction linking via relationship_id foreign key
-5. Use SQLAlchemy's session patterns for efficient relationship traversal
+1. Use the `SecurityService.get_or_create_security()` method to ensure security uniqueness
+2. Use the `TransactionService` methods for creating and retrieving transactions
+3. Link derivative securities to their underlying securities whenever possible
+4. Set the appropriate `acquisition_disposition_flag` ('A' or 'D') for all transactions
+5. Use the `direct_ownership` flag and `ownership_nature_explanation` to indicate ownership nature
+6. Ensure proper transaction linking via relationship_id and security_id foreign keys
 
 ## Related Components
 
-- [Form4RelationshipData Dataclass](../../dataclasses/forms/form4_relationship.py)
+- [SecurityData Dataclass](../../dataclasses/forms/security_data.py)
+- [DerivativeSecurityData Dataclass](../../dataclasses/forms/derivative_security_data.py)
+- [TransactionBase Dataclass](../../dataclasses/forms/transaction_data.py)
+- [NonDerivativeTransactionData Dataclass](../../dataclasses/forms/transaction_data.py)
+- [DerivativeTransactionData Dataclass](../../dataclasses/forms/transaction_data.py)
+- [Security Adapter](../../adapters/security_adapter.py)
+- [Transaction Adapter](../../adapters/transaction_adapter.py)
+- [Security Service](../../../services/forms/security_service.py)
+- [Transaction Service](../../../services/forms/transaction_service.py)
 - [Form 4 Parser](../../../parsers/forms/form4_parser.py)
-- [Form 4 Orchestrator](../../../orchestrators/forms/form4_orchestrator.py)

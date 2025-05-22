@@ -78,6 +78,96 @@ To run a specific test file:
 python -m pytest tests/forms/test_form4_footnote_extraction.py -v
 ```
 
+## Schema Redesign Test Suites
+
+### Position Tracking Tests (`position/`)
+
+The position test suite verifies the Form 4 position tracking functionality implemented as part of the schema redesign (Phase 3). These tests ensure proper tracking of security positions over time.
+
+#### Position Test Files
+
+1. **test_mocked_service.py**
+   - Tests position service functionality using mock implementations
+   - Verifies position creation, retrieval, and calculation methods
+   - Tests position updates from transactions
+   - Validates position-only entry handling
+   - Checks position history tracking and total share calculations
+
+2. **conftest.py**
+   - Provides test fixtures for position testing
+   - Mock database sessions and sample position data
+   - Sample transaction data for position update testing
+
+#### Position Service Functionality
+
+The position service provides the following key capabilities:
+
+- **Position Creation**: Create new position entries from transactions or holdings
+- **Position Retrieval**: Get positions by ID, relationship, or security
+- **Position Updates**: Update positions based on transaction impacts
+- **Position History**: Track position changes over time
+- **Total Calculations**: Calculate total shares owned per security
+- **Position Recalculation**: Recalculate positions from transaction history
+
+### Transaction Tests (`transaction/`)
+
+The transaction test suite verifies the normalized transaction handling for both derivative and non-derivative securities.
+
+#### Transaction Test Files
+
+1. **test_mocked_service.py**
+   - Tests transaction service functionality using mock implementations
+   - Verifies transaction creation for both derivative and non-derivative types
+   - Tests transaction retrieval by various criteria
+   - Validates transaction impact calculations
+
+### Security Tests (`security/`)
+
+The security test suite verifies the normalized security handling and derivative security relationships.
+
+#### Security Test Files
+
+1. **test_mocked_service.py**
+   - Tests security service functionality using mock implementations
+   - Verifies security normalization and creation
+   - Tests derivative security relationships
+   - Validates security search and retrieval
+
+## Testing Approach
+
+### Mock-Based Testing Strategy
+
+The schema redesign tests use a mock-based testing approach to avoid circular dependencies and database requirements:
+
+1. **Isolated Testing**: Each service is tested independently without requiring database connections
+2. **Mock Services**: Mock implementations provide the same interface as real services
+3. **Dataclass Focus**: Tests focus on dataclass validation and business logic
+4. **Performance**: Mock tests run quickly without database overhead
+
+### Test Organization
+
+- Each major component (position, transaction, security) has its own test directory
+- Mock service implementations are provided for isolated testing
+- Shared fixtures are defined in `conftest.py` files
+- Test files follow the naming convention `test_mocked_service.py`
+
+## Running Schema Redesign Tests
+
+To run all schema redesign tests:
+```bash
+python -m pytest tests/forms/position/ tests/forms/transaction/ tests/forms/security/ -v
+```
+
+To run position-specific tests:
+```bash
+python -m pytest tests/forms/position/ -v
+```
+
+To run a specific position test:
+```bash
+python -m pytest tests/forms/position/test_mocked_service.py::TestPositionFunctionality::test_position_creation -v
+```
+
 ## Other Form Tests
 
 As support for other form types is implemented, relevant test files should be added to this directory following similar patterns and naming conventions.
